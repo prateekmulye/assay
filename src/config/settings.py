@@ -55,11 +55,15 @@ class Settings(BaseSettings):
         """Fill model/temperature from models.yaml ONLY where env didn't override."""
         tiers = tiers if tiers is not None else load_model_tiers()
         if "quick" in tiers:
-            self.quick_model = tiers["quick"].get("model", self.quick_model)
-            self.quick_temperature = tiers["quick"].get("temperature", self.quick_temperature)
+            if "quick_model" not in self.model_fields_set:
+                self.quick_model = tiers["quick"].get("model", self.quick_model)
+            if "quick_temperature" not in self.model_fields_set:
+                self.quick_temperature = tiers["quick"].get("temperature", self.quick_temperature)
         if "deep" in tiers:
-            self.deep_model = tiers["deep"].get("model", self.deep_model)
-            self.deep_temperature = tiers["deep"].get("temperature", self.deep_temperature)
+            if "deep_model" not in self.model_fields_set:
+                self.deep_model = tiers["deep"].get("model", self.deep_model)
+            if "deep_temperature" not in self.model_fields_set:
+                self.deep_temperature = tiers["deep"].get("temperature", self.deep_temperature)
         return self
 
 

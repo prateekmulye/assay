@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 
 from langchain_core.callbacks import BaseCallbackHandler
 
@@ -30,7 +30,7 @@ class CostTracker(BaseCallbackHandler):
     def __init__(self, node: str = "unknown") -> None:
         self.node = node
         self.records: list[NodeCost] = []
-        self._starts: dict = {}
+        self._starts: dict[str | None, float] = {}
 
     def on_llm_start(self, serialized, prompts, *, run_id=None, **kwargs) -> None:
         self._starts[run_id] = time.perf_counter()
@@ -39,7 +39,7 @@ class CostTracker(BaseCallbackHandler):
         start = self._starts.pop(run_id, time.perf_counter())
         elapsed = time.perf_counter() - start
         out = getattr(response, "llm_output", None) or {}
-        usage = out.get("token_usage", {}) if isinstance(out, dict) else {}
+        usage = (out.get("token_usage") or {}) if isinstance(out, dict) else {}
         model = out.get("model_name", "") if isinstance(out, dict) else ""
         pt = int(usage.get("prompt_tokens", 0) or 0)
         ct = int(usage.get("completion_tokens", 0) or 0)

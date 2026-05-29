@@ -9,6 +9,8 @@ from src.config.settings import get_settings
 
 # Structured-output method constant — all WPs import this rather than hardcoding the string.
 # If an Ollama model lacks tool calling, flip to "json_schema" here in one place.
+# WP nodes MUST pass this explicitly: llm.with_structured_output(Schema, method=STRUCT_METHOD).
+# ChatOpenAI's own default is "json_schema" — relying on the default bypasses this knob.
 STRUCT_METHOD = "function_calling"
 
 
@@ -17,6 +19,7 @@ def get_llm(tier: str) -> ChatOpenAI:
     """Return a cached ChatOpenAI pointed at the configured provider for the given tier.
 
     tier: "quick" (retrieval/summary/formatting) or "deep" (debate/verdict/arbiter).
+    Cached per tier; callers that reload settings via get_settings.cache_clear() must also call get_llm.cache_clear().
     """
     s = get_settings()
     if tier == "quick":

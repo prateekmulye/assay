@@ -25,8 +25,8 @@ def test_cost_tracker_aggregates_tokens_and_latency():
     assert totals["per_node"][0]["node"] == "trader"
 
 
-def test_cost_tracker_uses_pricing_when_present():
-    PRICING["test-model"] = (1.0, 2.0)  # USD per 1M (in, out)
+def test_cost_tracker_uses_pricing_when_present(monkeypatch):
+    monkeypatch.setitem(PRICING, "test-model", (1.0, 2.0))  # USD per 1M (in, out)
     t = CostTracker(node="x")
     t.on_llm_start({}, ["p"], run_id="r")
     t.on_llm_end(_fake_response(1_000_000, 1_000_000, "test-model"), run_id="r")
@@ -38,4 +38,11 @@ def test_cost_tracker_handles_missing_usage():
     t = CostTracker(node="x")
     t.on_llm_start({}, ["p"], run_id="r")
     t.on_llm_end(SimpleNamespace(llm_output=None), run_id="r")
+    assert t.totals()["prompt_tokens"] == 0
+
+
+def test_cost_tracker_handles_none_token_usage():
+    t = CostTracker(node="x")
+    t.on_llm_start({}, ["p"], run_id="r")
+    t.on_llm_end(SimpleNamespace(llm_output={"token_usage": None, "model_name": "m"}), run_id="r")
     assert t.totals()["prompt_tokens"] == 0

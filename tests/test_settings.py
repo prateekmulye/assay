@@ -1,5 +1,4 @@
 # tests/test_settings.py
-from pathlib import Path
 import textwrap
 from src.config.settings import Settings, load_model_tiers
 
@@ -35,3 +34,13 @@ def test_settings_reads_env(monkeypatch):
     s = Settings(_env_file=None)
     assert s.ollama_api_key == "test-key-123"
     assert s.quick_model == "override-quick"
+
+
+def test_apply_model_yaml_env_wins_over_yaml(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUICK_MODEL", "env-model")
+    p = tmp_path / "m.yaml"
+    p.write_text("quick:\n  model: yaml-model\n  temperature: 0.1\n")
+    s = Settings(_env_file=None)
+    s.apply_model_yaml(load_model_tiers(p))
+    assert s.quick_model == "env-model"       # env wins
+    assert s.quick_temperature == 0.1          # yaml fills the unset field

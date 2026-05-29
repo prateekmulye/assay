@@ -4,7 +4,6 @@ Usage: python -m scripts.smoke --ticker AAPL"""
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 
 from src.graph import build_graph
 from src.obs.recorder import RunRecorder
