@@ -69,6 +69,29 @@ async def test_run_ab_preserves_input_order(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_run_ab_drops_failed_ticker_keeps_rest(monkeypatch):
+    """A ticker whose graph raises is logged + dropped; completed pairs survive."""
+    good = _make_build_graph()
+
+    def build_graph(debate_mode=None):
+        inner = good(debate_mode)
+        orig = inner.ainvoke
+
+        async def ainvoke(input_state):
+            if input_state["ticker"] == "BAD":
+                raise RuntimeError("graph blew up")
+            return await orig(input_state)
+
+        inner.ainvoke = ainvoke
+        return inner
+
+    monkeypatch.setattr(harness_mod, "build_graph", build_graph)
+    results = await run_ab(["AAPL", "BAD", "MSFT"], concurrency=3)
+    # BAD is dropped; AAPL + MSFT survive in input order.
+    assert [r.ticker for r in results] == ["AAPL", "MSFT"]
+
+
+@pytest.mark.asyncio
 async def test_run_ab_bounds_concurrency(monkeypatch):
     """Semaphore must cap simultaneous in-flight pairs at `concurrency`."""
     live = 0

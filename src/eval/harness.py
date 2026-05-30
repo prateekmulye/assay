@@ -7,10 +7,13 @@ module to return canned graph fakes, so no network or real graph is exercised.""
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass
 from typing import Any
 
 from src.graph import build_graph  # WP-D evolves this to accept debate_mode
+
+_LOG = logging.getLogger(__name__)
 
 
 @dataclass
@@ -82,14 +85,22 @@ async def _run_one_mode(ticker: str, mode: str, investor_mode: str) -> dict[str,
     return await app.ainvoke({"ticker": ticker, "investor_mode": investor_mode})
 
 
-async def _run_pair(ticker: str, investor_mode: str, sem: asyncio.Semaphore) -> PairedResult:
-    async with sem:
-        # Run the two graphs for this ticker concurrently; the semaphore bounds
-        # how many *pairs* are in flight at once.
-        state_on, state_off = await asyncio.gather(
-            _run_one_mode(ticker, "on", investor_mode),
-            _run_one_mode(ticker, "off", investor_mode),
-        )
+async def _run_pair(
+    ticker: str, investor_mode: str, sem: asyncio.Semaphore
+) -> PairedResult | None:
+    """Run the on/off pair for one ticker. Returns None (logged) on failure so a
+    single bad ticker can't abort the whole batch and discard completed results."""
+    try:
+        async with sem:
+            # Run the two graphs for this ticker concurrently; the semaphore bounds
+            # how many *pairs* are in flight at once.
+            state_on, state_off = await asyncio.gather(
+                _run_one_mode(ticker, "on", investor_mode),
+                _run_one_mode(ticker, "off", investor_mode),
+            )
+    except Exception as exc:
+        _LOG.warning("eval: ticker %s failed (%s); dropping from results", ticker, exc)
+        return None
     return PairedResult(
         ticker=ticker,
         decision_on=state_on.get("final_decision", {}) or {},
@@ -107,7 +118,9 @@ async def run_ab(
 ) -> list[PairedResult]:
     """For each ticker, run debate-on and debate-off graphs and pair the results.
 
-    Bounded by `concurrency` pairs in flight via asyncio.Semaphore. Results are
-    returned in the same order as `tickers` (asyncio.gather preserves order)."""
+    Bounded by `concurrency` pairs in flight via asyncio.Semaphore. Order follows
+    `tickers` (asyncio.gather preserves order). Tickers that raise are logged and
+    dropped, so partial results survive a flaky run."""
     sem = asyncio.Semaphore(concurrency)
-    return await asyncio.gather(*(_run_pair(t, investor_mode, sem) for t in tickers))
+    results = await asyncio.gather(*(_run_pair(t, investor_mode, sem) for t in tickers))
+    return [r for r in results if r is not None]

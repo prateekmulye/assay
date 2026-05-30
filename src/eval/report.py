@@ -22,7 +22,9 @@ PROXY_DISCLAIMER = (
     "single-pass baseline, at what cost/latency. It runs NO backtest and reports NO "
     "realized returns. Higher judge-preference or score deltas do not imply trading "
     "profit. Regime coverage is limited to the curated ticker snapshot (see "
-    "evals/tickers.json _note)."
+    "evals/tickers.json _note). The referee sees the two verdicts in a fixed A/B "
+    "position (A=debate-on), so a small LLM positional bias toward the first option "
+    "may inflate the debate-on preference rate."
 )
 
 
@@ -36,6 +38,7 @@ def aggregate(pairs: list[PairedResult], verdicts: dict[str, JudgeVerdict]) -> d
     if n == 0:
         return {
             "n_tickers": 0,
+            "n_judged": 0,
             "action_agreement_rate": 0.0,
             "judge_prefers_on_rate": 0.0,
             "judge_agreement_rate": 0.0,
@@ -52,19 +55,23 @@ def aggregate(pairs: list[PairedResult], verdicts: dict[str, JudgeVerdict]) -> d
     token_deltas = [p.tokens_on - p.tokens_off for p in pairs]
 
     action_matches = sum(1 for p in pairs if p.action_on == p.action_off)
-    prefers_on = sum(1 for p in pairs if verdicts.get(p.ticker)
-                     and verdicts[p.ticker].preferred == "on")
-    judge_agree = sum(1 for p in pairs if verdicts.get(p.ticker)
-                      and verdicts[p.ticker].agreement)
+    # Judge rates are over the pairs that were ACTUALLY judged, not all tickers —
+    # a missing verdict must not deflate the rate as if the judge said "no".
+    judged = [p for p in pairs if verdicts.get(p.ticker)]
+    n_judged = len(judged)
+    prefers_on = sum(1 for p in judged if verdicts[p.ticker].preferred == "on")
+    judge_agree = sum(1 for p in judged if verdicts[p.ticker].agreement)
 
     return {
         "n_tickers": n,
+        "n_judged": n_judged,
         "action_agreement_rate": _round(action_matches / n),
-        "judge_prefers_on_rate": _round(prefers_on / n),
-        "judge_agreement_rate": _round(judge_agree / n),
+        "judge_prefers_on_rate": _round(prefers_on / n_judged) if n_judged else 0.0,
+        "judge_agreement_rate": _round(judge_agree / n_judged) if n_judged else 0.0,
         "mean_score_delta_on_minus_off": _round(statistics.fmean(score_deltas)),
         "score_delta_stdev": _round(statistics.pstdev(score_deltas)) if n > 1 else 0.0,
-        "mean_cost_delta_on_minus_off": _round(statistics.fmean(cost_deltas)),
+        # Cost is the headline (paper critique #3); keep 6 dp to match per-ticker rows.
+        "mean_cost_delta_on_minus_off": _round(statistics.fmean(cost_deltas), 6),
         "mean_latency_delta_on_minus_off": _round(statistics.fmean(latency_deltas)),
         "mean_token_delta_on_minus_off": _round(statistics.fmean(token_deltas)),
     }
