@@ -116,10 +116,109 @@ def _patch_debate_nodes(monkeypatch, debate_outputs: list):
         monkeypatch.setattr(mod, "get_llm", lambda tier: _DebateLLM())
 
 
+def _patch_risk_nodes(monkeypatch):
+    """Patch WP-E risk nodes (trader, risk_conservative, risk_aggressive, risk_arbiter)
+    offline so graph-level tests don't require live LLMs for WP-E.
+    """
+    import src.agents.trader as trader_mod
+    import src.agents.risk.conservative as cons_mod
+    import src.agents.risk.aggressive as agg_mod
+    import src.agents.risk.arbiter as arbiter_mod
+    from src.llm.schemas import TradeProposal, FinalDecision
+    from src.agents.risk.conservative import RiskStance
+
+    _trade_proposal = TradeProposal(action="BUY", conviction=0.7, score=70, rationale="stub trade")
+    _final_decision = FinalDecision(action="BUY", conviction=0.7, score=70, rationale="stub decision")
+    _risk_stance = RiskStance(stance="stub risk stance")
+    _debate_turn_c = DebateTurn(role="conservative", round=1, argument="caution stub")
+    _debate_turn_a = DebateTurn(role="aggressive", round=1, argument="optimism stub")
+
+    import time
+    from types import SimpleNamespace
+
+    def _fake_resp():
+        return SimpleNamespace(
+            llm_output={"token_usage": {"prompt_tokens": 5, "completion_tokens": 3},
+                        "model_name": "fake"}
+        )
+
+    def _make_fixed_llm(fixed_output):
+        class _Structured:
+            async def ainvoke(self, messages, config=None, **kwargs):
+                callbacks = (config or {}).get("callbacks", []) or []
+                rid = f"risk-{time.monotonic_ns()}"
+                for cb in callbacks:
+                    if hasattr(cb, "on_llm_start"):
+                        cb.on_llm_start({}, ["<p>"], run_id=rid)
+                for cb in callbacks:
+                    if hasattr(cb, "on_llm_end"):
+                        cb.on_llm_end(_fake_resp(), run_id=rid)
+                return fixed_output
+
+        class _LLM:
+            def with_structured_output(self, schema, method=None):
+                return _Structured()
+
+        return _LLM()
+
+    monkeypatch.setattr(trader_mod, "get_llm", lambda tier: _make_fixed_llm(_trade_proposal))
+    monkeypatch.setattr(cons_mod, "get_llm", lambda tier: _make_fixed_llm(_risk_stance))
+    monkeypatch.setattr(agg_mod, "get_llm", lambda tier: _make_fixed_llm(_risk_stance))
+    # Arbiter uses run_debate (debate_mod) + FinalDecision; patch both
+    # The arbiter's own get_llm (for FinalDecision) and debate_mod's get_llm (for turns)
+    arbiter_debate_turn = DebateTurn(role="conservative", round=1, argument="arbiter debate turn")
+    arbiter_debate_turn2 = DebateTurn(role="aggressive", round=1, argument="arbiter debate turn2")
+    arbiter_queue = [arbiter_debate_turn, arbiter_debate_turn2]
+
+    class _ArbiterDebateStructured:
+        async def ainvoke(self, messages, config=None, **kwargs):
+            callbacks = (config or {}).get("callbacks", []) or []
+            rid = f"arb-{time.monotonic_ns()}"
+            for cb in callbacks:
+                if hasattr(cb, "on_llm_start"):
+                    cb.on_llm_start({}, ["<p>"], run_id=rid)
+            # Return from queue if available, else a debate turn fallback
+            result = arbiter_queue.pop(0) if arbiter_queue else arbiter_debate_turn
+            for cb in callbacks:
+                if hasattr(cb, "on_llm_end"):
+                    cb.on_llm_end(_fake_resp(), run_id=rid)
+            return result
+
+    class _ArbiterFinalStructured:
+        async def ainvoke(self, messages, config=None, **kwargs):
+            callbacks = (config or {}).get("callbacks", []) or []
+            rid = f"arb-final-{time.monotonic_ns()}"
+            for cb in callbacks:
+                if hasattr(cb, "on_llm_start"):
+                    cb.on_llm_start({}, ["<p>"], run_id=rid)
+            for cb in callbacks:
+                if hasattr(cb, "on_llm_end"):
+                    cb.on_llm_end(_fake_resp(), run_id=rid)
+            return _final_decision
+
+    class _ArbiterFinalLLM:
+        """Used for the FinalDecision call in arbiter."""
+        def with_structured_output(self, schema, method=None):
+            return _ArbiterFinalStructured()
+
+    monkeypatch.setattr(arbiter_mod, "get_llm", lambda tier: _ArbiterFinalLLM())
+
+    # Stub out run_debate inside the arbiter so it doesn't consume from the shared
+    # debate_mod.get_llm queue that _patch_debate_nodes set up for the facilitator.
+    async def _fake_run_debate(*args, **kwargs):
+        return [arbiter_debate_turn, arbiter_debate_turn2], [
+            {"node": "risk_debate", "model": "fake", "prompt_tokens": 5,
+             "completion_tokens": 3, "latency_s": 0.0, "cost_usd": 0.0}
+        ]
+
+    monkeypatch.setattr(arbiter_mod, "run_debate", _fake_run_debate)
+
+
 def _patch_graph(monkeypatch, debate_outputs: list):
-    """Convenience: patch both WP-B and WP-D nodes offline."""
+    """Convenience: patch both WP-B and WP-D nodes offline, plus WP-E risk nodes."""
     _patch_analysts(monkeypatch)
     _patch_debate_nodes(monkeypatch, debate_outputs)
+    _patch_risk_nodes(monkeypatch)
 
 
 # ---------------------------------------------------------------------------
@@ -203,6 +302,9 @@ async def test_debate_mode_on_produces_full_research_debate(monkeypatch):
     monkeypatch.setattr(fac_mod, "get_llm", lambda tier: _FacLLM())
     monkeypatch.setattr(debate_mod, "get_llm", lambda tier: _FacLLM())
 
+    # Also patch WP-E risk nodes so the graph runs fully offline.
+    _patch_risk_nodes(monkeypatch)
+
     from src.graph import build_graph
 
     app = build_graph(debate_mode="on")
@@ -216,6 +318,7 @@ async def test_debate_mode_on_produces_full_research_debate(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_debate_mode_off_produces_verdict_only(monkeypatch):
+    # _patch_graph includes risk node patches (WP-E) via _patch_risk_nodes
     _patch_graph(monkeypatch, [DebateTurn(role="bull", round=1, argument="single-pass lean HOLD")])
     from src.graph import build_graph
 
