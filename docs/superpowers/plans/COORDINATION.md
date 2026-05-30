@@ -104,9 +104,13 @@ async def run_debate(
     rounds: int,
     tier: str = "deep",
     node_label: str = "debate",
+    # optional keyword-only extras MAY be appended AFTER the above (e.g. max_rounds);
+    # the first four positional params MUST stay (topic, context, personas, rounds).
 ) -> tuple[list[DebateTurn], dict]:    # (turns, metrics_per_node)
     ...
 ```
+
+**Note (WP-D landed early):** `tests/conftest.py` (a shared `get_llm`/tool-mock fixture) was created by WP-D out of necessity for offline graph tests, even though §3 lists it under WP-I. WP-I must RECONCILE with the existing `tests/conftest.py` (extend it, don't clobber) rather than create it fresh.
 WP-E imports `run_debate` for the conservative↔aggressive risk debate. WP-E's plan MUST declare a dependency on WP-D being merged first (or stub `run_debate` locally behind the same signature if developed in parallel).
 
 **`build_graph(debate_mode)` — owned by WP-D.** WP-D evolves `build_graph` to accept `debate_mode`:
