@@ -1,4 +1,3 @@
-import pytest
 
 from src.agents.analysts import technicals as tech_mod
 from src.agents.analysts.technicals import technicals_analyst

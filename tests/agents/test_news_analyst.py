@@ -1,4 +1,3 @@
-import pytest
 
 from src.agents.analysts import news as news_mod
 from src.agents.analysts.news import news_analyst

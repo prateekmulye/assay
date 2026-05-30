@@ -1,4 +1,3 @@
-import pytest
 
 from src.agents.analysts import fundamentals as fund_mod
 from src.agents.analysts.fundamentals import fundamentals_analyst

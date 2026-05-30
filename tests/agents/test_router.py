@@ -2,6 +2,7 @@ import pytest
 
 from src.agents import router as router_mod
 from src.agents.router import TickerResolution, router
+from src.llm.schemas import FinalDecision
 
 
 class _FakeStructured:
@@ -55,9 +56,6 @@ def test_ticker_resolution_schema_defaults():
     r = TickerResolution(resolved_ticker="MSFT")
     assert r.screener == "america"
     assert r.exchange == "NASDAQ"
-
-
-from src.llm.schemas import FinalDecision
 
 
 async def test_router_cache_short_circuits(patch_llm, monkeypatch):
