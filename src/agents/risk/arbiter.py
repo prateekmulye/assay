@@ -112,15 +112,16 @@ async def risk_arbiter(state: AgentState) -> dict:
     try:
         decision: FinalDecision = await llm.ainvoke(messages, config={"callbacks": [tracker]})
     except Exception as exc:
-        _LOG.warning("risk_arbiter: LLM call failed (%s); degrading to HOLD", exc)
+        _LOG.warning("risk_arbiter: LLM call failed (%s); degrading to trade_proposal", exc)
         per_node = tracker.totals()["per_node"] or zero_metrics("risk_arbiter")
         metrics = list(debate_metrics) + per_node
+        # Degrade: copy trade_proposal values so downstream nodes have a valid FinalDecision.
         return {
             "final_decision": {
-                "action": "HOLD",
-                "conviction": 0.0,
-                "score": 50,
-                "rationale": "Arbiter degraded; defaulting to HOLD.",
+                "action": proposal.get("action", "HOLD"),
+                "conviction": proposal.get("conviction", 0.0),
+                "score": proposal.get("score", 50),
+                "rationale": "Arbiter degraded; using trader proposal as final decision.",
             },
             "risk_debate": {
                 "rounds": [t.model_dump() for t in turns],
