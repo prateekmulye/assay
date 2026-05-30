@@ -56,7 +56,7 @@ namespaces = true
 testpaths = ["tests"]
 # Deselect the live (network) test by default; CI and local runs stay offline.
 # --strict-markers turns any unregistered marker into an error (catches typos).
-addopts = "-v -m \"not live\" --strict-markers --ignore=tests/test_flow.py --ignore=tests/test_international.py --ignore=tests/test_ui_logic.py"
+addopts = "-v -m \"not live\" --strict-markers"
 asyncio_mode = "auto"
 markers = [
     "live: hits a real external API; skipped unless RUN_LIVE=1 (deselect with '-m \"not live\"')",
