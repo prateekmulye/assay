@@ -119,3 +119,51 @@ def test_cache_end_to_end_against_real_chroma(tmp_path):
 
     missing = get_cached_verdict("ZZZZ", max_age_min=60, store=store, now=10_000)
     assert missing is None
+
+
+def test_cache_end_to_end_newest_wins_real_chroma(tmp_path):
+    """F2: prove newest-wins against actual Chroma (which gives no row ordering).
+
+    Store an older verdict (score=10) then a newer verdict (score=99) for the
+    same ticker. Assert that get_cached_verdict returns the NEWER score.
+    """
+    from src.memory.store import VectorStore
+
+    store = VectorStore(persist_dir=str(tmp_path), collection="verdicts", embedder=FakeEmbedder())
+
+    # Older entry first
+    store_verdict("MSFT", _decision(action="SELL", score=10), store=store, now=5_000)
+    # Newer entry second (distinct score so we can tell them apart)
+    store_verdict("MSFT", _decision(action="BUY", score=99), store=store, now=6_000)
+
+    got = get_cached_verdict("MSFT", max_age_min=1000, store=store, now=6_000)
+    assert got is not None
+    assert got.score == 99, f"Expected newer score 99, got {got.score}"
+    assert got.action == "BUY"
+
+
+def test_corrupt_ts_does_not_raise(tmp_path):
+    """F1: a row with a non-numeric `ts` must not crash get_cached_verdict."""
+    store = FakeStore()
+    # Store a good verdict
+    store_verdict("AAPL", _decision(action="BUY", score=80), store=store, now=2000)
+    # Inject a row with a corrupt ts directly into the fake store
+    import json
+
+    bad_doc = json.dumps(_decision(action="SELL", score=1).model_dump())
+    store.rows.append({"id": "corrupt", "document": bad_doc, "metadata": {"ticker": "AAPL", "ts": "bad"}})
+
+    # Must not raise; should return the good verdict (ts=2000 beats ts="bad"→0)
+    got = get_cached_verdict("AAPL", max_age_min=1000, store=store, now=2000)
+    assert got is not None
+    assert got.score == 80
+
+
+def test_boundary_exactly_at_limit_is_fresh():
+    """F4: a verdict stored at now=1000, queried at now=1000+60*60 is still fresh
+    (exactly at the limit is inclusive)."""
+    store = FakeStore()
+    store_verdict("AAPL", _decision(action="BUY", score=42), store=store, now=1000)
+    got = get_cached_verdict("AAPL", max_age_min=60, store=store, now=1000 + 60 * 60)
+    assert got is not None, "Verdict exactly at max_age_min boundary should be fresh"
+    assert got.score == 42

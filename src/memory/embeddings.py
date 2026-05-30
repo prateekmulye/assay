@@ -46,7 +46,17 @@ class FastEmbedEmbedder:
 
 @lru_cache(maxsize=1)
 def get_embedder() -> Embedder:
-    """Cached default embedder. Swap seam: change this to return a different
-    Embedder implementation (e.g. an Ollama Cloud embeddings client) to switch
-    backends; callers depend only on the Embedder protocol."""
-    return FastEmbedEmbedder()
+    """Cached default embedder. NOTE: lru_cache does NOT cache exceptions —
+    a failed model load re-attempts on every call. Catch RuntimeError at startup.
+
+    Swap seam: change this to return a different Embedder implementation
+    (e.g. an Ollama Cloud embeddings client) to switch backends; callers depend
+    only on the Embedder protocol.
+    """
+    try:
+        return FastEmbedEmbedder()
+    except Exception as exc:
+        raise RuntimeError(
+            f"FastEmbed model load failed ({exc}). Check the ONNX model cache "
+            "or inject a custom embedder via store construction."
+        ) from exc
