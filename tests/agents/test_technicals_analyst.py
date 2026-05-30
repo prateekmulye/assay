@@ -44,7 +44,31 @@ async def test_technicals_analyst_tool_failure_degrades(monkeypatch):
     def _boom(t, screener, exchange):
         raise ToolError("tradingview", "all exchanges failed")
 
+    def _llm_must_not_be_called(tier):
+        raise AssertionError("llm called")
+
     monkeypatch.setattr(tech_mod, "fetch_technicals", _boom)
-    monkeypatch.setattr(tech_mod, "get_llm", lambda tier: (_ for _ in ()).throw(AssertionError("llm called")))
+    monkeypatch.setattr(tech_mod, "get_llm", _llm_must_not_be_called)
     out = await technicals_analyst({"resolved_ticker": "AAPL", "screener": "america", "exchange": "NASDAQ"})
     assert out["analyst_reports"]["technicals"]["confidence"] == 0.0
+
+
+async def test_technicals_analyst_llm_failure_degrades(monkeypatch):
+    """If ainvoke raises (e.g. ConnectionError), node must degrade rather than crash."""
+    monkeypatch.setattr(tech_mod, "fetch_technicals", lambda t, screener, exchange: _tech())
+
+    class _FailingStructured:
+        async def ainvoke(self, messages, config=None):
+            raise ConnectionError("LLM unreachable")
+
+    class _FailingLLM:
+        def with_structured_output(self, schema, method=None):
+            return _FailingStructured()
+
+    monkeypatch.setattr(tech_mod, "get_llm", lambda tier: _FailingLLM())
+    out = await technicals_analyst({"resolved_ticker": "AAPL", "screener": "america", "exchange": "NASDAQ"})
+    rep = out["analyst_reports"]["technicals"]
+    assert rep["confidence"] == 0.0
+    assert "Technicals unavailable:" in rep["summary"]
+    assert "LLM error" in rep["summary"]
+    assert out["run_metrics"][0]["node"] == "technicals_analyst"

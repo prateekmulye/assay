@@ -45,7 +45,10 @@ def test_fetch_technicals_exchange_fallback(monkeypatch):
 
 
 def test_fetch_technicals_all_exchanges_fail_raises(monkeypatch):
-    monkeypatch.setattr(tv, "_analyze", lambda **kw: (_ for _ in ()).throw(ValueError("nope")))
+    def _always_fail(**kw):
+        raise ValueError("nope")
+
+    monkeypatch.setattr(tv, "_analyze", _always_fail)
     monkeypatch.setattr(tv, "_BACKOFF_BASE", 0.0)
     with pytest.raises(ToolError) as ei:
         tv.fetch_technicals("AAPL", screener="america", exchange="NASDAQ")

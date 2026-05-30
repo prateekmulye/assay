@@ -42,18 +42,46 @@ async def test_news_analyst_tool_failure_degrades(monkeypatch):
     def _boom(q, limit=5):
         raise ToolError("firecrawl", "429")
 
+    def _llm_must_not_be_called(tier):
+        raise AssertionError("llm called")
+
     monkeypatch.setattr(news_mod, "search_news", _boom)
     # get_llm must NOT be called on the failure path
-    monkeypatch.setattr(news_mod, "get_llm", lambda tier: (_ for _ in ()).throw(AssertionError("llm called")))
+    monkeypatch.setattr(news_mod, "get_llm", _llm_must_not_be_called)
     out = await news_analyst({"resolved_ticker": "AAPL"})
     rep = out["analyst_reports"]["news"]
     assert rep["confidence"] == 0.0
-    assert "firecrawl" in rep["summary"].lower() or "unavailable" in rep["summary"].lower()
+    assert "News unavailable:" in rep["summary"]
     assert out["run_metrics"][0]["node"] == "news_analyst"
 
 
 async def test_news_analyst_empty_hits_degrades(monkeypatch):
+    def _llm_must_not_be_called(tier):
+        raise AssertionError("llm called")
+
     monkeypatch.setattr(news_mod, "search_news", lambda q, limit=5: [])
-    monkeypatch.setattr(news_mod, "get_llm", lambda tier: (_ for _ in ()).throw(AssertionError("llm called")))
+    monkeypatch.setattr(news_mod, "get_llm", _llm_must_not_be_called)
     out = await news_analyst({"resolved_ticker": "AAPL"})
     assert out["analyst_reports"]["news"]["confidence"] == 0.0
+
+
+async def test_news_analyst_llm_failure_degrades(monkeypatch):
+    """If ainvoke raises (e.g. ConnectionError), node must degrade rather than crash."""
+    hits = [NewsHit(title="Apple news", url="https://x.com", snippet="stuff", markdown=None)]
+    monkeypatch.setattr(news_mod, "search_news", lambda q, limit=5: hits)
+
+    class _FailingStructured:
+        async def ainvoke(self, messages, config=None):
+            raise ConnectionError("LLM unreachable")
+
+    class _FailingLLM:
+        def with_structured_output(self, schema, method=None):
+            return _FailingStructured()
+
+    monkeypatch.setattr(news_mod, "get_llm", lambda tier: _FailingLLM())
+    out = await news_analyst({"resolved_ticker": "AAPL"})
+    rep = out["analyst_reports"]["news"]
+    assert rep["confidence"] == 0.0
+    assert "News unavailable:" in rep["summary"]
+    assert "LLM error" in rep["summary"]
+    assert out["run_metrics"][0]["node"] == "news_analyst"

@@ -55,17 +55,21 @@ def _analyze(*, symbol: str, screener: str, exchange: str):
 def _candidate_exchanges(screener: str, exchange: str) -> list[str]:
     chain = list(_FALLBACKS.get(screener, []))
     ordered = [exchange] + [e for e in chain if e != exchange]
-    return ordered or [exchange]
+    # Enforce _MAX_ATTEMPTS bound so dead constant is actually respected.
+    return (ordered or [exchange])[:_MAX_ATTEMPTS]
 
 
 def fetch_technicals(ticker: str, screener: str, exchange: str) -> Technicals:
+    candidates = _candidate_exchanges(screener, exchange)
     last_exc: Exception | None = None
-    for attempt, ex in enumerate(_candidate_exchanges(screener, exchange)):
+    for attempt, ex in enumerate(candidates):
         try:
             analysis = _analyze(symbol=ticker, screener=screener, exchange=ex)
         except Exception as exc:  # rate limit / wrong exchange / network
             last_exc = exc
-            time.sleep(_BACKOFF_BASE * (2 ** attempt))
+            # Back off only between retries; skip sleep after the last candidate.
+            if attempt < len(candidates) - 1:
+                time.sleep(_BACKOFF_BASE * (2 ** attempt))
             continue
         summary = analysis.summary or {}
         ind = analysis.indicators or {}

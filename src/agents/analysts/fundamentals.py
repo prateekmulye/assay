@@ -8,9 +8,11 @@ STRUCT_METHOD is imported from src.llm.factory per COORDINATION §7.5.
 from __future__ import annotations
 
 import asyncio
+import warnings
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.agents._metrics import zero_metrics
 from src.llm.cost import CostTracker
 from src.llm.factory import STRUCT_METHOD, get_llm
 from src.llm.schemas import AnalystReport
@@ -28,9 +30,9 @@ def _degraded(reason: str) -> AnalystReport:
     return AnalystReport(summary=f"Fundamentals unavailable: {reason}", confidence=0.0)
 
 
+# Local alias kept for backward-compat; delegates to shared helper.
 def _zero_metrics() -> list[dict]:
-    return [{"node": _NODE, "model": "", "prompt_tokens": 0,
-             "completion_tokens": 0, "latency_s": 0.0, "cost_usd": 0.0}]
+    return zero_metrics(_NODE)
 
 
 async def fundamentals_analyst(state: dict) -> dict:
@@ -40,6 +42,7 @@ async def fundamentals_analyst(state: dict) -> dict:
     try:
         f = await asyncio.to_thread(fetch_fundamentals, ticker)
     except ToolError as exc:
+        # Degraded path: no LLM call was made, return zero metrics silently.
         return {
             "analyst_reports": {"fundamentals": _degraded(str(exc)).model_dump()},
             "run_metrics": _zero_metrics(),
@@ -51,12 +54,26 @@ async def fundamentals_analyst(state: dict) -> dict:
         SystemMessage(content=_SYSTEM),
         HumanMessage(content=f"Ticker: {ticker}\nMetrics: {data}"),
     ]
-    report: AnalystReport = await llm.ainvoke(messages, config={"callbacks": [tracker]})
+    try:
+        report: AnalystReport = await llm.ainvoke(messages, config={"callbacks": [tracker]})
+    except Exception as exc:  # LLM failure degrades gracefully
+        return {
+            "analyst_reports": {"fundamentals": _degraded(f"LLM error: {exc}").model_dump()},
+            "run_metrics": _zero_metrics(),
+        }
+
     # Attach raw numbers for the reporter; preserve any LLM-provided data too.
     merged = {**data, **(report.data or {})}
     report = report.model_copy(update={"data": merged})
 
-    per_node = tracker.totals()["per_node"] or _zero_metrics()
+    # Happy path: an LLM call was made; warn if no cost was recorded.
+    per_node = tracker.totals()["per_node"]
+    if not per_node:
+        warnings.warn(
+            f"{_NODE}: no LLM cost recorded; on_llm_end may not have fired",
+            stacklevel=2,
+        )
+        per_node = _zero_metrics()
     return {
         "analyst_reports": {"fundamentals": report.model_dump()},
         "run_metrics": per_node,

@@ -44,6 +44,8 @@ def _get(item: Any, key: str, default: Any = None) -> Any:
 
 @lru_cache(maxsize=1)
 def _client():
+    # Cached per process; if firecrawl_api_key changes, call `_client.cache_clear()`
+    # (mirrors get_llm/get_settings).
     from firecrawl import V1FirecrawlApp  # v2 package; class is V1FirecrawlApp
 
     return V1FirecrawlApp(api_key=get_settings().firecrawl_api_key)

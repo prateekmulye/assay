@@ -45,8 +45,13 @@ def fetch_fundamentals(ticker: str) -> Fundamentals:
         raise ToolError("yfinance", f"info fetch failed for {ticker}: {exc}") from exc
 
     # A valid ticker returns a rich dict; an unknown symbol returns {} or a
-    # near-empty stub with no name/marketCap.
-    if not info or (info.get("longName") is None and info.get("marketCap") is None):
+    # near-empty stub with no name/marketCap.  ETFs often have only shortName,
+    # so we require all three to be None before rejecting.
+    if not info or (
+        info.get("longName") is None
+        and info.get("shortName") is None
+        and info.get("marketCap") is None
+    ):
         raise ToolError("yfinance", f"no fundamentals for {ticker!r}")
 
     return Fundamentals(

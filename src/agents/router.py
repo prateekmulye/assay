@@ -9,11 +9,16 @@ single flip there propagates to all nodes.
 """
 from __future__ import annotations
 
+import logging
+
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
+from src.agents._metrics import zero_metrics
 from src.llm.cost import CostTracker
 from src.llm.factory import STRUCT_METHOD, get_llm
+
+_LOG = logging.getLogger(__name__)
 
 _SYSTEM = """You resolve a user-provided stock symbol or company name to an exact
 exchange-qualified ticker for data APIs.
@@ -45,10 +50,12 @@ def _get_cached_verdict(ticker: str, max_age_min: int):
     try:
         from src.memory.cache import get_cached_verdict
     except ImportError:
+        # Expected when WP-C is not yet merged; stay silent.
         return None
     try:
         return get_cached_verdict(ticker, max_age_min)
-    except Exception:
+    except Exception as exc:
+        _LOG.warning("verdict cache lookup failed: %s", exc)
         return None
 
 
@@ -67,8 +74,7 @@ async def router(state: dict) -> dict:
     # Guarantee at least one metrics record (tracker is empty when LLM call was
     # a no-op in unit tests or when structured-output bypasses callbacks).
     if not per_node:
-        per_node = [{"node": "router", "model": "", "prompt_tokens": 0,
-                     "completion_tokens": 0, "latency_s": 0.0, "cost_usd": 0.0}]
+        per_node = zero_metrics("router")
 
     out: dict = {
         "resolved_ticker": resolution.resolved_ticker,

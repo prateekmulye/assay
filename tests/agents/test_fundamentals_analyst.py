@@ -46,7 +46,31 @@ async def test_fundamentals_analyst_tool_failure_degrades(monkeypatch):
     def _boom(t):
         raise ToolError("yfinance", "no fundamentals")
 
+    def _llm_must_not_be_called(tier):
+        raise AssertionError("llm called")
+
     monkeypatch.setattr(fund_mod, "fetch_fundamentals", _boom)
-    monkeypatch.setattr(fund_mod, "get_llm", lambda tier: (_ for _ in ()).throw(AssertionError("llm called")))
+    monkeypatch.setattr(fund_mod, "get_llm", _llm_must_not_be_called)
     out = await fundamentals_analyst({"resolved_ticker": "BAD"})
     assert out["analyst_reports"]["fundamentals"]["confidence"] == 0.0
+
+
+async def test_fundamentals_analyst_llm_failure_degrades(monkeypatch):
+    """If ainvoke raises (e.g. ConnectionError), node must degrade rather than crash."""
+    monkeypatch.setattr(fund_mod, "fetch_fundamentals", lambda t: _fund())
+
+    class _FailingStructured:
+        async def ainvoke(self, messages, config=None):
+            raise ConnectionError("LLM unreachable")
+
+    class _FailingLLM:
+        def with_structured_output(self, schema, method=None):
+            return _FailingStructured()
+
+    monkeypatch.setattr(fund_mod, "get_llm", lambda tier: _FailingLLM())
+    out = await fundamentals_analyst({"resolved_ticker": "AAPL"})
+    rep = out["analyst_reports"]["fundamentals"]
+    assert rep["confidence"] == 0.0
+    assert "Fundamentals unavailable:" in rep["summary"]
+    assert "LLM error" in rep["summary"]
+    assert out["run_metrics"][0]["node"] == "fundamentals_analyst"
