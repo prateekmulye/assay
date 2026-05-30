@@ -1,5 +1,4 @@
 # tests/test_embeddings.py
-import pytest
 from src.memory.embeddings import (
     Embedder,
     FastEmbedEmbedder,
