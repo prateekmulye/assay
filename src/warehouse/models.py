@@ -176,7 +176,7 @@ class Verdict(Base):
     __table_args__ = (Index("ix_verdicts_ticker_ts", "ticker", "ts"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    ticker: Mapped[str] = mapped_column(String, index=True)
+    ticker: Mapped[str] = mapped_column(String)
     ts: Mapped[datetime]
     decision: Mapped[dict[str, Any]] = mapped_column(JSON)
 

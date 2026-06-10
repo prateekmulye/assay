@@ -28,11 +28,9 @@ def upgrade() -> None:
         sa.Column("ts", sa.DateTime(timezone=True), nullable=False),
         sa.Column("decision", sa.JSON(), nullable=False),
     )
-    op.create_index("ix_verdicts_ticker", "verdicts", ["ticker"])
     op.create_index("ix_verdicts_ticker_ts", "verdicts", ["ticker", "ts"])
 
 
 def downgrade() -> None:
     op.drop_index("ix_verdicts_ticker_ts", table_name="verdicts")
-    op.drop_index("ix_verdicts_ticker", table_name="verdicts")
     op.drop_table("verdicts")

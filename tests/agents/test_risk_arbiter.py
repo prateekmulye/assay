@@ -1,4 +1,6 @@
 # tests/agents/test_risk_arbiter.py
+import logging
+
 import pytest
 
 from src.agents.risk import arbiter as arb_mod
@@ -117,6 +119,37 @@ async def test_arbiter_survives_missing_store_verdict(monkeypatch, make_fake_llm
 
     out = await arb_mod.risk_arbiter(_base_state())
     assert out["final_decision"]["action"] == "SELL"
+
+
+@pytest.mark.asyncio
+async def test_arbiter_survives_store_verdict_failure(monkeypatch, make_fake_llm, caplog):
+    """Async store_verdict raising must not abort the node: the arbiter still returns a
+    valid FinalDecision-shaped output, and the degrade warning keeps the traceback."""
+    decision = FinalDecision(action="BUY", conviction=0.7, score=70, rationale="ok")
+    fake = make_fake_llm([decision])
+    monkeypatch.setattr(arb_mod, "get_llm", lambda tier: fake)
+
+    async def fake_run_debate(*a, **k):
+        return [], [{"node": "risk_debate", "prompt_tokens": 0, "completion_tokens": 0,
+                     "latency_s": 0.0, "cost_usd": 0.0, "model": ""}]
+    monkeypatch.setattr(arb_mod, "run_debate", fake_run_debate)
+
+    async def _boom_store_verdict(*a, **k):
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(arb_mod, "store_verdict", _boom_store_verdict)
+
+    with caplog.at_level(logging.WARNING, logger="src.agents.risk.arbiter"):
+        out = await arb_mod.risk_arbiter(_base_state())  # must not raise
+
+    fd = out["final_decision"]
+    assert fd == decision.model_dump()
+    assert fd["action"] in {"BUY", "SELL", "HOLD"}
+    assert isinstance(out["risk_debate"]["adjustments"], list)
+    # The store-failure warning must carry the traceback (exc_info) for diagnosis.
+    store_warnings = [r for r in caplog.records if "store_verdict failed" in r.getMessage()]
+    assert store_warnings, "expected a store-failure degrade warning"
+    assert store_warnings[0].exc_info is not None
 
 
 @pytest.mark.asyncio

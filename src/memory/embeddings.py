@@ -2,7 +2,8 @@
 """Local, key-free text embeddings (fastembed / BGE-small) behind a swap seam.
 
 The vector backend is isolated here so it can be swapped later (e.g. an
-Ollama Cloud /v1/embeddings client) without touching store.py or cache.py.
+Ollama Cloud /v1/embeddings client) without touching the WP-9 pgvector
+semantic-search layer (or cache.py) that consumes it.
 """
 from __future__ import annotations
 
@@ -58,5 +59,5 @@ def get_embedder() -> Embedder:
     except Exception as exc:
         raise RuntimeError(
             f"FastEmbed model load failed ({exc}). Check the ONNX model cache "
-            "or inject a custom embedder via store construction."
+            "or swap in a custom Embedder here for WP-9 pgvector semantic search."
         ) from exc

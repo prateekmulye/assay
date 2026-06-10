@@ -15,7 +15,6 @@ from __future__ import annotations
 import logging
 import time
 from datetime import UTC, datetime
-from typing import Callable
 
 from src.llm.schemas import FinalDecision
 from src.warehouse.db import session_scope, warehouse_enabled
@@ -29,7 +28,6 @@ async def store_verdict(
     decision: FinalDecision,
     *,
     now: int | None = None,
-    clock: Callable[[], float] = time.time,
 ) -> None:
     """Persist a FinalDecision for `ticker`, stamped with epoch `ts`.
 
@@ -39,7 +37,7 @@ async def store_verdict(
     if not warehouse_enabled():
         _LOG.debug("verdict cache disabled (no DATABASE_URL); skipping store for %s", ticker)
         return
-    ts = int(now if now is not None else clock())
+    ts = int(now if now is not None else time.time())
     async with session_scope() as session:
         await insert_verdict(
             session, ticker, decision.model_dump(), datetime.fromtimestamp(ts, tz=UTC)
@@ -51,7 +49,6 @@ async def get_cached_verdict(
     max_age_min: int,
     *,
     now: int | None = None,
-    clock: Callable[[], float] = time.time,
 ) -> FinalDecision | None:
     """Return the newest cached FinalDecision for `ticker` if it is no older than
     `max_age_min` minutes (inclusive — exactly at the limit is still fresh);
@@ -66,14 +63,16 @@ async def get_cached_verdict(
     if not warehouse_enabled():
         return None
     try:
+        # Deliberate session_scope reuse on the read path: a commit after the SELECT
+        # is accepted for the simplicity of one shared transaction helper.
         async with session_scope() as session:
             row = await latest_verdict(session, ticker)
-        if row is None:
-            return None
-        current = int(now if now is not None else clock())
-        if current - int(row.ts.timestamp()) > max_age_min * 60:
-            return None
-        return FinalDecision(**row.decision)
+            if row is None:
+                return None
+            current = int(now if now is not None else time.time())
+            if current - int(row.ts.timestamp()) > max_age_min * 60:
+                return None
+            return FinalDecision(**row.decision)
     except Exception as exc:
-        _LOG.warning("verdict cache lookup failed (%s); treating as miss", exc)
+        _LOG.warning("verdict cache lookup failed (%s); treating as miss", exc, exc_info=exc)
         return None

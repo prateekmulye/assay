@@ -136,8 +136,8 @@ async def risk_arbiter(state: AgentState) -> dict:
     if store_verdict is not None:
         try:
             await store_verdict(ticker, decision)
-        except Exception as exc:  # pragma: no cover - defensive; cache must never break the run
-            _LOG.warning("risk_arbiter: store_verdict failed (%s); continuing", exc)
+        except Exception as exc:  # defensive; cache must never break the run
+            _LOG.warning("risk_arbiter: store_verdict failed (%s); continuing", exc, exc_info=exc)
 
     adjustments = _derive_adjustments(proposal, decision)
     per_node = tracker.totals()["per_node"] or zero_metrics("risk_arbiter")
