@@ -26,13 +26,25 @@ from sqlalchemy import select
 
 from src.warehouse.db import session_scope, warehouse_enabled
 from src.warehouse.models import FundamentalsSnapshot, Instrument, PriceBar
-from src.warehouse.repos import bulk_upsert_price_bars, insert_fundamentals, upsert_instrument, upsert_news
+from src.warehouse.repos import (
+    bulk_append_run_events,
+    bulk_upsert_price_bars,
+    create_run,
+    finish_run,
+    insert_fundamentals,
+    upsert_instrument,
+    upsert_news,
+)
 
 _LOG = logging.getLogger(__name__)
 
 # Keep bulk inserts comfortably below asyncpg's ~32k bind-param ceiling
 # (8 params/row -> ~4k bars max per call; see bulk_upsert_price_bars).
 _PRICE_CHUNK = 2000
+
+# Run events are 3 params/row, but token streams can number thousands; chunk
+# conservatively at the same 2000-row boundary as price bars.
+_RUN_EVENT_CHUNK = 2000
 
 FetchBars = Callable[[str, datetime | None], Awaitable[list[dict[str, Any]]]]
 
@@ -267,6 +279,103 @@ async def refresh_prices(
             ticker, exchange, exc, exc_info=exc,
         )
         return 0
+
+
+# ------------------------------------------------------------ run persistence
+#
+# WP-4: every API analysis run lands as a `runs` row (created at stream start,
+# finished at done/error/abort) plus the full ordered SSE event stream in
+# `run_events` — the Research Library + timeline replay UI (WP-5/8) read these.
+# Same module contract as everything above: disabled -> no-op, errors -> log
+# WARNING and degrade, NEVER raise into the stream.
+
+
+async def record_run_start(run_id: str, ticker: str, debate_mode: str) -> bool:
+    """Create the `runs` row (status "running"). True on success."""
+    if not warehouse_enabled():
+        return False
+    try:
+        async with session_scope() as session:
+            await create_run(session, run_id, ticker, debate_mode)
+        return True
+    except Exception as exc:
+        _LOG.warning(
+            "warehouse ingest: record_run_start failed for %s (%s): %s",
+            run_id, ticker, exc, exc_info=exc,
+        )
+        return False
+
+
+async def record_run_events(run_id: str, events: list[dict[str, Any]]) -> int:
+    """Bulk-append the run's FULL ordered SSE event stream. Returns attempted count.
+
+    Seq contract: ``seq`` is assigned by 0-based list position — callers buffer
+    the entire stream and write it ONCE at run end (never per-event during
+    streaming). Partial/incremental appends are not supported; replaying the
+    same (or a prefix-extended) list is idempotent because the underlying insert
+    is ON CONFLICT (run_id, seq) DO NOTHING. Each input dict is stored verbatim
+    as the ``event`` JSON (the stream layer shapes ``{"name", "data", "ts_ms"}``).
+    Inserts are chunked at 2000 rows.
+    """
+    if not warehouse_enabled() or not events:
+        return 0
+    try:
+        rows = [{"seq": seq, "event": event} for seq, event in enumerate(events)]
+        attempted = 0
+        async with session_scope() as session:
+            for i in range(0, len(rows), _RUN_EVENT_CHUNK):
+                attempted += await bulk_append_run_events(
+                    session, run_id, rows[i : i + _RUN_EVENT_CHUNK]
+                )
+        return attempted
+    except Exception as exc:
+        _LOG.warning(
+            "warehouse ingest: record_run_events failed for %s (%d events): %s",
+            run_id, len(events), exc, exc_info=exc,
+        )
+        return 0
+
+
+async def record_run_finish(
+    run_id: str,
+    *,
+    status: str,
+    final_decision: dict[str, Any] | None = None,
+    report: str | None = None,
+    metrics: list[Any] | dict[str, Any] | None = None,
+) -> bool:
+    """Finalize the `runs` row. True iff the row existed and was updated.
+
+    Status vocabulary: "finished" (done, with payload), "error" (error event,
+    no payload), "aborted" (client disconnected before done/error). Only
+    "finished" runs are honored by ``repos.latest_finished_run`` — verdict-cache
+    semantics are preserved.
+    """
+    if not warehouse_enabled():
+        return False
+    try:
+        async with session_scope() as session:
+            run = await finish_run(
+                session,
+                run_id,
+                status=status,
+                final_decision=final_decision,
+                report=report,
+                metrics=metrics,
+            )
+        if run is None:
+            _LOG.warning(
+                "warehouse ingest: record_run_finish found no runs row for %s "
+                "(record_run_start likely failed earlier)", run_id,
+            )
+            return False
+        return True
+    except Exception as exc:
+        _LOG.warning(
+            "warehouse ingest: record_run_finish failed for %s (status=%s): %s",
+            run_id, status, exc, exc_info=exc,
+        )
+        return False
 
 
 # ----------------------------------------------------------- freshness helpers

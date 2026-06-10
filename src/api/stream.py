@@ -15,6 +15,8 @@ run_metrics holds all per-node entries — 12 for the on-topology stub graph).
 """
 from __future__ import annotations
 
+import json
+import time
 import uuid
 from collections.abc import AsyncIterator
 from functools import lru_cache
@@ -29,12 +31,76 @@ from src.api.schemas import (
     start_payload,
     token_payload,
 )
+from src.config.settings import get_settings
 from src.graph import build_graph
 from src.obs.recorder import RunRecorder
+from src.warehouse.ingest import record_run_events, record_run_finish, record_run_start
 
 
 def _node_from_messages_meta(metadata: dict[str, Any]) -> str:
     return metadata.get("langgraph_node", "unknown")
+
+
+class _RunPersistence:
+    """Warehouse persistence bookkeeping for one analysis run (WP-4).
+
+    ``capture`` wraps ``sse_event``: it buffers every emitted event as
+    ``{"name", "data", "ts_ms"}`` (ts_ms at yield time — the timing that powers
+    the replay scrubber) and returns the SSE dict to yield. Events are written
+    in ONE bulk insert at ``finalize`` — never per-event during streaming (token
+    events can number thousands). All writes go through the never-raise ingest
+    API, so a disabled warehouse or DB failure cannot affect streaming.
+    """
+
+    def __init__(self, run_id: str, ticker: str, debate_mode: str | None) -> None:
+        self.run_id = run_id
+        self.ticker = ticker
+        # None means "settings default" (same resolution as build_graph); the
+        # runs row stores the resolved value.
+        self.debate_mode: str = debate_mode or get_settings().debate_mode
+        self.events: list[dict[str, Any]] = []
+        # Until done/error is reached, the run counts as aborted (client
+        # disconnect mid-stream lands here via GeneratorExit -> finally).
+        self.status = "aborted"
+        self.final_decision: dict[str, Any] | None = None
+        self.report: str | None = None
+        self.metrics: list[Any] | None = None
+
+    async def start(self) -> None:
+        await record_run_start(self.run_id, self.ticker, self.debate_mode)
+
+    def capture(self, name: str, payload: dict[str, Any]) -> dict[str, str]:
+        event = sse_event(name, payload)
+        # Round-trip the serialized payload: sse_event already coerced any
+        # non-JSON values (default=str), so the stored event is exactly what
+        # the client received and is guaranteed JSON-safe for the DB column.
+        self.events.append(
+            {"name": name, "data": json.loads(event["data"]), "ts_ms": int(time.time() * 1000)}
+        )
+        return event
+
+    def mark_done(
+        self, *, final_decision: dict[str, Any], report: str, metrics: list[Any]
+    ) -> None:
+        self.status = "finished"
+        self.final_decision = final_decision
+        self.report = report
+        self.metrics = metrics
+
+    def mark_error(self) -> None:
+        self.status = "error"  # error/aborted runs persist no payload
+
+    async def finalize(self) -> None:
+        # Events first, finish second: a "finished" runs row implies its events
+        # are already queryable (the Research Library lists finished runs).
+        await record_run_events(self.run_id, self.events)
+        await record_run_finish(
+            self.run_id,
+            status=self.status,
+            final_decision=self.final_decision,
+            report=self.report,
+            metrics=self.metrics,
+        )
 
 
 @lru_cache(maxsize=4)
@@ -57,17 +123,24 @@ async def analyze_event_stream(
 ) -> AsyncIterator[dict[str, str]]:
     """Yield sse-starlette event dicts for one analysis run over the compiled graph.
 
-    Also persists a JSONL trace via RunRecorder so ``GET /runs/{run_id}`` can replay
-    the run; the trace is flushed even if the stream errors mid-run.
+    Persists two run records, both flushed even if the stream errors mid-run:
+    a JSONL trace via RunRecorder (local fallback; ``GET /runs/{run_id}`` replays
+    it) and — when the warehouse is enabled — a ``runs`` row plus the full ordered
+    SSE event stream in ``run_events`` (WP-4; never affects streaming).
     """
     run_id = run_id or uuid.uuid4().hex[:12]
     recorder = RunRecorder(runs_dir=runs_dir, run_id=run_id)
+    persistence = _RunPersistence(run_id, ticker, debate_mode)
     recorder.record("__run__", "start", {"ticker": ticker, "investor_mode": investor_mode})
-    yield sse_event("start", start_payload(run_id, ticker, investor_mode))
+    await persistence.start()
 
     final_state: dict[str, Any] = {}
     seen_started: set[str] = set()
     try:
+        # The start yield lives INSIDE the try so a client disconnect at any
+        # yield point (GeneratorExit) still reaches the finally-persistence.
+        yield persistence.capture("start", start_payload(run_id, ticker, investor_mode))
+
         graph = _compiled_graph(debate_mode)
         inputs = {"ticker": ticker, "investor_mode": investor_mode, "run_id": run_id}
 
@@ -79,9 +152,9 @@ async def analyze_event_stream(
                 for node, delta in (chunk or {}).items():
                     if node not in seen_started:
                         seen_started.add(node)
-                        yield sse_event("node_start", node_start_payload(run_id, node))
+                        yield persistence.capture("node_start", node_start_payload(run_id, node))
                     recorder.record(node, "node_complete", delta or {})
-                    yield sse_event(
+                    yield persistence.capture(
                         "node_complete", node_complete_payload(run_id, node, delta or {})
                     )
             elif mode == "messages":
@@ -89,7 +162,7 @@ async def analyze_event_stream(
                 message, metadata = chunk
                 text = getattr(message, "content", "") or ""
                 if text:
-                    yield sse_event(
+                    yield persistence.capture(
                         "token", token_payload(run_id, _node_from_messages_meta(metadata), text)
                     )
             elif mode == "values":
@@ -102,13 +175,20 @@ async def analyze_event_stream(
         recorder.record(
             "__run__", "done", {"final_decision": decision, "run_metrics": metrics}
         )
-        yield sse_event(
+        persistence.mark_done(final_decision=decision, report=report, metrics=metrics)
+        yield persistence.capture(
             "done",
             done_payload(run_id, final_report=report, final_decision=decision, run_metrics=metrics),
         )
     except Exception as exc:  # never leak a 500 mid-stream: emit a clean error event
         recorder.record("__run__", "error", {"error": str(exc)})
-        yield sse_event("error", error_payload(run_id, str(exc)))
+        persistence.mark_error()
+        yield persistence.capture("error", error_payload(run_id, str(exc)))
     finally:
-        # Persist the trace regardless of success/failure so /runs/{id} resolves.
+        # Persist the traces regardless of success/failure/disconnect: JSONL so
+        # /runs/{id} resolves, then the warehouse (events before the run-finish
+        # row; both no-op/degrade when the warehouse is unavailable). A client
+        # disconnect lands here via GeneratorExit (not the except above), so the
+        # status stays "aborted" — we must only await here, never yield.
         recorder.flush()
+        await persistence.finalize()
