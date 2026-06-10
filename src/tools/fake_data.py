@@ -31,8 +31,9 @@ def base_price(ticker: str) -> float:
 
 
 def demo_score(ticker: str) -> int:
-    """0-100 outlook score; >= 70 reads as BUY (AAPL-style demo tickers lean bullish)."""
-    return 55 + _h(f"{ticker}:score") % 40
+    """55-94 outlook score; >= 70 reads as BUY. The salt is tuned so the canonical
+    demo ticker AAPL lands a confident BUY (86) while others spread BUY/HOLD."""
+    return 55 + _h(f"{ticker}:alpha") % 40
 
 
 def news_url(ticker: str, i: int) -> str:
