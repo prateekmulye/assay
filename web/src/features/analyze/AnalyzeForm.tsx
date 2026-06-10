@@ -23,14 +23,17 @@ export function AnalyzeForm({
   onStop,
   isActive,
   disabled,
+  initialTicker,
 }: {
   onSubmit: (values: AnalyzeFormValues) => void;
   onStop: () => void;
   isActive: boolean;
   disabled?: boolean;
+  /** Prefill the ticker (e.g. a replay's "Run this ticker live" deep link). */
+  initialTicker?: string;
 }) {
   const tickerId = useId();
-  const [ticker, setTicker] = useState("AAPL");
+  const [ticker, setTicker] = useState(initialTicker?.toUpperCase() || "AAPL");
   const [investorMode, setInvestorMode] = useState<InvestorMode>("Neutral");
   const [debate, setDebate] = useState<"default" | DebateMode>("default");
 

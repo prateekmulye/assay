@@ -1,61 +1,250 @@
 /**
- * eventPlayer.ts — the WP-8 REPLAY SEAM (interface only; the player is WP-8).
+ * eventPlayer.ts — the WP-8 REPLAY DRIVER (implemented).
  *
- * The cockpit is a pure function of `AnalysisStreamState`. There are exactly two
- * ways that state gets produced:
+ * The cockpit is a pure function of `AnalysisStreamState`. Two drivers produce
+ * that state:
+ *   1. LIVE   — useAnalysisStream reduces a real SSE stream.
+ *   2. REPLAY — useEventPlayer (here) reduces a recorded RunDetail.events[] list
+ *               through the SAME reducer (analysisReducer), on a timer, to
+ *               re-create the exact live trajectory at playback speed.
  *
- *   1. LIVE   — `useAnalysisStream()` runs POST /api/analyze and reduces its SSE
- *               frames into state. This is what WP-7 wires up.
+ * Because both terminate in identical state, <Cockpit/> never knows which one is
+ * driving it. CockpitDriver captures the `{state, isActive}` equivalence.
  *
- *   2. REPLAY — WP-8 will take a recorded `RunDetail.events[]` (from
- *               GET /api/runs/{id}) and feed them through the SAME reducer, on a
- *               timer, to re-create the exact live trajectory at playback speed.
- *
- * Because both paths terminate in identical `AnalysisStreamState`, the cockpit
- * component tree never needs to know which one is driving it. The contract below
- * is the only thing WP-8 must satisfy: produce an `AnalysisStreamState` (plus the
- * same control surface the live hook exposes) and hand it to <Cockpit/>.
- *
- * WP-8 implementation sketch (do NOT build here):
- *   - reuse the reducer from useAnalysisStream (extract it if needed),
- *   - map each ReplayEvent -> an AnalysisEvent (the `name`/`data` shape from the
- *     recorder maps 1:1 onto the SSE event union),
- *   - dispatch them on a setInterval/raf scheduled by `ts_ms` deltas * (1/speed),
- *   - expose play/pause/seek/setSpeed; `state` stays the same shape.
+ * Design notes:
+ *   - SEEK is a pure re-reduce: fold every step whose synthetic offset <= target
+ *     time from the initial state. The reducer is cheap and pure, so scrubbing is
+ *     instant — and visually correct, because seeking reproduces the *causal*
+ *     accumulation (cost ticker, node statuses, deltas) rather than interpolating.
+ *   - The wall clock is virtualised: we track elapsed playback ms (advanced while
+ *     playing, scaled by speed) and derive which steps are "due". One rAF-paced
+ *     loop drives both the visible time and the dispatch, so pause/resume/seek
+ *     never desync.
+ *   - analysisClock is monkeypatched to a deterministic counter during a folded
+ *     re-reduce so node lifecycle stamps stay ordered without wall-clock drift.
  */
-import type {
-  AnalysisStreamState,
-  UseAnalysisStream,
-} from "@/hooks/useAnalysisStream";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import {
+  analysisClock,
+  initialState,
+  reducer,
+  type AnalysisStreamState,
+} from "@/hooks/analysisReducer";
+import type { UseAnalysisStream } from "@/hooks/useAnalysisStream";
 import type { ReplayEvent } from "@/lib/api";
 
-/** The control surface a replay driver must expose to the cockpit. */
+import { compileReplay, type ReplayStep } from "./replayEvents";
+
+/** Speeds the transport offers (Hick's Law: a small, tappable set). */
+export const REPLAY_SPEEDS = [1, 2, 4, 8] as const;
+export type ReplaySpeed = (typeof REPLAY_SPEEDS)[number];
+
+/** The control surface a replay driver exposes to the cockpit + transport bar. */
 export interface EventPlayerControls {
   state: AnalysisStreamState;
   isActive: boolean;
+  /** True once the playhead has reached the end of the recorded timeline. */
+  isEnded: boolean;
   play: () => void;
   pause: () => void;
-  /** 0..1 progress through the recorded timeline. */
-  seek: (progress: number) => void;
-  setSpeed: (multiplier: number) => void;
+  /** Jump to an absolute synthetic time (ms); clamps to [0, duration]. */
+  seek: (timeMs: number) => void;
+  /** Jump to 0..1 progress through the recorded timeline. */
+  seekProgress: (progress: number) => void;
+  /** Step exactly one recorded event forward/back (arrow-key seeking). */
+  step: (direction: 1 | -1) => void;
+  restart: () => void;
+  setSpeed: (multiplier: ReplaySpeed) => void;
+  speed: ReplaySpeed;
+  /** Current playhead time (ms) and total duration (ms), synthetic 1x scale. */
+  elapsedMs: number;
+  durationMs: number;
+  /** 0..1 progress, for the scrubber fill. */
+  progress: number;
+  /** Stage ticks (node_complete offsets) for the pipeline-mapped scrubber. */
+  stageTicks: { offsetMs: number; node: string }[];
 }
 
 /**
- * The cockpit accepts EITHER the live stream hook's return OR a replay player's
- * controls — both expose `{ state, isActive }`, which is all the cockpit reads.
- * This alias documents that equivalence so the page can be driven by either.
+ * The cockpit accepts EITHER the live stream hook OR a replay player — both
+ * expose `{ state, isActive }`, which is all the cockpit reads.
  */
 export type CockpitDriver = Pick<
   UseAnalysisStream | EventPlayerControls,
   "state" | "isActive"
 >;
 
-/**
- * WP-8 will implement this. Kept as a typed stub so the seam is real and
- * type-checked today; calling it throws to make accidental use obvious.
- */
-export function useEventPlayer(_events: ReplayEvent[]): EventPlayerControls {
-  throw new Error(
-    "useEventPlayer is a WP-8 seam stub — the replay player is not built yet.",
+/** Fold steps with offset <= timeMs into a fresh state (the pure seek core). */
+function reduceUpTo(steps: ReplayStep[], timeMs: number): AnalysisStreamState {
+  // Deterministic, ordered lifecycle stamps during the fold (no wall clock).
+  const real = analysisClock.now;
+  let tick = 0;
+  analysisClock.now = () => ++tick;
+  try {
+    let state = initialState;
+    for (const s of steps) {
+      if (s.offsetMs > timeMs) break;
+      state = reducer(state, { kind: "event", event: s.event });
+    }
+    return state;
+  } finally {
+    analysisClock.now = real;
+  }
+}
+
+type PlayerState = { steps: ReplayStep[]; durationMs: number; timeMs: number };
+
+export function useEventPlayer(events: readonly ReplayEvent[]): EventPlayerControls {
+  const { steps, durationMs } = useMemo(() => compileReplay(events), [events]);
+
+  // `timeMs` is the source of truth; `state` is derived from it on every tick.
+  const [timeMs, setTimeMs] = useState(0);
+  const [speed, setSpeedState] = useState<ReplaySpeed>(4);
+  const [playing, setPlaying] = useState(false);
+
+  // Derived render state — a pure fold up to the current playhead.
+  const state = useMemo(() => reduceUpTo(steps, timeMs), [steps, timeMs]);
+
+  const rafRef = useRef<number | null>(null);
+  const lastTsRef = useRef<number | null>(null);
+  // Hold the latest time/speed/duration for the rAF loop without re-subscribing.
+  const ctl = useRef<PlayerState & { speed: ReplaySpeed }>({
+    steps,
+    durationMs,
+    timeMs,
+    speed,
+  });
+  ctl.current.steps = steps;
+  ctl.current.durationMs = durationMs;
+  ctl.current.timeMs = timeMs;
+  ctl.current.speed = speed;
+
+  const stopLoop = useCallback(() => {
+    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+    lastTsRef.current = null;
+  }, []);
+
+  const clamp = (t: number) => Math.max(0, Math.min(ctl.current.durationMs, t));
+
+  // The single rAF loop: advance virtual time by wall-delta * speed while playing.
+  const tick = useCallback(
+    (ts: number) => {
+      if (lastTsRef.current == null) lastTsRef.current = ts;
+      const wallDelta = ts - lastTsRef.current;
+      lastTsRef.current = ts;
+
+      const next = ctl.current.timeMs + wallDelta * ctl.current.speed;
+      if (next >= ctl.current.durationMs) {
+        setTimeMs(ctl.current.durationMs);
+        setPlaying(false);
+        stopLoop();
+        return;
+      }
+      setTimeMs(next);
+      rafRef.current = requestAnimationFrame(tick);
+    },
+    [stopLoop],
   );
+
+  const play = useCallback(() => {
+    // Replaying from the end restarts (Peak-End: re-watch is one tap).
+    if (ctl.current.timeMs >= ctl.current.durationMs) setTimeMs(0);
+    setPlaying(true);
+  }, []);
+
+  const pause = useCallback(() => {
+    setPlaying(false);
+    stopLoop();
+  }, [stopLoop]);
+
+  const seek = useCallback(
+    (t: number) => {
+      stopLoop();
+      lastTsRef.current = null; // resume cleanly after a scrub
+      setTimeMs(clamp(t));
+    },
+    [stopLoop],
+  );
+
+  const seekProgress = useCallback(
+    (p: number) => seek(p * ctl.current.durationMs),
+    [seek],
+  );
+
+  const step = useCallback(
+    (direction: 1 | -1) => {
+      const s = ctl.current.steps;
+      const now = ctl.current.timeMs;
+      if (direction > 0) {
+        const nxt = s.find((x) => x.offsetMs > now + 0.5);
+        seek(nxt ? nxt.offsetMs : ctl.current.durationMs);
+      } else {
+        // Land just past the previous step so its reduction is included.
+        let target = 0;
+        for (const x of s) {
+          if (x.offsetMs < now - 0.5) target = x.offsetMs;
+          else break;
+        }
+        seek(target);
+      }
+    },
+    [seek],
+  );
+
+  const restart = useCallback(() => {
+    seek(0);
+    setPlaying(true);
+  }, [seek]);
+
+  const setSpeed = useCallback((m: ReplaySpeed) => setSpeedState(m), []);
+
+  // Drive the loop on/off as `playing` flips.
+  useEffect(() => {
+    if (playing) {
+      lastTsRef.current = null;
+      rafRef.current = requestAnimationFrame(tick);
+      return () => stopLoop();
+    }
+    return undefined;
+  }, [playing, tick, stopLoop]);
+
+  // Autoplay once events are loaded (the recruiter shouldn't have to hunt for
+  // play). Honoured only on first mount with a non-empty timeline.
+  const didAutoplay = useRef(false);
+  useEffect(() => {
+    if (!didAutoplay.current && durationMs > 0) {
+      didAutoplay.current = true;
+      setPlaying(true);
+    }
+  }, [durationMs]);
+
+  const stageTicks = useMemo(
+    () =>
+      steps
+        .filter((s) => s.name === "node_complete" && s.node)
+        .map((s) => ({ offsetMs: s.offsetMs, node: s.node! })),
+    [steps],
+  );
+
+  const isEnded = durationMs > 0 && timeMs >= durationMs;
+
+  return {
+    state,
+    isActive: playing,
+    isEnded,
+    play,
+    pause,
+    seek,
+    seekProgress,
+    step,
+    restart,
+    setSpeed,
+    speed,
+    elapsedMs: timeMs,
+    durationMs,
+    progress: durationMs > 0 ? timeMs / durationMs : 0,
+    stageTicks,
+  };
 }
