@@ -18,6 +18,7 @@ from src.warehouse.repos import (
     append_run_event,
     bulk_append_run_events,
     bulk_upsert_price_bars,
+    count_runs,
     create_run,
     finish_run,
     get_quota,
@@ -27,11 +28,16 @@ from src.warehouse.repos import (
     insert_fundamentals,
     insert_verdict,
     latest_finished_run,
+    latest_fundamentals,
     latest_verdict,
     list_eval_results,
+    list_news_items,
+    list_price_bars,
     list_runs,
     list_watched,
+    resolve_instrument,
     save_eval_result,
+    search_instruments,
     set_watched,
     upsert_instrument,
     upsert_news,
@@ -388,3 +394,109 @@ async def test_latest_verdict_is_per_ticker(session):
     row = await latest_verdict(session, "MSFT")
     assert row is not None and row.decision == {"action": "SELL"}
     assert await latest_verdict(session, "ZZZZ") is None
+
+
+# ----------------------------------------------------- WP-5 API read queries
+
+
+async def _seed_instrument(session, ticker, exchange, name=None, watched=False):
+    inst = await upsert_instrument(
+        session, ticker=ticker, exchange=exchange, screener="america",
+        **({"name": name} if name else {}),
+    )
+    if watched:
+        await set_watched(session, inst.id, True)
+    return inst
+
+
+async def test_search_instruments_matches_ticker_or_name_case_insensitive(session):
+    await _seed_instrument(session, "AAPL", "NASDAQ", name="Apple Inc.")
+    await _seed_instrument(session, "MSFT", "NASDAQ", name="Microsoft Corporation")
+    await _seed_instrument(session, "JPM", "NYSE", name="JPMorgan Chase & Co.")
+
+    assert [i.ticker for i in await search_instruments(session, "aap")] == ["AAPL"]
+    # name substring, case-insensitive
+    assert [i.ticker for i in await search_instruments(session, "micro")] == ["MSFT"]
+    # matches both ticker (AAPL) and name (Apple) once; ordered ticker asc
+    assert [i.ticker for i in await search_instruments(session, "Ap")] == ["AAPL"]
+    # empty q matches everything, ticker asc
+    assert [i.ticker for i in await search_instruments(session, "")] == ["AAPL", "JPM", "MSFT"]
+    assert [i.ticker for i in await search_instruments(session, "")][:2] == ["AAPL", "JPM"]
+    assert len(await search_instruments(session, "", limit=2)) == 2
+    assert await search_instruments(session, "zzz-no-match") == []
+
+
+async def test_resolve_instrument_by_ticker_and_exchange(session):
+    nse = await _seed_instrument(session, "RELIANCE.NS", "NSE")
+    assert (await resolve_instrument(session, "RELIANCE.NS")).id == nse.id
+    assert (await resolve_instrument(session, "RELIANCE.NS", exchange="NSE")).id == nse.id
+    assert await resolve_instrument(session, "RELIANCE.NS", exchange="BSE") is None
+    assert await resolve_instrument(session, "NOPE") is None
+
+
+async def test_resolve_instrument_ambiguous_prefers_newest_price_bar(session):
+    stale = await _seed_instrument(session, "DUAL", "NYSE")
+    fresh = await _seed_instrument(session, "DUAL", "NASDAQ")
+    bare = await _seed_instrument(session, "DUAL", "AMEX")  # no bars at all
+    await bulk_upsert_price_bars(
+        session, stale.id,
+        [{"ts": TS - timedelta(days=30), "open": 1, "high": 1, "low": 1, "close": 1}],
+    )
+    await bulk_upsert_price_bars(
+        session, fresh.id,
+        [{"ts": TS, "open": 2, "high": 2, "low": 2, "close": 2}],
+    )
+    resolved = await resolve_instrument(session, "DUAL")
+    assert resolved is not None and resolved.id == fresh.id
+    # explicit exchange still wins over bar recency
+    assert (await resolve_instrument(session, "DUAL", exchange="AMEX")).id == bare.id
+
+
+async def test_list_price_bars_ascending_within_window(session):
+    inst = await _seed_instrument(session, "AAPL", "NASDAQ")
+    bars = [
+        {"ts": TS - timedelta(days=d), "open": 1.0, "high": 2.0, "low": 0.5,
+         "close": 1.5, "volume": 100 + d}
+        for d in (400, 10, 5, 1)
+    ]
+    await bulk_upsert_price_bars(session, inst.id, bars)
+    rows = await list_price_bars(session, inst.id, days=365)
+    assert [r.ts for r in rows] == sorted(r.ts for r in rows)
+    assert len(rows) == 3  # the 400-day-old bar is outside the window
+    assert await list_price_bars(session, inst.id, days=365, interval="1h") == []
+
+
+async def test_latest_fundamentals_newest_by_ts(session):
+    inst = await _seed_instrument(session, "AAPL", "NASDAQ")
+    assert await latest_fundamentals(session, inst.id) is None
+    await insert_fundamentals(session, inst.id, TS - timedelta(days=2), pe_ratio=10.0)
+    await insert_fundamentals(session, inst.id, TS, pe_ratio=28.0)
+    snap = await latest_fundamentals(session, inst.id)
+    assert snap is not None and snap.pe_ratio == 28.0
+
+
+async def test_list_news_items_newest_first_with_limit(session):
+    inst = await _seed_instrument(session, "AAPL", "NASDAQ")
+    items = [
+        {"ts": TS - timedelta(hours=h), "title": f"n{h}", "url": f"https://x.com/{h}"}
+        for h in (3, 1, 2)
+    ]
+    await upsert_news(session, inst.id, items)
+    rows = await list_news_items(session, inst.id)
+    assert [r.title for r in rows] == ["n1", "n2", "n3"]
+    assert [r.title for r in await list_news_items(session, inst.id, limit=2)] == ["n1", "n2"]
+
+
+async def test_list_runs_status_filter_and_count_runs(session):
+    await create_run(session, "r1", "AAPL", "on")
+    await create_run(session, "r2", "AAPL", "on")
+    await create_run(session, "r3", "MSFT", "off")
+    await finish_run(session, "r1", status="finished")
+    await finish_run(session, "r3", status="error")
+
+    assert {r.run_id for r in await list_runs(session, status="finished")} == {"r1"}
+    assert {r.run_id for r in await list_runs(session, ticker="AAPL", status="running")} == {"r2"}
+    assert await count_runs(session) == 3
+    assert await count_runs(session, ticker="AAPL") == 2
+    assert await count_runs(session, ticker="AAPL", status="finished") == 1
+    assert await count_runs(session, status="aborted") == 0
