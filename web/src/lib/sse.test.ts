@@ -157,4 +157,33 @@ describe("decodeEvent — all six event types", () => {
   it("returns null for a non-object payload", () => {
     expect(decodeEvent({ event: "token", data: "42" })).toBeNull();
   });
+
+  it("rejects node-scoped events missing the node field", () => {
+    for (const type of ["node_start", "node_complete", "token"]) {
+      expect(
+        decodeEvent({
+          event: "message",
+          data: JSON.stringify({ type, run_id: "r" }),
+        }),
+      ).toBeNull();
+    }
+  });
+
+  it("rejects node-scoped events whose node field is not a string", () => {
+    expect(
+      decodeEvent({
+        event: "token",
+        data: '{"type":"token","run_id":"r","node":42,"text":"x"}',
+      }),
+    ).toBeNull();
+  });
+
+  it("still accepts non-node events without a node field", () => {
+    expect(
+      decodeEvent({
+        event: "error",
+        data: '{"type":"error","run_id":"r","message":"m"}',
+      }),
+    ).not.toBeNull();
+  });
 });

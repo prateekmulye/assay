@@ -1,7 +1,7 @@
 import { Github } from "lucide-react";
 
 /**
- * Footer — quiet, persistent. Carries the GitHub link placeholder and the
+ * Footer — quiet, persistent. Carries the GitHub source link and the
  * "powered by a 12-node multi-agent graph" provenance line that frames the whole
  * project as an engineering artifact, not a toy.
  */
@@ -17,7 +17,7 @@ export function Footer() {
           · router → analysts → debate → trader → risk → reporter
         </p>
         <a
-          href="https://github.com/"
+          href="https://github.com/prateekmulye/FinResearchAI"
           target="_blank"
           rel="noreferrer"
           className="inline-flex items-center gap-2 rounded-md text-xs font-medium text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]"

@@ -7,7 +7,7 @@
  * streamed token text, the terminal `done` payload, and any error. Abortable via
  * the returned `stop()` and on unmount.
  */
-import { useCallback, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 
 import {
   ApiError,
@@ -16,7 +16,12 @@ import {
   type InvestorMode,
   type NodeMetric,
 } from "@/lib/api";
-import { SseFrameParser, decodeEvent, type AnalysisEvent } from "@/lib/sse";
+import {
+  SseFrameParser,
+  decodeEvent,
+  type AnalysisEvent,
+  type RawSseFrame,
+} from "@/lib/sse";
 
 export type StreamPhase = "idle" | "connecting" | "streaming" | "done" | "error";
 
@@ -61,6 +66,7 @@ type Action =
   | { kind: "connect" }
   | { kind: "event"; event: AnalysisEvent }
   | { kind: "error"; message: string }
+  | { kind: "abort" }
   | { kind: "reset" };
 
 function ensureNode(state: AnalysisStreamState, node: string): AnalysisStreamState {
@@ -83,6 +89,12 @@ function reducer(state: AnalysisStreamState, action: Action): AnalysisStreamStat
       return { ...initialState, phase: "connecting" };
     case "error":
       return { ...state, phase: "error", error: action.message };
+    case "abort":
+      // A user-stopped run lands back at rest (the form recovers its Run
+      // affordance); a terminal done/error phase is never clobbered.
+      return state.phase === "connecting" || state.phase === "streaming"
+        ? { ...state, phase: "idle" }
+        : state;
     case "event": {
       const e = action.event;
       switch (e.type) {
@@ -163,7 +175,13 @@ export function useAnalysisStream(): UseAnalysisStream {
   const stop = useCallback(() => {
     controllerRef.current?.abort();
     controllerRef.current = null;
+    // Terminal transition: without this the phase stays "streaming" and the
+    // Stop button is dead. The reducer ignores it once done/error has landed.
+    dispatch({ kind: "abort" });
   }, []);
+
+  // Abort any in-flight stream when the owning component unmounts.
+  useEffect(() => () => controllerRef.current?.abort(), []);
 
   const reset = useCallback(() => {
     stop();
@@ -223,20 +241,27 @@ export function useAnalysisStream(): UseAnalysisStream {
       const decoder = new TextDecoder();
       const parser = new SseFrameParser();
 
+      // Tracks whether a terminal done/error frame arrived, so a stream that
+      // drains without one can be surfaced instead of streaming forever.
+      let sawTerminal = false;
+      const handleFrame = (frame: RawSseFrame) => {
+        const event = decodeEvent(frame);
+        if (!event) return;
+        if (event.type === "done" || event.type === "error") sawTerminal = true;
+        dispatch({ kind: "event", event });
+      };
+
       try {
         for (;;) {
           const { value, done } = await reader.read();
           if (done) break;
           const text = decoder.decode(value, { stream: true });
-          for (const frame of parser.push(text)) {
-            const event = decodeEvent(frame);
-            if (event) dispatch({ kind: "event", event });
-          }
+          for (const frame of parser.push(text)) handleFrame(frame);
         }
         // Drain any final, blank-line-less frame.
-        for (const frame of parser.flush()) {
-          const event = decodeEvent(frame);
-          if (event) dispatch({ kind: "event", event });
+        for (const frame of parser.flush()) handleFrame(frame);
+        if (!sawTerminal && !controller.signal.aborted) {
+          dispatch({ kind: "error", message: "stream ended early" });
         }
       } catch (err) {
         if (controller.signal.aborted) return; // user stopped — not an error

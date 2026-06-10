@@ -148,10 +148,13 @@ export function decodeEvent(frame: RawSseFrame): AnalysisEvent | null {
   const type = (obj.type as string) ?? frame.event;
 
   switch (type) {
-    case "start":
     case "node_start":
     case "node_complete":
     case "token":
+      // Node-scoped events are unusable (and unsafe to cast) without a node id.
+      if (typeof obj.node !== "string") return null;
+      return { ...(obj as object), type } as AnalysisEvent;
+    case "start":
     case "error":
     case "done":
       return { ...(obj as object), type } as AnalysisEvent;

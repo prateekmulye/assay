@@ -21,7 +21,7 @@ describe("TopNav — shell smoke", () => {
 
   it("exposes all four section links", () => {
     renderWithProviders(<TopNav />);
-    // Each label appears in the desktop tablist AND the mobile row, so assert >=1.
+    // Each label appears in the desktop link row AND the mobile row, so assert >=1.
     for (const label of ["Analyze", "Library", "Market", "Eval"]) {
       expect(
         screen.getAllByRole("link", { name: new RegExp(label, "i") }).length,

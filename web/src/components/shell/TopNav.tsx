@@ -46,11 +46,9 @@ export function TopNav() {
           <Wordmark />
         </NavLink>
 
-        <div
-          className="ml-2 hidden items-center gap-1 sm:flex"
-          role="tablist"
-          aria-label="Sections"
-        >
+        {/* Plain nav links (NavLink anchors) — deliberately NOT a tablist:
+            tabs control in-page panels; these navigate between routes. */}
+        <div className="ml-2 hidden items-center gap-1 sm:flex">
           {ROUTES.map((route) => {
             const isActive = activeRoot === route.to;
             return (

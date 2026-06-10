@@ -148,7 +148,9 @@ Shared spring bridges the static-terminal feel and the fluid shell:
 - **Breathing** (`.animate-breathe`, 2600ms): the active/live element (health
   dot, the currently-generating node). Scale 1→1.05, opacity .8→1.
 - **Nav active pill:** one shared Motion `layoutId="nav-active-pill"` slides
-  between tabs (continuous element, spring).
+  between tabs (continuous element, spring). Deliberate exception to the shared
+  spring: it hardcodes `{ stiffness: 380, damping: 32, mass: 0.8 }` — a tighter,
+  faster settle tuned for high-frequency tab switching.
 - **Page transition:** 280ms fade + 8px lift, spring easing, keyed on pathname.
 - **Aurora:** two blurred blobs on 64s/88s linear rotations (transform-only,
   compositor thread, zero JS).
