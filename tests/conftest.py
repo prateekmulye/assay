@@ -279,7 +279,14 @@ def env_isolation(monkeypatch):
     real .env or reach a live provider, and that get_settings()/get_llm() caches
     don't leak a real key between tests.
     """
-    for key in ("OLLAMA_API_KEY", "FIRECRAWL_API_KEY", "LLM_BASE_URL", "LANGSMITH_API_KEY"):
+    for key in (
+        "OLLAMA_API_KEY",
+        "FIRECRAWL_API_KEY",
+        "LLM_BASE_URL",
+        "LANGSMITH_API_KEY",
+        "DATABASE_URL",
+        "DB_ECHO",
+    ):
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("RUN_LIVE", "0")
     # Construct Settings without reading the on-disk .env in tests.
