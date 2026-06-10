@@ -14,8 +14,12 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      # Unset -> Caddyfile falls back to :80 (local stack testing, no TLS).
-      CADDY_DOMAIN: ${CADDY_DOMAIN:-}
+      # Unset -> plain :80 (local stack testing, no TLS). The default must be
+      # applied HERE: compose would otherwise export CADDY_DOMAIN="" (set but
+      # empty), and Caddy's {$VAR:default} only falls back when the var is
+      # truly unset — an empty site address makes the first block parse as
+      # global options and Caddy crash-loops.
+      CADDY_DOMAIN: ${CADDY_DOMAIN:-:80}
     volumes:
       - caddy_data:/data      # ACME account + certs; MUST persist across deploys
       - caddy_config:/config
