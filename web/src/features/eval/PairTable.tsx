@@ -23,7 +23,7 @@ import {
   formatSignedUsd,
   toneColor,
 } from "./evalFormat";
-import { JudgePrefChip } from "./judgeChrome.tsx";
+import { JudgePrefChip } from "./JudgeBadges";
 import { type SortKey, type SortState, nextSort, sortPairs } from "./pairSort";
 
 export function PairTable({ pairs }: { pairs: EvalPair[] }) {

@@ -85,6 +85,11 @@ describe("EvalPage", () => {
 
     // Hero judge-prefers-debate rate.
     expect(await screen.findByText("75%")).toBeInTheDocument();
+    // All four delta tiles render, token Δ included, with the stdev annotation
+    // on the score tile.
+    expect(screen.getByText("Mean token Δ")).toBeInTheDocument();
+    expect(screen.getByText("+1,200")).toBeInTheDocument();
+    expect(screen.getByText(/±3\.0 σ/)).toBeInTheDocument();
     // The PROXY honesty cue is always present.
     expect(
       screen.getByText(/judge-preference proxy — not realized p&l/i),

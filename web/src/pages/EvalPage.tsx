@@ -25,7 +25,7 @@ import {
   EvalUnavailable,
 } from "@/features/eval/EvalStates";
 import { readPairs, readSummary } from "@/features/eval/evalFormat";
-import { JudgeLegend } from "@/features/eval/judgeChrome.tsx";
+import { JudgeLegend } from "@/features/eval/JudgeBadges";
 import { MethodologyTape } from "@/features/eval/MethodologyTape";
 import { PairTable } from "@/features/eval/PairTable";
 import { RunRail } from "@/features/eval/RunRail";

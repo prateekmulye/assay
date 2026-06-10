@@ -2,9 +2,9 @@
  * VerdictBand — the headline claim of the screen, as an asymmetric bento of
  * mono stat tiles (NotebookLM "Asymmetric Bento Verdict Band"). The hero tile —
  * judge-prefers-debate rate — is isolated by SIZE (spans two columns) and a slow
- * breathing oscillation (Von Restorff + "this feed is live"); the five
- * supporting deltas are smaller, each color-encoded by OUTCOME UTILITY with a
- * directional arrow (Functional Signal Inversion) so a recruiter reads
+ * breathing oscillation (Von Restorff + "this feed is live"); the six
+ * supporting tiles are smaller, each delta color-encoded by OUTCOME UTILITY
+ * with a directional arrow (Functional Signal Inversion) so a recruiter reads
  * cost-up-as-penalty without reading the label.
  *
  * `aria-live="polite"` on the band so a screen reader announces the verdict.
@@ -22,6 +22,10 @@ import {
   deltaArrow,
   deltaTone,
   formatRate,
+  formatSigned,
+  formatSignedInt,
+  formatSignedSeconds,
+  formatSignedUsd,
   toneColor,
 } from "./evalFormat";
 
@@ -32,15 +36,15 @@ export function VerdictBand({ summary }: { summary: EvalSummary }) {
     <section
       aria-label="Debate-on versus debate-off verdict"
       aria-live="polite"
-      className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
     >
-      {/* HERO — judge prefers debate. Spans 2 cols, breathes. */}
+      {/* HERO — judge prefers debate. Spans 2 cols, breathes. With the hero at
+          2×2 and six supporting tiles, lg's 5-col bento fills exactly. */}
       <div
         className={cn(
           "glass-strong relative col-span-2 flex flex-col justify-between overflow-hidden rounded-2xl p-5 sm:row-span-1 lg:col-span-2 lg:row-span-2",
           !reduced && "animate-breathe-tile",
         )}
-        style={{ animationDuration: "3200ms" }}
       >
         <div className="flex items-center gap-2">
           <span
@@ -95,31 +99,36 @@ export function VerdictBand({ summary }: { summary: EvalSummary }) {
         label="Mean score Δ"
         value={summary.meanScoreDelta}
         polarity="more-is-better"
-        format={(v) => (v > 0 ? `+${v.toFixed(1)}` : v.toFixed(1))}
-        hint="conviction score, on − off"
+        format={formatSigned}
+        hint={
+          summary.scoreDeltaStdev != null
+            ? `conviction score, on − off · ±${summary.scoreDeltaStdev.toFixed(1)} σ`
+            : "conviction score, on − off"
+        }
       />
       <DeltaTile
         label="Mean cost Δ"
         value={summary.meanCostDelta}
         polarity="less-is-better"
-        format={formatUsdDelta}
+        format={formatSignedUsd}
         hint="the debate's price, on − off"
       />
       <DeltaTile
         label="Mean latency Δ"
         value={summary.meanLatencyDelta}
         polarity="less-is-better"
-        format={(v) => (v > 0 ? `+${v.toFixed(1)}s` : `${v.toFixed(1)}s`)}
+        format={formatSignedSeconds}
         hint="wall-clock, on − off"
+      />
+      <DeltaTile
+        label="Mean token Δ"
+        value={summary.meanTokenDelta}
+        polarity="less-is-better"
+        format={formatSignedInt}
+        hint="tokens spent, on − off"
       />
     </section>
   );
-}
-
-function formatUsdDelta(v: number): string {
-  const sign = v > 0 ? "+" : v < 0 ? "-" : "";
-  const abs = Math.abs(v);
-  return `${sign}$${abs < 0.01 ? abs.toFixed(4) : abs.toFixed(2)}`;
 }
 
 /** A neutral 0..1 rate tile (no good/bad polarity — agreement isn't a win or a

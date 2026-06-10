@@ -1,8 +1,8 @@
 /**
- * judgeChrome (components) — the A/B legend and the per-pair judge chip. Both
- * read their color from judgeChrome.ts so the scatter, the legend, and the
- * table speak one visual language (Gestalt similarity). The legend is what makes
- * "debate ON vs OFF" instantly legible to a recruiter who's never seen the repo.
+ * JudgeBadges — the A/B legend and the per-pair judge chip. Both read their
+ * color from judgeChrome.ts so the scatter, the legend, and the table speak one
+ * visual language (Gestalt similarity). The legend is what makes "debate ON vs
+ * OFF" instantly legible to a recruiter who's never seen the repo.
  */
 import type { JudgePreferred } from "./evalFormat";
 import { judgeColor, judgeLabel } from "./judgeChrome";

@@ -2,7 +2,7 @@
  * judgeChrome — the shared visual DNA of the A/B comparison: how a judge
  * preference is colored, everywhere it appears (scatter points, table chips,
  * the legend). Kept as a pure `.ts` so both the chart and the table import it
- * without tripping react-refresh (components live in judgeChrome.tsx).
+ * without tripping react-refresh (components live in JudgeBadges.tsx).
  *
  * The mapping IS the A/B legend a recruiter reads in one glance:
  *   on  → bull green  (debate won)

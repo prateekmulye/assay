@@ -44,7 +44,10 @@ export function RunRail({
                 to={`/eval?label=${encodeURIComponent(run.label)}`}
                 aria-current={active ? "true" : undefined}
                 className={cn(
-                  "group flex min-w-[10.5rem] flex-col gap-1.5 rounded-xl border p-3 transition-[transform,border-color,box-shadow] duration-[200ms] ease-[var(--ease-spring)] focus-visible:outline-none",
+                  // The card IS the focus target, so the ring lives right here
+                  // (house pattern: LibraryRow restores it via group-* on the
+                  // inner card; there is no inner card to delegate to).
+                  "group flex min-w-[10.5rem] flex-col gap-1.5 rounded-xl border p-3 transition-[transform,border-color,box-shadow] duration-[200ms] ease-[var(--ease-spring)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]",
                   active
                     ? "glass-strong -translate-y-0.5 shadow-[var(--shadow-raised)]"
                     : "glass hover:-translate-y-0.5 hover:shadow-[var(--shadow-glass)]",
