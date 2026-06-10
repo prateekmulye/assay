@@ -314,6 +314,7 @@ async def finish_run(
     final_decision: dict[str, Any] | None = None,
     report: str | None = None,
     metrics: Any | None = None,
+    embedding: list[float] | None = None,
 ) -> Run | None:
     run = await session.get(Run, run_id)
     if run is None:
@@ -326,6 +327,10 @@ async def finish_run(
         run.report = report
     if metrics is not None:
         run.metrics = metrics
+    if embedding is not None:
+        # WP-9: summary vector for /api/search (computed by the caller OUTSIDE
+        # any DB session — model inference must not hold a transaction open).
+        run.embedding = embedding
     await session.flush()
     return run
 
