@@ -10,171 +10,26 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 
 import {
-  ApiError,
-  type DebateMode,
-  type FinalDecision,
-  type InvestorMode,
-  type NodeMetric,
-} from "@/lib/api";
+  initialState,
+  reducer,
+  type AnalysisStreamState,
+} from "@/hooks/analysisReducer";
+import { ApiError, type DebateMode, type InvestorMode } from "@/lib/api";
 import {
   SseFrameParser,
   decodeEvent,
-  type AnalysisEvent,
   type RawSseFrame,
 } from "@/lib/sse";
 
-export type StreamPhase = "idle" | "connecting" | "streaming" | "done" | "error";
-
-export interface NodeRun {
-  node: string;
-  startedAt: number;
-  completedAt: number | null;
-  /** Concatenated token text streamed for this node (reporter, etc.). */
-  text: string;
-  /**
-   * The structured state delta this node emitted on `node_complete` (the raw
-   * LangGraph state fragment — analyst_reports, research_debate, trade_proposal,
-   * risk_debate, final_decision, run_metrics, …). The cockpit's intelligence
-   * panels decode this; empty until the node completes.
-   */
-  delta: Record<string, unknown>;
-}
-
-export interface AnalysisDone {
-  finalReport: string;
-  finalDecision: FinalDecision | null;
-  runMetrics: NodeMetric[];
-}
-
-export interface AnalysisStreamState {
-  phase: StreamPhase;
-  runId: string | null;
-  ticker: string | null;
-  investorMode: string | null;
-  /** Insertion-ordered node ids as they were first seen. */
-  order: string[];
-  nodes: Record<string, NodeRun>;
-  done: AnalysisDone | null;
-  error: string | null;
-  /** HTTP status behind the error, when one exists (429 drives quota UX). */
-  errorStatus: number | null;
-}
-
-const initialState: AnalysisStreamState = {
-  phase: "idle",
-  runId: null,
-  ticker: null,
-  investorMode: null,
-  order: [],
-  nodes: {},
-  done: null,
-  error: null,
-  errorStatus: null,
-};
-
-type Action =
-  | { kind: "connect" }
-  | { kind: "event"; event: AnalysisEvent }
-  | { kind: "error"; message: string; status?: number | null }
-  | { kind: "abort" }
-  | { kind: "reset" };
-
-function ensureNode(state: AnalysisStreamState, node: string): AnalysisStreamState {
-  if (state.nodes[node]) return state;
-  return {
-    ...state,
-    order: [...state.order, node],
-    nodes: {
-      ...state.nodes,
-      [node]: { node, startedAt: Date.now(), completedAt: null, text: "", delta: {} },
-    },
-  };
-}
-
-function reducer(state: AnalysisStreamState, action: Action): AnalysisStreamState {
-  switch (action.kind) {
-    case "reset":
-      return initialState;
-    case "connect":
-      return { ...initialState, phase: "connecting" };
-    case "error":
-      return {
-        ...state,
-        phase: "error",
-        error: action.message,
-        errorStatus: action.status ?? null,
-      };
-    case "abort":
-      // A user-stopped run lands back at rest (the form recovers its Run
-      // affordance); a terminal done/error phase is never clobbered.
-      return state.phase === "connecting" || state.phase === "streaming"
-        ? { ...state, phase: "idle" }
-        : state;
-    case "event": {
-      const e = action.event;
-      switch (e.type) {
-        case "start":
-          return {
-            ...state,
-            phase: "streaming",
-            runId: e.run_id,
-            ticker: e.ticker,
-            investorMode: e.investor_mode,
-          };
-        case "node_start":
-          return { ...ensureNode(state, e.node), phase: "streaming" };
-        case "node_complete": {
-          const withNode = ensureNode(state, e.node);
-          const existing = withNode.nodes[e.node]!;
-          return {
-            ...withNode,
-            nodes: {
-              ...withNode.nodes,
-              [e.node]: {
-                ...existing,
-                completedAt: Date.now(),
-                // Merge so a node that completes in multiple updates (or that
-                // also streamed tokens) keeps every key it ever reported.
-                delta: { ...existing.delta, ...(e.delta ?? {}) },
-              },
-            },
-          };
-        }
-        case "token": {
-          const withNode = ensureNode(state, e.node);
-          const existing = withNode.nodes[e.node]!;
-          return {
-            ...withNode,
-            nodes: {
-              ...withNode.nodes,
-              [e.node]: { ...existing, text: existing.text + e.text },
-            },
-          };
-        }
-        case "done":
-          return {
-            ...state,
-            phase: "done",
-            done: {
-              finalReport: e.final_report,
-              finalDecision:
-                e.final_decision && "action" in e.final_decision
-                  ? (e.final_decision as FinalDecision)
-                  : null,
-              runMetrics: e.run_metrics ?? [],
-            },
-          };
-        case "error":
-          // In-stream failure — there is no HTTP status behind it.
-          return { ...state, phase: "error", error: e.message, errorStatus: null };
-        default:
-          return state;
-      }
-    }
-    default:
-      return state;
-  }
-}
+// Re-exported so existing imports (the cockpit, panels, tests) keep resolving
+// `AnalysisStreamState`/`NodeRun`/etc. from this hook unchanged after the
+// reducer was lifted into analysisReducer.ts for the replay driver to share.
+export type {
+  AnalysisDone,
+  AnalysisStreamState,
+  NodeRun,
+  StreamPhase,
+} from "@/hooks/analysisReducer";
 
 export interface StartAnalysisParams {
   ticker: string;

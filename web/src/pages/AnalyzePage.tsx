@@ -1,5 +1,6 @@
 import { AlertTriangle, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "react-router";
 
 import { GlassCard } from "@/components/ui/glass-card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -21,6 +22,13 @@ export function AnalyzePage() {
   // The debate mode the user explicitly requested for the CURRENT run — lets
   // the cockpit lay out the right topology from t=0 (null = server default).
   const [modeHint, setModeHint] = useState<DebateMode | null>(null);
+  // A replay's "Run this ticker live" CTA deep-links here with the ticker in
+  // router state; prefill the command bar so the recruiter just hits Run.
+  const location = useLocation();
+  const prefillTicker =
+    location.state && typeof (location.state as { ticker?: unknown }).ticker === "string"
+      ? (location.state as { ticker: string }).ticker
+      : undefined;
 
   const quotaBlocked =
     state.phase === "error" && isQuotaError(state.error, state.errorStatus);
@@ -42,6 +50,7 @@ export function AnalyzePage() {
 
       <GlassCard>
         <AnalyzeForm
+          initialTicker={prefillTicker}
           onSubmit={(v) => {
             setModeHint(v.debateMode ?? null);
             void start({
