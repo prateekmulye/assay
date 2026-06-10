@@ -103,6 +103,11 @@ class TestEntrypoint:
     def test_execs_uvicorn(self, text: str) -> None:
         assert re.search(r"^exec uvicorn src\.api\.main:app", text, re.M)
 
+    def test_fails_rather_than_serving_unmigrated(self, text: str) -> None:
+        # Retry exhaustion must exit non-zero, never fall through to uvicorn.
+        assert "exit 1" in text
+        assert text.index("exit 1") < text.index("exec uvicorn")
+
 
 # ---------------------------------------------------- docker-compose.prod.yml
 class TestComposeProd:
@@ -186,6 +191,11 @@ class TestCaddyfile:
         assert "/api/*" in text
         assert "/healthz" in text
         assert "reverse_proxy app:7860" in text
+
+    def test_sse_streaming_is_unbuffered(self, text: str) -> None:
+        # flush_interval -1 disables proxy buffering — without it Caddy batches
+        # the token SSE stream and the live cockpit stops feeling live.
+        assert "flush_interval -1" in text
 
     def test_spa_fallback_and_caching(self, text: str) -> None:
         assert "try_files {path} /index.html" in text

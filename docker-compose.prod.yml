@@ -45,6 +45,7 @@ services:
       # Same-origin in practice (Caddy serves SPA + API together); locked anyway.
       ALLOWED_ORIGINS: https://${CADDY_DOMAIN:-localhost}
       RUNS_DIR: /app/runs
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
       # Deterministic offline demo mode — leave 0 in production.
       APP_FAKE_LLM: ${APP_FAKE_LLM:-0}
     volumes:

@@ -96,7 +96,7 @@ All durable state is in named volumes — back up `pgdata_prod` (runs, market
 data, news + embeddings, verdict cache) at minimum:
 
 ```bash
-docker compose -f docker-compose.prod.yml exec db \
+docker compose -f docker-compose.prod.yml exec -T db \
   pg_dump -U finresearch -Fc finresearch > finresearch-$(date +%F).dump
 ```
 
