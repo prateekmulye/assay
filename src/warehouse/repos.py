@@ -12,7 +12,7 @@ import hashlib
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Callable
 
-from sqlalchemy import select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.warehouse.models import (
@@ -108,6 +108,51 @@ async def list_watched(session: AsyncSession) -> list[Instrument]:
     return list(result.scalars().all())
 
 
+async def search_instruments(
+    session: AsyncSession, q: str, limit: int = 20
+) -> list[Instrument]:
+    """Case-insensitive substring search on ticker OR name, ordered ticker asc.
+
+    Empty ``q`` matches everything (the Market Explorer's unfiltered list)."""
+    stmt = select(Instrument).order_by(Instrument.ticker.asc(), Instrument.id.asc())
+    if q:
+        pattern = f"%{q}%"
+        stmt = stmt.where(
+            or_(Instrument.ticker.ilike(pattern), Instrument.name.ilike(pattern))
+        )
+    result = await session.execute(stmt.limit(limit))
+    return list(result.scalars().all())
+
+
+async def resolve_instrument(
+    session: AsyncSession, ticker: str, exchange: str | None = None
+) -> Instrument | None:
+    """Resolve a ticker (optionally exchange-qualified) to ONE instrument row.
+
+    With ``exchange`` the (ticker, exchange) pair is unique. Without it, a
+    ticker listed on several exchanges is disambiguated by data freshness: the
+    row with the newest price bar wins (rows with no bars sort last; id asc
+    tie-break keeps the result deterministic)."""
+    if exchange is not None:
+        result = await session.execute(
+            select(Instrument).where(
+                Instrument.ticker == ticker, Instrument.exchange == exchange
+            )
+        )
+        return result.scalars().first()
+    newest_bar = func.max(PriceBar.ts)
+    stmt = (
+        select(Instrument)
+        .outerjoin(PriceBar, PriceBar.instrument_id == Instrument.id)
+        .where(Instrument.ticker == ticker)
+        .group_by(Instrument.id)
+        .order_by(newest_bar.desc().nulls_last(), Instrument.id.asc())
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    return result.scalars().first()
+
+
 # ------------------------------------------------------------------- price bars
 
 
@@ -156,6 +201,27 @@ async def bulk_upsert_price_bars(
     return len(rows)
 
 
+async def list_price_bars(
+    session: AsyncSession,
+    instrument_id: int,
+    *,
+    days: int = 365,
+    interval: str = "1d",
+) -> list[PriceBar]:
+    """Bars for the instrument within the trailing ``days`` window, ts ASCENDING."""
+    cutoff = _utcnow() - timedelta(days=days)
+    result = await session.execute(
+        select(PriceBar)
+        .where(
+            PriceBar.instrument_id == instrument_id,
+            PriceBar.interval == interval,
+            PriceBar.ts >= cutoff,
+        )
+        .order_by(PriceBar.ts.asc())
+    )
+    return list(result.scalars().all())
+
+
 # ----------------------------------------------------------------- fundamentals
 
 
@@ -166,6 +232,19 @@ async def insert_fundamentals(
     session.add(snap)
     await session.flush()
     return snap
+
+
+async def latest_fundamentals(
+    session: AsyncSession, instrument_id: int
+) -> FundamentalsSnapshot | None:
+    """Newest fundamentals snapshot (ts DESC, id DESC tie-break), or None."""
+    result = await session.execute(
+        select(FundamentalsSnapshot)
+        .where(FundamentalsSnapshot.instrument_id == instrument_id)
+        .order_by(FundamentalsSnapshot.ts.desc(), FundamentalsSnapshot.id.desc())
+        .limit(1)
+    )
+    return result.scalars().first()
 
 
 # ------------------------------------------------------------------------- news
@@ -200,6 +279,19 @@ async def upsert_news(
     stmt = insert(NewsItem).values(rows).on_conflict_do_nothing(index_elements=["url_hash"])
     await session.execute(stmt)
     return len(rows)
+
+
+async def list_news_items(
+    session: AsyncSession, instrument_id: int, limit: int = 20
+) -> list[NewsItem]:
+    """News for the instrument, newest first (ts DESC, id DESC tie-break)."""
+    result = await session.execute(
+        select(NewsItem)
+        .where(NewsItem.instrument_id == instrument_id)
+        .order_by(NewsItem.ts.desc(), NewsItem.id.desc())
+        .limit(limit)
+    )
+    return list(result.scalars().all())
 
 
 # ------------------------------------------------------------------------- runs
@@ -286,14 +378,33 @@ async def get_run_events(session: AsyncSession, run_id: str) -> list[RunEvent]:
 
 
 async def list_runs(
-    session: AsyncSession, *, ticker: str | None = None, limit: int = 50, offset: int = 0
+    session: AsyncSession,
+    *,
+    ticker: str | None = None,
+    status: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
 ) -> list[Run]:
-    """Runs newest-first (by started_at), optionally filtered by ticker."""
+    """Runs newest-first (by started_at), optionally filtered by ticker/status."""
     stmt = select(Run).order_by(Run.started_at.desc(), Run.run_id.desc())
     if ticker is not None:
         stmt = stmt.where(Run.ticker == ticker)
+    if status is not None:
+        stmt = stmt.where(Run.status == status)
     result = await session.execute(stmt.limit(limit).offset(offset))
     return list(result.scalars().all())
+
+
+async def count_runs(
+    session: AsyncSession, *, ticker: str | None = None, status: str | None = None
+) -> int:
+    """Total runs matching the same filters as ``list_runs`` (the library's total)."""
+    stmt = select(func.count()).select_from(Run)
+    if ticker is not None:
+        stmt = stmt.where(Run.ticker == ticker)
+    if status is not None:
+        stmt = stmt.where(Run.status == status)
+    return int((await session.execute(stmt)).scalar_one())
 
 
 async def latest_finished_run(
