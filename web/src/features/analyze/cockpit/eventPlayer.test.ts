@@ -132,6 +132,65 @@ describe("useEventPlayer", () => {
     expect(result.current.elapsedMs).toBe(steps[0]!.offsetMs);
   });
 
+  it("seek during playback keeps the playhead advancing (no freeze)", () => {
+    const { result } = renderHook(() => useEventPlayer(fixtureEvents));
+    act(() => result.current.setSpeed(1));
+    frame(0); // prime the autoplay loop
+    frame(100);
+    expect(result.current.isActive).toBe(true);
+
+    act(() => result.current.seek(900));
+    expect(result.current.elapsedMs).toBe(900);
+    expect(result.current.isActive).toBe(true); // UI still says "playing"…
+
+    // …so the playhead must keep moving after the scrub.
+    frame(0); // surviving rAF tick re-primes the wall delta
+    expect(result.current.elapsedMs).toBe(900);
+    frame(100);
+    expect(result.current.elapsedMs).toBeCloseTo(1000, 5);
+    frame(100);
+    expect(result.current.elapsedMs).toBeCloseTo(1100, 5);
+  });
+
+  it("restart during playback replays from 0 without pausing", () => {
+    const { result } = renderHook(() => useEventPlayer(fixtureEvents));
+    act(() => result.current.setSpeed(1));
+    frame(0);
+    frame(500);
+    expect(result.current.elapsedMs).toBeGreaterThan(0);
+    expect(result.current.isActive).toBe(true);
+
+    act(() => result.current.restart());
+    expect(result.current.elapsedMs).toBe(0);
+    expect(result.current.isActive).toBe(true);
+
+    // The loop keeps running and re-advances from the start.
+    frame(0); // re-prime
+    frame(100);
+    expect(result.current.elapsedMs).toBeCloseTo(100, 5);
+    expect(result.current.state.phase).toBe("streaming");
+  });
+
+  it("keeps state identity stable across frames when no new event is due", () => {
+    const { result } = renderHook(() => useEventPlayer(fixtureEvents));
+    act(() => result.current.pause());
+    // Steps land every 420ms (MIN_STEP cadence); park between the 3rd (840)
+    // and 4th (1260) steps, then advance frames that pass no event.
+    act(() => result.current.seek(850));
+    act(() => result.current.setSpeed(1));
+    act(() => result.current.play());
+    frame(0); // prime
+    frame(100); // 950ms — still before the next step
+    const before = result.current.state;
+    frame(100); // 1050ms — still before the next step
+    expect(result.current.elapsedMs).toBeCloseTo(1050, 5);
+    expect(result.current.state).toBe(before); // identity stable: no re-reduce
+
+    frame(400); // 1450ms — the 4th step (1260) lands
+    expect(result.current.state).not.toBe(before);
+    act(() => result.current.pause());
+  });
+
   it("restart returns to the start and resumes playing", () => {
     const { result } = renderHook(() => useEventPlayer(fixtureEvents));
     act(() => result.current.seek(result.current.durationMs)); // to the end

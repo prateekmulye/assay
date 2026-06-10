@@ -119,6 +119,46 @@ describe("LibraryPage", () => {
     expect(await screen.findByText(/no runs match those filters/i)).toBeInTheDocument();
   });
 
+  it("clears filters via client-side navigation from the empty-state CTA", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    library.mockImplementation((params: { ticker?: string }) =>
+      params.ticker === "ZZZZ"
+        ? Promise.resolve({ runs: [], total: 0 })
+        : Promise.resolve({ runs: [makeRun()], total: 1 }),
+    );
+    renderWithProviders(<LibraryPage />, { route: "/library?ticker=ZZZZ" });
+    const cta = await screen.findByRole("link", { name: /clear filters/i });
+
+    // A router <Link> navigates in-app (no full reload), so the unfiltered
+    // archive must render after the click.
+    await user.click(cta);
+    expect(await screen.findByText("AAPL")).toBeInTheDocument();
+    expect(library).toHaveBeenCalledWith(
+      expect.objectContaining({ ticker: undefined, offset: 0 }),
+      expect.anything(),
+    );
+  });
+
+  it("clamps an out-of-range page to the last valid page", async () => {
+    // 25 runs => pages 0..2. /library?page=99 (offset 990) returns an empty
+    // window; the page must clamp to page 2 (offset 20) and show rows, not
+    // the "no research yet" empty state.
+    library.mockImplementation((params: { offset?: number }) =>
+      (params.offset ?? 0) >= 25
+        ? Promise.resolve({ runs: [], total: 25 })
+        : Promise.resolve({ runs: [makeRun()], total: 25 }),
+    );
+    renderWithProviders(<LibraryPage />, { route: "/library?page=99" });
+
+    expect(await screen.findByText("AAPL")).toBeInTheDocument();
+    expect(library).toHaveBeenCalledWith(
+      expect.objectContaining({ offset: 20, limit: 10 }),
+      expect.anything(),
+    );
+    expect(screen.queryByText(/no research yet/i)).not.toBeInTheDocument();
+    expect(pagerText()).toMatch(/21.*25.*of.*25/);
+  });
+
   it("shows an error state when the API rejects", async () => {
     library.mockRejectedValue(new Error("boom"));
     renderWithProviders(<LibraryPage />, { route: "/library" });

@@ -75,17 +75,16 @@ export type CockpitDriver = Pick<
   "state" | "isActive"
 >;
 
-/** Fold steps with offset <= timeMs into a fresh state (the pure seek core). */
-function reduceUpTo(steps: ReplayStep[], timeMs: number): AnalysisStreamState {
+/** Fold the first `count` steps into a fresh state (the pure seek core). */
+function reduceFirstN(steps: ReplayStep[], count: number): AnalysisStreamState {
   // Deterministic, ordered lifecycle stamps during the fold (no wall clock).
   const real = analysisClock.now;
   let tick = 0;
   analysisClock.now = () => ++tick;
   try {
     let state = initialState;
-    for (const s of steps) {
-      if (s.offsetMs > timeMs) break;
-      state = reducer(state, { kind: "event", event: s.event });
+    for (let i = 0; i < count && i < steps.length; i++) {
+      state = reducer(state, { kind: "event", event: steps[i]!.event });
     }
     return state;
   } finally {
@@ -103,8 +102,21 @@ export function useEventPlayer(events: readonly ReplayEvent[]): EventPlayerContr
   const [speed, setSpeedState] = useState<ReplaySpeed>(4);
   const [playing, setPlaying] = useState(false);
 
-  // Derived render state — a pure fold up to the current playhead.
-  const state = useMemo(() => reduceUpTo(steps, timeMs), [steps, timeMs]);
+  // How many steps are due at the playhead. Memoising the COUNT (not the raw
+  // time) means the derived state's identity only changes when an event
+  // actually lands — not on every rAF frame — so the cockpit doesn't re-render
+  // per frame while the transport alone tracks the raw playhead.
+  const dueCount = useMemo(() => {
+    let n = 0;
+    for (const s of steps) {
+      if (s.offsetMs > timeMs) break;
+      n += 1;
+    }
+    return n;
+  }, [steps, timeMs]);
+
+  // Derived render state — a pure fold of the due steps (re-runs per event).
+  const state = useMemo(() => reduceFirstN(steps, dueCount), [steps, dueCount]);
 
   const rafRef = useRef<number | null>(null);
   const lastTsRef = useRef<number | null>(null);
@@ -126,7 +138,6 @@ export function useEventPlayer(events: readonly ReplayEvent[]): EventPlayerContr
     lastTsRef.current = null;
   }, []);
 
-  const clamp = (t: number) => Math.max(0, Math.min(ctl.current.durationMs, t));
 
   // The single rAF loop: advance virtual time by wall-delta * speed while playing.
   const tick = useCallback(
@@ -159,14 +170,15 @@ export function useEventPlayer(events: readonly ReplayEvent[]): EventPlayerContr
     stopLoop();
   }, [stopLoop]);
 
-  const seek = useCallback(
-    (t: number) => {
-      stopLoop();
-      lastTsRef.current = null; // resume cleanly after a scrub
-      setTimeMs(clamp(t));
-    },
-    [stopLoop],
-  );
+  const seek = useCallback((t: number) => {
+    // Do NOT cancel the rAF loop here: while playing, the loop must survive a
+    // scrub (the effect only re-arms it when `playing` flips, so cancelling
+    // would freeze the playhead with the UI still saying "Pause"). Nulling
+    // lastTs makes the surviving tick re-prime its wall delta and read the new
+    // playhead time — which also lets restart() rewind mid-playback.
+    lastTsRef.current = null;
+    setTimeMs(Math.max(0, Math.min(ctl.current.durationMs, t)));
+  }, []);
 
   const seekProgress = useCallback(
     (p: number) => seek(p * ctl.current.durationMs),

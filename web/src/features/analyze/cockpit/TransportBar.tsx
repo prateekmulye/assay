@@ -123,8 +123,9 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
   );
 
   // Space toggles play/pause from anywhere on the page (the media convention),
-  // unless the user is typing in a field or focused on the slider (which owns
-  // its own handler). Mirrors how a recruiter expects a player to behave.
+  // unless the user is typing in a field, focused on the slider (which owns
+  // its own handler), or focused on a button — Space must ACTIVATE a focused
+  // button (Restart, speed), not hijack it into a play/pause toggle.
   useEffect(() => {
     const onSpace = (e: KeyboardEvent) => {
       if (e.key !== " ") return;
@@ -133,7 +134,8 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
       const typing =
         tag === "INPUT" || tag === "TEXTAREA" || t?.isContentEditable;
       const onSlider = t?.getAttribute("role") === "slider";
-      if (typing || onSlider) return;
+      const onButton = Boolean(t?.closest?.("button"));
+      if (typing || onSlider || onButton) return;
       e.preventDefault();
       toggle();
     };

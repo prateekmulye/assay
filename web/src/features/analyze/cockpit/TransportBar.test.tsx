@@ -78,6 +78,22 @@ describe("TransportBar", () => {
     expect(step).toHaveBeenCalledWith(-1);
   });
 
+  it("does not hijack Space when a button has focus (button activates instead)", async () => {
+    const play = vi.fn();
+    const pause = vi.fn();
+    const setSpeed = vi.fn();
+    render(
+      <TransportBar player={makePlayer({ isActive: false, play, pause, setSpeed })} />,
+    );
+    const speedBtn = screen.getByRole("button", { name: "8×" });
+    speedBtn.focus();
+    await userEvent.keyboard(" ");
+    // Space must activate the focused button, not toggle playback.
+    expect(play).not.toHaveBeenCalled();
+    expect(pause).not.toHaveBeenCalled();
+    expect(setSpeed).toHaveBeenCalledWith(8);
+  });
+
   it("renders a stage tick per node_complete with its label", () => {
     render(<TransportBar player={makePlayer()} />);
     expect(screen.getByTitle("Router")).toBeInTheDocument();

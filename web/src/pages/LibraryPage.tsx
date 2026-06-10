@@ -10,7 +10,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Library } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -95,6 +95,23 @@ export function LibraryPage() {
     placeholderData: keepPreviousData,
   });
 
+  // An out-of-range page (e.g. /library?page=99 against 25 runs) would render
+  // as an empty archive. When data shows the offset is past the end, clamp the
+  // URL (replace, so Back isn't polluted) to the last valid page.
+  useEffect(() => {
+    if (!data || data.total <= 0 || offset < data.total) return;
+    const lastPage = Math.max(0, Math.ceil(data.total / PAGE_SIZE) - 1);
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (lastPage <= 0) next.delete("page");
+        else next.set("page", String(lastPage));
+        return next;
+      },
+      { replace: true },
+    );
+  }, [data, offset, setParams]);
+
   const { quota } = useQuota();
   const quotaExhausted = quota.kind === "replay-only";
 
@@ -146,12 +163,12 @@ export function LibraryPage() {
                 : "Run your first analysis and it lands here newest-first with its verdict, conviction, token cost, and latency — one click to replay the stream."
             }
           >
-            <a
-              href={hasFilters ? "/library" : "/"}
+            <Link
+              to={hasFilters ? "/library" : "/"}
               className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-accent-fg)] transition-colors hover:bg-[var(--color-accent-strong)]"
             >
               {hasFilters ? "Clear filters" : "Run your first analysis"}
-            </a>
+            </Link>
           </EmptyState>
         ) : (
           <>
