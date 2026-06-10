@@ -16,6 +16,7 @@ from src.warehouse.models import Instrument, NewsItem, PriceBar
 from src.warehouse.repos import (
     _dialect_insert,
     append_run_event,
+    bulk_append_run_events,
     bulk_upsert_price_bars,
     create_run,
     finish_run,
@@ -228,6 +229,43 @@ async def test_run_lifecycle_create_events_finish_get_list(session):
 
 async def test_finish_run_unknown_run_returns_none(session):
     assert await finish_run(session, "nope", status="finished") is None
+
+
+async def test_bulk_append_run_events_inserts_in_order(session):
+    await create_run(session, "r1", "AAPL", "on")
+    rows = [
+        {"seq": 0, "event": {"name": "start", "data": {}, "ts_ms": 1}},
+        {"seq": 1, "event": {"name": "node_start", "data": {"node": "router"}, "ts_ms": 2}},
+        {"seq": 2, "event": {"name": "done", "data": {}, "ts_ms": 3}},
+    ]
+    assert await bulk_append_run_events(session, "r1", rows) == 3
+
+    events = await get_run_events(session, "r1")
+    assert [e.seq for e in events] == [0, 1, 2]
+    assert [e.event["name"] for e in events] == ["start", "node_start", "done"]
+
+
+async def test_bulk_append_run_events_conflict_do_nothing(session):
+    await create_run(session, "r1", "AAPL", "on")
+    first = [{"seq": 0, "event": {"name": "start"}}, {"seq": 1, "event": {"name": "done"}}]
+    await bulk_append_run_events(session, "r1", first)
+
+    # Overlapping replay: existing seqs are kept (DO NOTHING), the new one lands.
+    replay = [
+        {"seq": 1, "event": {"name": "OVERWRITE-ATTEMPT"}},
+        {"seq": 2, "event": {"name": "error"}},
+    ]
+    assert await bulk_append_run_events(session, "r1", replay) == 2  # attempted count
+
+    events = await get_run_events(session, "r1")
+    assert [e.seq for e in events] == [0, 1, 2]
+    assert events[1].event == {"name": "done"}  # original kept
+
+
+async def test_bulk_append_run_events_empty_returns_zero(session):
+    await create_run(session, "r1", "AAPL", "on")
+    assert await bulk_append_run_events(session, "r1", []) == 0
+    assert await get_run_events(session, "r1") == []
 
 
 async def test_latest_finished_run_respects_within_hours(session):

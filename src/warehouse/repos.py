@@ -247,6 +247,33 @@ async def append_run_event(
     return row
 
 
+async def bulk_append_run_events(
+    session: AsyncSession, run_id: str, rows: list[dict[str, Any]]
+) -> int:
+    """Idempotent bulk append; ON CONFLICT (run_id, seq) DO NOTHING.
+
+    Each row is ``{"seq": int, "event": dict}`` — the caller owns seq assignment
+    (see ``ingest.record_run_events``). First write wins: replaying rows with
+    already-stored seqs inserts nothing, mirroring ``upsert_news`` semantics.
+
+    Returns the attempted (input) count, not the inserted count.
+    """
+    # asyncpg's ~32k bind-param ceiling bounds one bulk call; chunk upstream.
+    if not rows:
+        return 0
+    values = [
+        {"run_id": run_id, "seq": row["seq"], "event": row["event"]} for row in rows
+    ]
+    insert = _dialect_insert(session)
+    stmt = (
+        insert(RunEvent)
+        .values(values)
+        .on_conflict_do_nothing(index_elements=["run_id", "seq"])
+    )
+    await session.execute(stmt)
+    return len(values)
+
+
 async def get_run(session: AsyncSession, run_id: str) -> Run | None:
     return await session.get(Run, run_id)
 
