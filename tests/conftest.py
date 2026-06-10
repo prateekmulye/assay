@@ -293,6 +293,8 @@ def env_isolation(monkeypatch):
         "LANGSMITH_API_KEY",
         "DATABASE_URL",
         "DB_ECHO",
+        "COLLECTOR_ENABLED",
+        "COLLECTOR_INTERVAL_HOURS",
     ):
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("RUN_LIVE", "0")
@@ -318,6 +320,32 @@ def _clear_caches() -> None:
         settings_mod.get_settings.cache_clear()
     if hasattr(factory_mod.get_llm, "cache_clear"):
         factory_mod.get_llm.cache_clear()
+
+
+# ---------------------------------------------------------------------------
+# WP-3 shared fixture — added ADDITIVELY (existing fixtures above untouched).
+#
+# sqlite_warehouse: enable the warehouse on a per-test SQLite file (a `:memory:`
+# aiosqlite URL gives each pooled connection a FRESH empty DB, so the file URL
+# is the safe choice) with the schema created. Mirrors the proven pattern in
+# tests/test_cache.py; exposed here so the WP-3 ingest/node/collector tests
+# don't each duplicate it.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+async def sqlite_warehouse(monkeypatch, tmp_path):
+    """Enable the warehouse on a per-test SQLite file with the schema created."""
+    from src.warehouse.bootstrap import create_all
+    from src.warehouse.db import get_engine, reset_engine
+
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+aiosqlite:///{tmp_path}/warehouse.db")
+    settings_mod.get_settings.cache_clear()
+    await reset_engine()
+    await create_all(get_engine())
+    yield
+    await reset_engine()
+    settings_mod.get_settings.cache_clear()
 
 
 class _WPIFakeStructured:
