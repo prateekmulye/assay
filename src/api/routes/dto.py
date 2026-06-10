@@ -168,8 +168,13 @@ class EvalResultsResponse(BaseModel):
 
 
 class QuotaStatus(BaseModel):
-    ip_used: int
-    ip_limit: int
-    global_used: int
-    global_limit: int
+    """``metered=False`` means there is no quota system at all (warehouse
+    disabled) — distinct from a quota outage — and the counter fields are null.
+    ``admin`` is computed either way."""
+
+    metered: bool
+    ip_used: int | None = None
+    ip_limit: int | None = None
+    global_used: int | None = None
+    global_limit: int | None = None
     admin: bool

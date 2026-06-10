@@ -13,11 +13,14 @@ One FastAPI dependency (``demo_guard``) enforces, in order:
   3. **Daily caps** — per-IP (``ip:{client_key}``) and ``global`` counters in
      the warehouse ``demo_quota`` table, keyed by UTC day.
 
-Increment-FIRST design (documented choice): both counters are atomically
-upserted+incremented in one transaction BEFORE the limit comparison, so there
-is no check-then-increment race window. The cost is that an over-limit attempt
-still consumes quota — acceptable for a demo cap, and it makes hammering
-strictly unprofitable.
+Increment-FIRST design (documented choice): the per-IP counter is atomically
+upserted+incremented BEFORE its limit comparison, so there is no
+check-then-increment race window; the cost is that an over-limit attempt still
+consumes IP quota — acceptable for a demo cap, and it makes hammering strictly
+unprofitable. The GLOBAL counter is only incremented when the IP counter is
+within its limit (same transaction), so one hammering IP can never drain the
+shared global pool. The 429 is raised AFTER the session commits, so the
+increments always persist.
 
 The guard declares the request body (``AnalyzeRequest``), so schema-invalid
 requests 422 before any quota is consumed; the route receives the parsed body
@@ -71,12 +74,16 @@ async def daily_quota_handler(request: Request, exc: Exception) -> JSONResponse:
 
 
 def is_admin(request: Request) -> bool:
-    """True iff a non-empty admin token is configured AND the header matches it."""
+    """True iff a non-empty admin token is configured AND the header matches it.
+
+    Compares UTF-8 encoded bytes: ``secrets.compare_digest`` raises TypeError on
+    non-ASCII *str* inputs, and header values are attacker-controlled — a "£" in
+    the header must be a failed match, never a 500."""
     token = get_settings().admin_token
     if not token:
         return False
     supplied = request.headers.get(ADMIN_TOKEN_HEADER) or ""
-    return secrets.compare_digest(supplied, token)
+    return secrets.compare_digest(supplied.encode("utf-8"), token.encode("utf-8"))
 
 
 def quota_key_for(request: Request) -> str:
@@ -96,18 +103,27 @@ async def demo_guard(request: Request, req: AnalyzeRequest) -> AnalyzeRequest:
 
     settings = get_settings()
     day = datetime.now(UTC).date()
+    exceeded: DailyQuotaExceeded | None = None
     try:
-        # ONE session/transaction: both counters land (or neither). Increment
-        # first, compare after — see module docstring.
+        # ONE session/transaction. IP counter increments first (increment-FIRST,
+        # see module docstring); the global counter only increments when the IP
+        # is within its limit, so over-IP-cap attempts never drain the global
+        # pool. The 429 is raised only after the session commits, so the
+        # increments persist.
         async with session_scope() as session:
             ip_count = await increment_quota(session, quota_key_for(request), day)
-            global_count = await increment_quota(session, GLOBAL_QUOTA_KEY, day)
+            if ip_count > settings.demo_runs_per_ip_per_day:
+                exceeded = DailyQuotaExceeded("ip", settings.demo_runs_per_ip_per_day)
+            else:
+                global_count = await increment_quota(session, GLOBAL_QUOTA_KEY, day)
+                if global_count > settings.demo_runs_global_per_day:
+                    exceeded = DailyQuotaExceeded(
+                        "global", settings.demo_runs_global_per_day
+                    )
     except Exception as exc:  # fail OPEN: quota outage must not block demos
         _LOG.warning("demo_guard: quota increment failed; failing open: %s", exc)
         return req
 
-    if ip_count > settings.demo_runs_per_ip_per_day:
-        raise DailyQuotaExceeded("ip", settings.demo_runs_per_ip_per_day)
-    if global_count > settings.demo_runs_global_per_day:
-        raise DailyQuotaExceeded("global", settings.demo_runs_global_per_day)
+    if exceeded is not None:
+        raise exceeded
     return req

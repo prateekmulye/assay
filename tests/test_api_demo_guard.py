@@ -3,12 +3,15 @@
 layered ON TOP of the per-minute limiter, with an X-Admin-Token bypass for
 BOTH, plus the GET /api/quota status endpoint.
 
-Design under test (see src/api/demo_guard.py): increment-FIRST — the quota is
-consumed atomically before the limit check, so an over-limit attempt still
-counts (race-proof; no check-then-increment window).
+Design under test (see src/api/demo_guard.py): increment-FIRST for the IP
+counter — it is consumed atomically before the limit check, so an over-limit
+attempt still counts (race-proof; no check-then-increment window). The GLOBAL
+counter is only incremented when the IP counter is within its limit, so one
+hammering IP cannot drain the shared global pool.
 """
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 
 import pytest
@@ -104,13 +107,40 @@ def test_quota_keys_are_per_ip_and_utc_day(guarded_app):
 
 
 def test_over_limit_attempt_still_consumes_quota(guarded_app):
-    # Increment-first: the 429'd attempt itself counted (documented choice).
+    # Increment-first: the 429'd attempt itself counted against the IP
+    # (documented choice) — but NOT against the shared global pool.
     make_client, seed = guarded_app
     with make_client(ip_cap=1) as client:
         client.post("/api/analyze", json=BODY)
         client.post("/api/analyze", json=BODY)  # 429, but still incremented
     rows = {key: count for key, _, count in _quota_rows(seed)}
     assert rows["ip:testclient"] == 2
+    assert rows["global"] == 1  # only the admitted run touched the global pool
+
+
+def test_over_ip_cap_attempts_do_not_drain_global_pool(guarded_app):
+    # Hammering one IP past its cap must not consume the shared global quota.
+    make_client, seed = guarded_app
+    with make_client(ip_cap=1, global_cap=100) as client:
+        assert client.post("/api/analyze", json=BODY).status_code == 200
+        for _ in range(4):
+            resp = client.post("/api/analyze", json=BODY)
+            assert resp.status_code == 429
+            assert resp.json()["scope"] == "ip"
+    rows = {key: count for key, _, count in _quota_rows(seed)}
+    assert rows["ip:testclient"] == 5  # every attempt burned the IP counter
+    assert rows["global"] == 1  # global pool untouched after the cap
+
+
+def test_within_limit_requests_increment_both_counters(guarded_app):
+    # Admitted runs consume IP and global atomically in one transaction.
+    make_client, seed = guarded_app
+    with make_client(ip_cap=5, global_cap=5) as client:
+        assert client.post("/api/analyze", json=BODY).status_code == 200
+        assert client.post("/api/analyze", json=BODY).status_code == 200
+    rows = {key: count for key, _, count in _quota_rows(seed)}
+    assert rows["ip:testclient"] == 2
+    assert rows["global"] == 2
 
 
 def test_invalid_body_does_not_consume_quota(guarded_app):
@@ -160,6 +190,40 @@ def test_admin_header_without_configured_token_is_not_a_bypass(guarded_app):
     assert resp.status_code == 429
 
 
+def test_non_ascii_admin_token_header_is_not_admin_and_not_500(guarded_app):
+    # secrets.compare_digest raises TypeError on non-ASCII str; the guard must
+    # compare UTF-8 bytes so a "£" header is just a failed match (quota applies),
+    # never a 500.
+    make_client, _ = guarded_app
+    with make_client(ip_cap=0, admin_token="s3cr3t") as client:
+        resp = client.post(
+            "/api/analyze", json=BODY,
+            headers={"X-Admin-Token": "£".encode("utf-8")},
+        )
+    assert resp.status_code == 429  # treated as non-admin -> daily cap applies
+
+
+# ------------------------------------------------------------------- fail open
+
+
+def test_guard_fails_open_when_quota_db_is_broken(guarded_app, monkeypatch, caplog):
+    # Warehouse enabled but the sessionmaker is dead (same DB-error pattern as
+    # tests/test_cache.py): the guard must log a warning and ADMIT the request —
+    # a quota outage must never take down live demos.
+    from src.warehouse import db as db_mod
+
+    make_client, seed = guarded_app
+    with make_client(ip_cap=0, global_cap=0) as client:  # caps would reject everything
+        def _boom():
+            raise RuntimeError("db down")
+
+        monkeypatch.setattr(db_mod, "get_sessionmaker", _boom)
+        with caplog.at_level(logging.WARNING, logger="src.api.demo_guard"):
+            resp = client.post("/api/analyze", json=BODY)
+    assert resp.status_code == 200  # admitted: no 429/500 from the guard
+    assert "failing open" in caplog.text
+
+
 # -------------------------------------------------------- warehouse disabled
 
 
@@ -183,6 +247,7 @@ def test_quota_endpoint_reflects_usage(guarded_app):
         client.post("/api/analyze", json=BODY)
         after = client.get("/api/quota").json()
     assert before == {
+        "metered": True,
         "ip_used": 0, "ip_limit": 3, "global_used": 0, "global_limit": 25,
         "admin": False,
     }
@@ -201,8 +266,20 @@ def test_quota_endpoint_reports_admin_flag(guarded_app):
     assert wrong["admin"] is False
 
 
-def test_quota_endpoint_503_when_warehouse_disabled():
+def test_quota_endpoint_unmetered_when_warehouse_disabled(monkeypatch):
+    # No quota system is NOT an outage: the UI must be able to distinguish
+    # "unmetered" (200, metered=false) from a real failure. Admin detection
+    # still works without the warehouse.
+    monkeypatch.setenv("ADMIN_TOKEN", "s3cr3t")
+    settings_mod.get_settings.cache_clear()
     with TestClient(create_app()) as client:
-        resp = client.get("/api/quota")
-    assert resp.status_code == 503
-    assert resp.json()["detail"] == "warehouse disabled"
+        anon = client.get("/api/quota")
+        admin = client.get("/api/quota", headers={"X-Admin-Token": "s3cr3t"})
+    assert anon.status_code == 200
+    assert anon.json() == {
+        "metered": False,
+        "ip_used": None, "ip_limit": None, "global_used": None, "global_limit": None,
+        "admin": False,
+    }
+    assert admin.json()["metered"] is False
+    assert admin.json()["admin"] is True
