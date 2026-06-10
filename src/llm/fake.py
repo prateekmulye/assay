@@ -16,7 +16,9 @@ current node calls the raw model). The structured ainvoke:
   content keyed by the ticker extracted from the prompt so different tickers
   produce visibly different reports;
 - fires the CostTracker callbacks (on_llm_start/on_llm_end with token_usage)
-  so per-node run metrics stay realistic in fake mode.
+  so per-node run metrics stay realistic in fake mode, including a
+  deterministic hash-derived 80-400ms synthetic latency injected by backdating
+  the tracker's start marker (never by sleeping).
 """
 from __future__ import annotations
 
@@ -304,9 +306,19 @@ class _FakeStructured:
     def _fire(self, callbacks: list[Any], text: str) -> None:
         # one start/end pair per call with plausible token usage
         rid = f"fake-{time.monotonic_ns()}"
+        # CostTracker measures wall-clock perf_counter() between on_llm_start
+        # and on_llm_end (src/llm/cost.py keeps the start in `_starts[run_id]`).
+        # Backdate that marker by a deterministic hash-derived 80-400ms so the
+        # recorded latency looks plausible WITHOUT sleeping — manipulating the
+        # timing exactly the way the tracker computes it. Guarded so callbacks
+        # without a `_starts` dict are untouched.
+        synthetic_latency_s = 0.08 + (_h(f"latency:{text[:200]}") % 321) / 1000
         for cb in callbacks:
             if hasattr(cb, "on_llm_start"):
                 cb.on_llm_start({}, [text[:200]], run_id=rid)
+            starts = getattr(cb, "_starts", None)
+            if isinstance(starts, dict) and rid in starts:
+                starts[rid] -= synthetic_latency_s
         response = SimpleNamespace(
             llm_output={
                 "token_usage": {

@@ -28,7 +28,7 @@ from src.api.demo_guard import DailyQuotaExceeded, daily_quota_handler
 from src.api.lifespan import lifespan
 from src.api.ratelimit import get_rate_limiter
 from src.api.routes import analyze as analyze_routes
-from src.api.routes import eval as eval_routes
+from src.api.routes import eval_results as eval_results_routes
 from src.api.routes import library as library_routes
 from src.api.routes import market as market_routes
 from src.api.routes import quota as quota_routes
@@ -66,7 +66,7 @@ def create_app(
     app.include_router(analyze_routes.router, prefix="/api")
     app.include_router(library_routes.router, prefix="/api")
     app.include_router(market_routes.router, prefix="/api/market")
-    app.include_router(eval_routes.router, prefix="/api/eval")
+    app.include_router(eval_results_routes.router, prefix="/api/eval")
     app.include_router(quota_routes.router, prefix="/api")
 
     # Daily demo caps render as a structured 429 the UI can act on.

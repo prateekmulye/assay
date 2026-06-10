@@ -146,3 +146,21 @@ def test_run_detail_falls_back_to_jsonl_when_not_in_db(api_sqlite_warehouse, tmp
 def test_run_detail_404_when_neither_source_knows_it(api_sqlite_warehouse, tmp_path):
     with TestClient(create_app(runs_dir=str(tmp_path))) as client:
         assert client.get("/api/runs/ghost-run").status_code == 404
+
+
+def test_run_detail_jsonl_fallback_skips_corrupt_lines(api_sqlite_warehouse, tmp_path):
+    # A truncated/garbled line in the trace (e.g. a crash mid-write) must not
+    # 500 the replay — corrupt lines are skipped, valid ones still served.
+    trace = tmp_path / "run-corrupt.jsonl"
+    trace.write_text(
+        '{"node": "router", "event": "node_complete"}\n'
+        '{"node": "bull", "event": TRUNCATED GARBAGE\n'
+        '{"node": "reporter", "event": "node_complete"}\n',
+        encoding="utf-8",
+    )
+    with TestClient(create_app(runs_dir=str(tmp_path))) as client:
+        resp = client.get("/api/runs/run-corrupt")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["source"] == "jsonl"
+    assert [e["node"] for e in body["events"]] == ["router", "reporter"]

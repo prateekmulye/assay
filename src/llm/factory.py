@@ -25,7 +25,9 @@ def get_llm(tier: Literal["quick", "deep"]) -> ChatOpenAI | FakeChatModel:
 
     APP_FAKE_LLM mode (WP-5): when settings.fake_llm is on, BOTH tiers return the
     deterministic offline FakeChatModel (src/llm/fake.py) — zero-network demos/e2e.
-    The flag is read at call time (per the lru_cache contract above).
+    The flag is read at the FIRST call per tier and then memoized by lru_cache;
+    after changing it, call get_llm.cache_clear() (alongside
+    get_settings.cache_clear()) so the next call re-reads the flag.
     """
     s = get_settings()
     if s.fake_llm:

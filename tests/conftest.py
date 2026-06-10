@@ -10,6 +10,7 @@ order and fires LangChain callbacks so CostTracker records one entry per call.
 from __future__ import annotations
 
 import importlib
+import json
 import sys
 from types import SimpleNamespace
 from typing import Any
@@ -77,6 +78,32 @@ def make_structured_llm(outputs: list[Any]):
             return _Structured()
 
     return _LLM()
+
+
+@pytest.fixture
+def parse_sse():
+    """Parse an SSE text body into a list of (event, json_payload) tuples.
+
+    sse-starlette emits CRLF line endings and separates frames with a blank
+    line; normalize to LF so frame boundaries (``\\n\\n``) are unambiguous.
+    Shared by the API streaming tests and the fake-LLM e2e suite.
+    """
+
+    def _parse(raw: str) -> list[tuple[str, Any]]:
+        raw = raw.replace("\r\n", "\n").replace("\r", "\n")
+        events = []
+        for block in raw.strip().split("\n\n"):
+            name, data_lines = None, []
+            for line in block.splitlines():
+                if line.startswith("event:"):
+                    name = line[len("event:"):].strip()
+                elif line.startswith("data:"):
+                    data_lines.append(line[len("data:"):].strip())
+            if name and data_lines:
+                events.append((name, json.loads("".join(data_lines))))
+        return events
+
+    return _parse
 
 
 @pytest.fixture

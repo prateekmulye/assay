@@ -10,8 +10,6 @@ bars; GET /api/library lists it and GET /api/runs/{id} replays it.
 """
 from __future__ import annotations
 
-import json
-
 from sqlalchemy import func, select
 from starlette.testclient import TestClient
 
@@ -19,23 +17,8 @@ from src.api.main import create_app
 from src.config import settings as settings_mod
 
 
-def _parse_sse(raw: str):
-    raw = raw.replace("\r\n", "\n").replace("\r", "\n")
-    events = []
-    for block in raw.strip().split("\n\n"):
-        name, data_lines = None, []
-        for line in block.splitlines():
-            if line.startswith("event:"):
-                name = line[len("event:"):].strip()
-            elif line.startswith("data:"):
-                data_lines.append(line[len("data:"):].strip())
-        if name and data_lines:
-            events.append((name, json.loads("".join(data_lines))))
-    return events
-
-
 def test_fake_llm_full_run_persists_and_replays(
-    api_sqlite_warehouse, monkeypatch, tmp_path
+    api_sqlite_warehouse, monkeypatch, tmp_path, parse_sse
 ):
     monkeypatch.setenv("APP_FAKE_LLM", "1")
     settings_mod.get_settings.cache_clear()
@@ -47,7 +30,7 @@ def test_fake_llm_full_run_persists_and_replays(
         )
         assert resp.status_code == 200
         assert resp.headers["content-type"].startswith("text/event-stream")
-        events = _parse_sse(resp.text)
+        events = parse_sse(resp.text)
         names = [name for name, _ in events]
         assert names[0] == "start"
         assert names[-1] == "done"
@@ -59,6 +42,14 @@ def test_fake_llm_full_run_persists_and_replays(
             "bull", "bear", "facilitator", "trader",
             "risk_conservative", "risk_aggressive", "risk_arbiter", "reporter",
         } <= completed  # the full debate-on topology actually ran
+
+        # One flavor assertion per analyst: the fake's prompt-keyed dispatch
+        # produced the news/fundamentals/technicals variants through the REAL
+        # node prompts — not the generic analyst fallback.
+        deltas = {p["node"]: p["delta"] for name, p in events if name == "node_complete"}
+        assert "headlines" in deltas["news_analyst"]["analyst_reports"]["news"]["summary"]
+        assert "P/E" in deltas["fundamentals_analyst"]["analyst_reports"]["fundamentals"]["summary"]
+        assert "RSI" in deltas["technicals_analyst"]["analyst_reports"]["technicals"]["summary"]
 
         run_id = events[0][1]["run_id"]
         done = events[-1][1]
@@ -133,15 +124,17 @@ def test_fake_llm_full_run_persists_and_replays(
     assert counts["events"] == len(events)
 
 
-def test_fake_llm_runs_are_deterministic_per_ticker(api_sqlite_warehouse, monkeypatch, tmp_path):
+def test_fake_llm_runs_are_deterministic_per_ticker(
+    api_sqlite_warehouse, monkeypatch, tmp_path, parse_sse
+):
     monkeypatch.setenv("APP_FAKE_LLM", "1")
     settings_mod.get_settings.cache_clear()
     with TestClient(create_app(runs_dir=str(tmp_path), rate_limit=10)) as client:
         # Different tickers produce different (but valid) decisions/reports.
-        first = _parse_sse(
+        first = parse_sse(
             client.post("/api/analyze", json={"ticker": "MSFT"}).text
         )[-1][1]
-        second = _parse_sse(
+        second = parse_sse(
             client.post("/api/analyze", json={"ticker": "GOOGL"}).text
         )[-1][1]
     assert first["final_decision"]["action"] in {"BUY", "SELL", "HOLD"}

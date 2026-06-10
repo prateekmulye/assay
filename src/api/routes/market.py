@@ -7,7 +7,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.routes.deps import clamp_limit, require_warehouse, ticker_path
+from src.api.routes.deps import clamp, clamp_limit, require_warehouse, ticker_path
 from src.api.routes.dto import (
     FundamentalsResponse,
     InstrumentOut,
@@ -57,7 +57,7 @@ async def prices(
     days: int = 365,
 ) -> PricesResponse:
     """Daily bars ascending by ts within the trailing ``days`` window."""
-    days = max(1, min(days, 3650))
+    days = clamp(days, 1, 3650)
     async with session_scope() as session:
         inst = await _resolve_or_404(session, ticker, exchange)
         bars = await list_price_bars(session, inst.id, days=days)

@@ -1,28 +1,6 @@
-import json
-
 from starlette.testclient import TestClient
 
 from src.api.main import create_app
-
-
-def _parse_sse(raw: str):
-    """Parse an SSE text body into a list of (event, json_payload) tuples.
-
-    sse-starlette emits CRLF line endings and separates frames with a blank line;
-    normalize to LF so frame boundaries (``\\n\\n``) are unambiguous.
-    """
-    raw = raw.replace("\r\n", "\n").replace("\r", "\n")
-    events = []
-    for block in raw.strip().split("\n\n"):
-        ev_name, data_lines = None, []
-        for line in block.splitlines():
-            if line.startswith("event:"):
-                ev_name = line[len("event:"):].strip()
-            elif line.startswith("data:"):
-                data_lines.append(line[len("data:"):].strip())
-        if ev_name and data_lines:
-            events.append((ev_name, json.loads("".join(data_lines))))
-    return events
 
 
 def test_healthz_stays_at_root():
@@ -32,12 +10,12 @@ def test_healthz_stays_at_root():
         assert resp.json()["status"] == "ok"
 
 
-def test_analyze_streams_events_ending_in_done(offline_graph):
+def test_analyze_streams_events_ending_in_done(offline_graph, parse_sse):
     with TestClient(create_app()) as client:
         resp = client.post("/api/analyze", json={"ticker": "AAPL", "investor_mode": "Neutral"})
         assert resp.status_code == 200
         assert resp.headers["content-type"].startswith("text/event-stream")
-        events = _parse_sse(resp.text)
+        events = parse_sse(resp.text)
         names = [e[0] for e in events]
         assert names[0] == "start"
         assert names[-1] == "done"
@@ -102,11 +80,13 @@ def test_runs_endpoint_404_for_unknown_id(tmp_path):
         assert client.get("/api/runs/does-not-exist").status_code == 404
 
 
-def test_runs_endpoint_400_for_non_token_run_id(tmp_path):
-    # run_ids are hex tokens; anything else (e.g. dotted traversal attempts)
-    # is rejected before touching the filesystem or the DB.
+def test_runs_endpoint_422_for_non_token_run_id(tmp_path):
+    # run_ids are short [A-Za-z0-9-] tokens; anything else (dotted traversal
+    # attempts, over-long ids) is rejected with 422 (same code as ticker_path)
+    # before touching the filesystem or the DB.
     with TestClient(create_app(runs_dir=str(tmp_path))) as client:
-        assert client.get("/api/runs/..etc").status_code == 400
+        assert client.get("/api/runs/..etc").status_code == 422
+        assert client.get(f"/api/runs/{'a' * 65}").status_code == 422
 
 
 def test_cors_headers_present():

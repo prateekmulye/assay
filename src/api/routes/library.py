@@ -1,8 +1,10 @@
 """Research Library reads (WP-5): GET /api/library and GET /api/runs/{run_id}."""
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import re
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -18,6 +20,10 @@ _LOG = logging.getLogger(__name__)
 router = APIRouter()
 
 RunStatus = Literal["running", "finished", "error", "aborted"]
+
+# run_ids are short opaque tokens (uuid hex / "run-..." test ids); reject
+# anything else before touching the filesystem or the DB.
+RUN_ID_RE = re.compile(r"[A-Za-z0-9-]{1,64}")
 
 
 def _summary(run: Run) -> RunSummary:
@@ -44,7 +50,9 @@ async def library(
     """Runs newest-first with a total count; filterable by ticker and status."""
     limit = clamp_limit(limit)
     offset = max(0, offset)
-    norm_ticker = ticker.strip().upper() or None if ticker else None
+    norm_ticker = (ticker.strip().upper() or None) if ticker else None
+    # Offset pagination can skew under concurrent inserts (a new run shifts every
+    # page); fine at demo scale — upgrade to keyset (started_at/run_id cursor) if needed.
     async with session_scope() as session:
         runs = await list_runs(
             session, ticker=norm_ticker, status=status, limit=limit, offset=offset
@@ -61,9 +69,9 @@ async def run_detail(run_id: str, request: Request) -> RunDetail:
     disabled, errors, or doesn't know the run, fall back to the JSONL trace the
     RunRecorder wrote (the pre-WP-5 ``GET /runs/{id}`` behavior, preserved).
     404 only when NEITHER source knows the run_id."""
-    # Guard against path traversal: run_ids are hex tokens.
-    if not run_id.replace("-", "").isalnum():
-        raise HTTPException(status_code=400, detail="invalid run_id")
+    # Guard against path traversal: 422 (same code as ticker_path) for junk ids.
+    if not RUN_ID_RE.fullmatch(run_id):
+        raise HTTPException(status_code=422, detail="invalid run_id")
 
     if warehouse_enabled():
         try:
@@ -91,9 +99,13 @@ async def run_detail(run_id: str, request: Request) -> RunDetail:
     trace = request.app.state.runs_path / f"{run_id}.jsonl"
     if not trace.exists():
         raise HTTPException(status_code=404, detail="run not found")
-    events = [
-        json.loads(line)
-        for line in trace.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
+    raw = await asyncio.to_thread(trace.read_text, encoding="utf-8")
+    events: list[dict] = []
+    for line in raw.splitlines():
+        if not line.strip():
+            continue
+        try:
+            events.append(json.loads(line))
+        except json.JSONDecodeError:  # crash mid-write etc.: skip, don't 500
+            _LOG.warning("run_detail: skipping corrupt JSONL line in %s", trace.name)
     return RunDetail(run_id=run_id, source="jsonl", events=events)

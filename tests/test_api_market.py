@@ -251,7 +251,7 @@ def test_eval_results_newest_first(api_sqlite_warehouse):
     assert [r["label"] for r in limited["results"]] == ["new"]
 
 
-def test_eval_results_empty_and_503_when_disabled(api_sqlite_warehouse):
+def test_eval_results_empty_when_no_rows_stored(api_sqlite_warehouse):
     with TestClient(create_app()) as client:
         assert client.get("/api/eval/results").json() == {"results": []}
 

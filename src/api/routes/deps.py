@@ -27,6 +27,11 @@ def ticker_path(ticker: str) -> str:
     return normalized
 
 
+def clamp(value: int, lo: int, hi: int) -> int:
+    """Silently clamp a client-supplied integer into [lo, hi]."""
+    return max(lo, min(value, hi))
+
+
 def clamp_limit(limit: int, *, lo: int = 1, hi: int = 100) -> int:
     """Silently clamp a client-supplied limit into [lo, hi]."""
-    return max(lo, min(limit, hi))
+    return clamp(limit, lo, hi)
