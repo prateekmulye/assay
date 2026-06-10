@@ -8,11 +8,13 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.warehouse.bootstrap import create_all
+from src.warehouse.db import enable_sqlite_fks
 from src.warehouse.models import Instrument, NewsItem, PriceBar
 from src.warehouse.repos import (
+    _dialect_insert,
     append_run_event,
     bulk_upsert_price_bars,
     create_run,
@@ -39,6 +41,7 @@ DAY = date(2026, 6, 10)
 @pytest.fixture
 async def engine():
     eng = create_async_engine("sqlite+aiosqlite:///:memory:")
+    enable_sqlite_fks(eng)
     await create_all(eng)
     yield eng
     await eng.dispose()
@@ -71,6 +74,26 @@ async def test_upsert_instrument_inserts_then_updates_same_id(session):
     assert second.name == "Apple Inc."
     assert second.sector == "Technology"
     assert await _count(session, Instrument) == 1
+
+
+async def test_upsert_instrument_unknown_field_raises_typeerror(session):
+    # Insert path: no row exists yet.
+    with pytest.raises(TypeError, match="sectr"):
+        await upsert_instrument(
+            session, ticker="AAPL", exchange="NASDAQ", screener="america", sectr="Tech"
+        )
+    # Update path: the row exists, the kwarg is still bogus.
+    await upsert_instrument(session, ticker="AAPL", exchange="NASDAQ", screener="america")
+    with pytest.raises(TypeError, match="watchd"):
+        await upsert_instrument(
+            session, ticker="AAPL", exchange="NASDAQ", screener="america", watchd=True
+        )
+    assert await _count(session, Instrument) == 1
+
+
+def test_dialect_insert_unbound_session_raises():
+    with pytest.raises(RuntimeError, match="session is not bound to an engine"):
+        _dialect_insert(AsyncSession())
 
 
 async def test_set_watched_and_list_watched(session):
@@ -206,7 +229,14 @@ async def test_latest_finished_run_respects_within_hours(session):
 
     await create_run(session, "still-running", "AAPL", "on")  # never finished
 
-    # No window: newest finished run per ticker.
+    # A newer run that finished with status="error" must NOT win.
+    errored = await create_run(session, "errored", "AAPL", "on")
+    await finish_run(session, "errored", status="error")
+    errored.started_at = now - timedelta(minutes=1)
+    await session.flush()
+    assert errored.finished_at is not None  # finished, but not status="finished"
+
+    # No window: newest *successfully* finished run per ticker.
     got = await latest_finished_run(session, "AAPL")
     assert got is not None and got.run_id == "fresh"
     got = await latest_finished_run(session, "TSLA")
@@ -219,6 +249,20 @@ async def test_latest_finished_run_respects_within_hours(session):
 
     # Unfinished runs never count.
     assert await latest_finished_run(session, "NVDA") is None
+
+
+async def test_latest_finished_run_tie_breaks_on_run_id(session):
+    t = datetime.now(UTC) - timedelta(minutes=10)
+    a = await create_run(session, "a", "IBM", "on")
+    await finish_run(session, "a", status="finished")
+    b = await create_run(session, "b", "IBM", "on")
+    await finish_run(session, "b", status="finished")
+    a.started_at = t
+    b.started_at = t  # identical started_at -> run_id.desc() decides
+    await session.flush()
+
+    got = await latest_finished_run(session, "IBM")
+    assert got is not None and got.run_id == "b"
 
 
 # ----------------------------------------------------------------------- quota

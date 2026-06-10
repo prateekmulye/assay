@@ -1,9 +1,10 @@
 # tests/warehouse/test_models.py
 """Warehouse ORM models: create_all on in-memory SQLite, per-table roundtrips,
-and unique-constraint enforcement (IntegrityError on duplicates)."""
+unique-constraint enforcement (IntegrityError on duplicates), FK enforcement
+(PRAGMA foreign_keys=ON), and tz-aware datetime roundtrips."""
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import func, select
@@ -11,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from src.warehouse.bootstrap import create_all
+from src.warehouse.db import enable_sqlite_fks
 from src.warehouse.models import (
     EMBEDDING_DIM,
     DemoQuota,
@@ -30,6 +32,7 @@ DAY = date(2026, 6, 10)
 @pytest.fixture
 async def engine():
     eng = create_async_engine("sqlite+aiosqlite:///:memory:")
+    enable_sqlite_fks(eng)
     await create_all(eng)
     yield eng
     await eng.dispose()
@@ -163,3 +166,57 @@ async def test_demo_quota_unique_key_day(session):
     session.add(DemoQuota(key="ip:1.2.3.4", day=DAY, count=2))
     with pytest.raises(IntegrityError):
         await session.flush()
+
+
+# ---------------------------------------------------------- FK enforcement
+
+
+async def test_orphan_run_event_rejected_on_sqlite(session):
+    """PRAGMA foreign_keys=ON makes SQLite reject orphans like Postgres does."""
+    session.add(RunEvent(run_id="ghost", seq=0, event={"type": "orphan"}))
+    with pytest.raises(IntegrityError):
+        await session.flush()
+
+
+async def test_delete_instrument_cascades_price_bars(session):
+    inst = await _make_instrument(session)
+    session.add(
+        PriceBar(instrument_id=inst.id, ts=TS, open=1.0, high=2.0, low=0.5, close=1.5)
+    )
+    await session.flush()
+    await session.delete(inst)
+    await session.flush()
+    n = (await session.execute(select(func.count()).select_from(PriceBar))).scalar_one()
+    assert n == 0
+
+
+# ------------------------------------------------------- datetimes & indexes
+
+
+async def test_datetime_columns_return_utc_aware_on_sqlite(engine):
+    """An aware non-UTC bind comes back as the same instant with tzinfo=UTC."""
+    ist = timezone(timedelta(hours=5, minutes=30))
+    maker = async_sessionmaker(engine, expire_on_commit=False)
+    async with maker() as s1:
+        inst = Instrument(ticker="AAPL", exchange="NASDAQ", screener="america")
+        s1.add(inst)
+        await s1.flush()
+        s1.add(
+            PriceBar(
+                instrument_id=inst.id, ts=TS.astimezone(ist),
+                open=1.0, high=2.0, low=0.5, close=1.5,
+            )
+        )
+        await s1.commit()
+    async with maker() as s2:  # fresh session: forces result-row processing
+        bar = (await s2.execute(select(PriceBar))).scalar_one()
+        assert bar.ts.tzinfo == UTC
+        assert bar.ts == TS
+        inst2 = (await s2.execute(select(Instrument))).scalar_one()
+        assert inst2.created_at.tzinfo == UTC
+        assert inst2.updated_at.tzinfo == UTC
+
+
+def test_news_items_has_instrument_ts_index():
+    names = {ix.name for ix in NewsItem.__table__.indexes}
+    assert "ix_news_items_instrument_id_ts" in names

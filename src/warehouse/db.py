@@ -4,12 +4,20 @@
 The warehouse is enabled iff ``DATABASE_URL`` is set (``get_settings().database_url``).
 Engine and sessionmaker are lazily created and module-memoized; ``reset_engine``
 disposes and clears the memo so tests (and config reloads) can swap URLs.
+
+.. caution::
+   The module-memoized ``AsyncEngine`` has event-loop affinity: its connection
+   pool binds to the asyncio loop it first connects on, so the engine must not
+   be reused across ``asyncio.run()`` loops. Call ``await reset_engine()``
+   before switching loops (tests that spin up fresh loops must do this).
 """
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -28,6 +36,25 @@ def warehouse_enabled() -> bool:
     return bool(get_settings().database_url)
 
 
+def enable_sqlite_fks(engine: AsyncEngine) -> None:
+    """Enforce foreign keys on SQLite engines (no-op on every other dialect).
+
+    SQLite ships with ``foreign_keys`` OFF per connection; without this pragma
+    the offline suite silently diverges from PostgreSQL (orphan inserts succeed
+    and ``ON DELETE CASCADE`` never fires). Registers a sync-engine ``connect``
+    listener so every pooled connection gets ``PRAGMA foreign_keys=ON``. Call
+    it on any directly-created test engine too (the test fixtures do).
+    """
+    if engine.sync_engine.dialect.name != "sqlite":
+        return
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _set_sqlite_fk_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+
 def get_engine() -> AsyncEngine:
     """Return the memoized async engine, creating it on first use."""
     global _engine
@@ -36,6 +63,7 @@ def get_engine() -> AsyncEngine:
         if not settings.database_url:
             raise RuntimeError("warehouse disabled: DATABASE_URL not set")
         _engine = create_async_engine(settings.database_url, echo=settings.db_echo)
+        enable_sqlite_fks(_engine)
     return _engine
 
 

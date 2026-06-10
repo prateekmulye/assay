@@ -33,9 +33,11 @@ def _utcnow() -> datetime:
 
 def _dialect_insert(session: AsyncSession) -> Callable[..., Any]:
     """Return the ON-CONFLICT-capable ``insert`` constructor for the bound dialect."""
-    bind = session.bind
-    name = bind.dialect.name if bind is not None else "sqlite"
-    if name == "postgresql":
+    # An unbound AsyncSession has no ``bind`` proxy attribute at all.
+    bind = getattr(session, "bind", None)
+    if bind is None:
+        raise RuntimeError("session is not bound to an engine")
+    if bind.dialect.name == "postgresql":
         from sqlalchemy.dialects.postgresql import insert as pg_insert
 
         return pg_insert
@@ -46,26 +48,49 @@ def _dialect_insert(session: AsyncSession) -> Callable[..., Any]:
 
 # ------------------------------------------------------------------ instruments
 
+# Optional upsert kwargs must be real mapped columns; the key/identity fields are
+# keyword-only parameters of upsert_instrument itself.
+_INSTRUMENT_OPTIONAL_FIELDS = frozenset(Instrument.__table__.columns.keys()) - {
+    "id",
+    "ticker",
+    "exchange",
+    "screener",
+}
+
 
 async def upsert_instrument(
     session: AsyncSession, *, ticker: str, exchange: str, screener: str, **optional: Any
 ) -> Instrument:
-    """Insert or update-by-(ticker, exchange); returns the ORM row."""
+    """Insert or update-by-(ticker, exchange) atomically; returns the ORM row.
+
+    Race-safe: a single dialect-aware ``INSERT ... ON CONFLICT (ticker, exchange)
+    DO UPDATE`` (no SELECT-then-INSERT window), followed by a re-select to return
+    the refreshed ORM row.
+    """
+    unknown = set(optional) - _INSTRUMENT_OPTIONAL_FIELDS
+    if unknown:
+        raise TypeError(
+            f"upsert_instrument() got unknown field(s): {', '.join(sorted(unknown))}"
+        )
+    insert = _dialect_insert(session)
+    stmt = (
+        insert(Instrument)
+        .values(ticker=ticker, exchange=exchange, screener=screener, **optional)
+        .on_conflict_do_update(
+            index_elements=["ticker", "exchange"],
+            # onupdate defaults don't fire for ON CONFLICT DO UPDATE: set
+            # updated_at explicitly (last, so it always reflects this upsert).
+            set_={"screener": screener, **optional, "updated_at": _utcnow()},
+        )
+    )
+    await session.execute(stmt)
     row = (
         await session.execute(
-            select(Instrument).where(
-                Instrument.ticker == ticker, Instrument.exchange == exchange
-            )
+            select(Instrument)
+            .where(Instrument.ticker == ticker, Instrument.exchange == exchange)
+            .execution_options(populate_existing=True)
         )
-    ).scalar_one_or_none()
-    if row is None:
-        row = Instrument(ticker=ticker, exchange=exchange, screener=screener, **optional)
-        session.add(row)
-    else:
-        row.screener = screener
-        for field, value in optional.items():
-            setattr(row, field, value)
-    await session.flush()
+    ).scalar_one()
     return row
 
 
@@ -92,6 +117,8 @@ async def bulk_upsert_price_bars(
 
     Returns the attempted (input) count, not the inserted count.
     """
+    # asyncpg's ~32k bind-param ceiling caps one call at ~4k bars (8 params/row);
+    # chunk upstream for backfills.
     if not bars:
         return 0
     rows = [
@@ -139,6 +166,7 @@ async def upsert_news(
 
     Returns the attempted (input) count, not the inserted count.
     """
+    # asyncpg's ~32k bind-param ceiling bounds one bulk call; chunk upstream for backfills.
     if not items:
         return 0
     rows = []
@@ -232,14 +260,20 @@ async def list_runs(
 async def latest_finished_run(
     session: AsyncSession, ticker: str, *, within_hours: int | None = None
 ) -> Run | None:
-    """Newest finished run for ``ticker`` (backs the WP-2 verdict cache).
+    """Newest successfully finished run for ``ticker`` (backs the WP-2 verdict cache).
 
-    ``within_hours`` restricts to runs started inside the freshness window.
+    Only ``status == "finished"`` runs qualify (errored runs have ``finished_at``
+    set too but must never win). ``within_hours`` restricts to runs started
+    inside the freshness window.
     """
     stmt = (
         select(Run)
-        .where(Run.ticker == ticker, Run.finished_at.is_not(None))
-        .order_by(Run.started_at.desc())
+        .where(
+            Run.ticker == ticker,
+            Run.status == "finished",
+            Run.finished_at.is_not(None),
+        )
+        .order_by(Run.started_at.desc(), Run.run_id.desc())
         .limit(1)
     )
     if within_hours is not None:

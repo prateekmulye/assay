@@ -117,6 +117,9 @@ def upgrade() -> None:
         sa.Column("url_hash", sa.String(64), nullable=False, unique=True),
         sa.Column("embedding", _embedding_type(), nullable=True),
     )
+    op.create_index(
+        "ix_news_items_instrument_id_ts", "news_items", ["instrument_id", "ts"]
+    )
 
     op.create_table(
         "runs",
@@ -183,6 +186,7 @@ def downgrade() -> None:
     op.drop_table("run_events")
     op.drop_index("ix_runs_ticker_started_at", table_name="runs")
     op.drop_table("runs")
+    op.drop_index("ix_news_items_instrument_id_ts", table_name="news_items")
     op.drop_table("news_items")
     op.drop_index(
         "ix_fundamentals_snapshots_instrument_id_ts", table_name="fundamentals_snapshots"

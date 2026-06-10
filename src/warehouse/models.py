@@ -2,11 +2,14 @@
 """Warehouse ORM models (SQLAlchemy 2 declarative, Mapped/mapped_column style).
 
 Design notes:
-- All datetimes are tz-aware UTC, applied as Python-side defaults so SQLite and
-  Postgres bind/compare them identically (SQLite stores ISO strings; a uniform
-  ``+00:00`` suffix keeps lexicographic comparisons correct).
+- All datetime columns use ``UTCDateTime``: naive binds raise ``ValueError``,
+  aware binds are normalized to UTC, and SQLite result rows (stored without an
+  offset) come back with ``tzinfo=UTC`` reattached — so SQLite and Postgres
+  bind/compare/return datetimes identically.
 - JSON columns use ``sqlalchemy.JSON`` which works on both dialects (plain JSON on
-  PG — no JSONB-only APIs).
+  PG — no JSONB-only APIs). In-place mutation of a loaded JSON value is NOT
+  change-tracked; always reassign the whole value (``row.payload = {**row.payload,
+  "k": v}``), never mutate it.
 - ``EmbeddingVector(EMBEDDING_DIM)`` is pgvector on PG, JSON-in-TEXT on SQLite.
 """
 from __future__ import annotations
@@ -18,7 +21,6 @@ from sqlalchemy import (
     JSON,
     BigInteger,
     Date,
-    DateTime,
     ForeignKey,
     Index,
     String,
@@ -27,7 +29,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from src.warehouse.types import EmbeddingVector
+from src.warehouse.types import EmbeddingVector, UTCDateTime
 
 EMBEDDING_DIM = 384  # BAAI/bge-small-en-v1.5 output dimension (matches src/memory)
 
@@ -38,7 +40,9 @@ def _utcnow() -> datetime:
 
 class Base(DeclarativeBase):
     type_annotation_map = {
-        datetime: DateTime(timezone=True),
+        datetime: UTCDateTime(),
+        # NOTE: plain JSON columns don't track in-place mutation — reassign whole
+        # values (see module docstring).
         dict[str, Any]: JSON,
     }
 
@@ -99,11 +103,14 @@ class FundamentalsSnapshot(Base):
     eps: Mapped[float | None]
     revenue_growth: Mapped[float | None]
     profit_margin: Mapped[float | None]
+    # JSON columns (here and below): in-place mutation isn't tracked — always
+    # reassign whole values.
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
 
 class NewsItem(Base):
     __tablename__ = "news_items"
+    __table_args__ = (Index("ix_news_items_instrument_id_ts", "instrument_id", "ts"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     instrument_id: Mapped[int] = mapped_column(
