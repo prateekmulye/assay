@@ -44,8 +44,8 @@ jobs:
       - name: Type-check (mypy, lenient)
         run: mypy src
 
-      - name: Tests (offline; live deselected)
+      - name: Tests (offline; live + db deselected)
         env:
           # No real keys in CI; the env-isolation fixture also scrubs these.
           RUN_LIVE: "0"
-        run: pytest -q -m "not live"
+        run: pytest -q -m "not live and not db"
