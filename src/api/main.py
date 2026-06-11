@@ -57,7 +57,8 @@ def create_app(
 
     # Lifespan (WP-3): watchlist seeding + the gated collector; degrades on any
     # failure so it can never affect startup — see src/api/lifespan.py.
-    app = FastAPI(title="FinResearchAI API", version="0.2.0", lifespan=lifespan)
+    # version: simple literal, kept in sync with pyproject.toml [project].version.
+    app = FastAPI(title="FinResearchAI API", version="2.0.0", lifespan=lifespan)
 
     origins = allowed_origins or [
         o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",") if o.strip()
