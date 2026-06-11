@@ -53,7 +53,7 @@ def _patch_eval_seams(monkeypatch) -> None:
         assert tickers == ["AAPL", "MSFT"]  # loaded from the tickers file
         return list(_PAIRS)
 
-    async def fake_judge(*, ticker, context, decision_on, decision_off):
+    async def fake_judge(*, ticker, context, decision_on, decision_off, tracker=None):
         return _VERDICTS[ticker]
 
     monkeypatch.setattr(run_mod, "run_ab", fake_run_ab)
@@ -127,6 +127,43 @@ async def test_run_eval_one_judge_failure_skips_ticker_and_completes(
     failures = [r for r in caplog.records if "judge failed" in r.getMessage()]
     assert failures, "expected a judge-failure degrade warning"
     assert failures[0].exc_info is not None
+
+
+async def test_run_eval_surfaces_judge_cost_in_summary(monkeypatch, tmp_path):
+    """The judge's shared CostTracker totals land in the summary
+    (judge_cost_usd / judge_tokens) and in the markdown report table."""
+    from types import SimpleNamespace
+
+    async def fake_run_ab(tickers, *, investor_mode="Neutral", concurrency=3):
+        return list(_PAIRS)
+
+    async def fake_judge(*, ticker, context, decision_on, decision_off, tracker=None):
+        # Simulate the LLM-call cost the real judge_decision records on the
+        # shared tracker run_eval threads through.
+        assert tracker is not None, "run_eval must pass its shared judge tracker"
+        rid = f"judge-{ticker}"
+        tracker.on_llm_start({}, ["<p>"], run_id=rid)
+        tracker.on_llm_end(
+            SimpleNamespace(
+                llm_output={
+                    "token_usage": {"prompt_tokens": 100, "completion_tokens": 50},
+                    "model_name": "fake-deep",
+                }
+            ),
+            run_id=rid,
+        )
+        return _VERDICTS[ticker]
+
+    monkeypatch.setattr(run_mod, "run_ab", fake_run_ab)
+    monkeypatch.setattr(run_mod, "judge_decision", fake_judge)
+
+    await run_eval(_write_tickers(tmp_path), "wp14cost", 2, str(tmp_path))
+
+    report = json.loads((tmp_path / "report-wp14cost.json").read_text(encoding="utf-8"))
+    assert report["summary"]["judge_tokens"] == 300  # 150 per ticker x 2 tickers
+    assert report["summary"]["judge_cost_usd"] == 0.0  # fake-deep has no pricing entry
+    md = (tmp_path / "report-wp14cost.md").read_text(encoding="utf-8")
+    assert "Judge cost" in md
 
 
 async def test_run_eval_disabled_warehouse_still_writes_reports(monkeypatch, tmp_path):

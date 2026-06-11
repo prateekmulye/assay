@@ -21,6 +21,7 @@ from pathlib import Path
 from src.eval.harness import PairedResult, run_ab
 from src.eval.judge import JudgeVerdict, judge_decision
 from src.eval.report import _per_ticker_rows, aggregate, write_report
+from src.llm.cost import CostTracker
 from src.warehouse.ingest import record_eval_result
 
 _LOG = logging.getLogger(__name__)
@@ -39,8 +40,13 @@ def _context_for(pair: PairedResult) -> str:
     return f"Pipeline-A rationale: {on_r}\nPipeline-B rationale: {off_r}"
 
 
-async def _judge_all(pairs: list[PairedResult], concurrency: int) -> dict[str, JudgeVerdict]:
+async def _judge_all(
+    pairs: list[PairedResult], concurrency: int
+) -> tuple[dict[str, JudgeVerdict], dict]:
+    """Judge every pair (bounded concurrency). Returns (verdicts, judge_totals)
+    where judge_totals is the shared CostTracker.totals() across all judge calls."""
     sem = asyncio.Semaphore(concurrency)
+    tracker = CostTracker("eval_judge")
 
     async def _one(p: PairedResult) -> tuple[str, JudgeVerdict | None]:
         async with sem:
@@ -50,6 +56,7 @@ async def _judge_all(pairs: list[PairedResult], concurrency: int) -> dict[str, J
                     context=_context_for(p),
                     decision_on=p.decision_on,
                     decision_off=p.decision_off,
+                    tracker=tracker,
                 )
             except Exception:
                 # One judge failure must not kill the batch: leave the ticker
@@ -60,20 +67,25 @@ async def _judge_all(pairs: list[PairedResult], concurrency: int) -> dict[str, J
         return p.ticker, v
 
     results = await asyncio.gather(*(_one(p) for p in pairs))
-    return {ticker: verdict for ticker, verdict in results if verdict is not None}
+    verdicts = {ticker: verdict for ticker, verdict in results if verdict is not None}
+    return verdicts, tracker.totals()
 
 
 async def run_eval(tickers_path: str, label: str, concurrency: int, out_dir: str) -> Path:
     tickers = load_tickers(tickers_path)
     pairs = await run_ab(tickers, concurrency=concurrency)
-    verdicts = await _judge_all(pairs, concurrency=concurrency)
-    md_path, json_path = write_report(pairs, verdicts, label=label, out_dir=out_dir)
+    verdicts, judge_totals = await _judge_all(pairs, concurrency=concurrency)
+    md_path, json_path = write_report(
+        pairs, verdicts, label=label, out_dir=out_dir, judge_totals=judge_totals
+    )
     print(f"[eval] wrote {md_path} and {json_path}")
     # WP-10: persist the same summary + per-ticker rows the JSON report carries
     # so GET /api/eval/results serves real data. Runs AFTER the file writes and
     # never raises (warehouse disabled -> no-op False), so the eval's file
     # outputs are identical with or without a warehouse.
-    if await record_eval_result(label, aggregate(pairs, verdicts), _per_ticker_rows(pairs, verdicts)):
+    if await record_eval_result(
+        label, aggregate(pairs, verdicts, judge_totals), _per_ticker_rows(pairs, verdicts)
+    ):
         print(f"[eval] persisted eval result label={label!r} to warehouse")
     return md_path
 
