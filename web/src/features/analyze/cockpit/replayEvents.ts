@@ -101,3 +101,26 @@ export function compileReplay(events: readonly ReplayEvent[]): {
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
+
+/**
+ * Per-node latency (SECONDS) from the recorded run's own clock: the
+ * recordedOffsetMs delta between each node's first node_start and its
+ * node_complete. This is what the replay transcript shows — the reducer's
+ * replay-mode lifecycle stamps are synthetic fold ticks, so deriving latency
+ * from them renders nonsense ("1ms" rows).
+ */
+export function recordedNodeLatencies(
+  steps: readonly ReplayStep[],
+): Record<string, number> {
+  const startedAt: Record<string, number> = {};
+  const out: Record<string, number> = {};
+  for (const s of steps) {
+    if (!s.node) continue;
+    if (s.name === "node_start" && !(s.node in startedAt)) {
+      startedAt[s.node] = s.recordedOffsetMs;
+    } else if (s.name === "node_complete" && s.node in startedAt) {
+      out[s.node] = Math.max(0, s.recordedOffsetMs - startedAt[s.node]!) / 1000;
+    }
+  }
+  return out;
+}

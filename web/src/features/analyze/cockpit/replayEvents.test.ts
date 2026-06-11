@@ -13,6 +13,7 @@ import {
   MIN_STEP_MS,
   compileReplay,
   decodeReplayEvent,
+  recordedNodeLatencies,
 } from "./replayEvents";
 import { fixtureEvents } from "./replayFixture";
 
@@ -114,5 +115,25 @@ describe("compileReplay timing", () => {
     const { steps } = compileReplay(events);
     expect(steps).toHaveLength(2);
     expect(steps.map((s) => s.event.type)).toEqual(["start", "done"]);
+  });
+});
+
+describe("recordedNodeLatencies", () => {
+  it("derives per-node latency (s) from recorded node_start -> node_complete deltas", () => {
+    // fixture: router 1010 -> 1020 (10ms), reporter 1030 -> 1050 (20ms).
+    const { steps } = compileReplay(fixtureEvents);
+    expect(recordedNodeLatencies(steps)).toEqual({
+      router: 0.01,
+      reporter: 0.02,
+    });
+  });
+
+  it("omits a node whose start was never recorded (no fabricated number)", () => {
+    const events: ReplayEvent[] = [
+      { name: "start", ts_ms: 0, data: { type: "start", run_id: "r", ticker: "X", investor_mode: "Neutral" } },
+      { name: "node_complete", ts_ms: 30, data: { type: "node_complete", run_id: "r", node: "router", delta: {} } },
+    ];
+    const { steps } = compileReplay(events);
+    expect(recordedNodeLatencies(steps)).toEqual({});
   });
 });

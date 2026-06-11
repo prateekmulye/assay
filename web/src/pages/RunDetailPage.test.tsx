@@ -121,4 +121,31 @@ describe("RunDetailPage", () => {
     expect(await screen.findByText(/was aborted mid-stream/i)).toBeInTheDocument();
     expect(screen.getByRole("slider", { name: /replay timeline/i })).toBeInTheDocument();
   });
+
+  it("a single-event run still mounts the transport (not 'no replayable events')", async () => {
+    // Offsets are inter-event GAPS, so one event means durationMs === 0 —
+    // keying emptiness on duration misreported this run as having nothing to
+    // replay. One recorded event is absolutely replayable.
+    run.mockResolvedValue(detail({ events: [fixtureEvents[0]!] }));
+    renderWithProviders(<RunDetailPage />, { route: "/library/0bd902d9d393", path: "/library/:runId" });
+
+    expect(
+      await screen.findByRole("slider", { name: /replay timeline/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/no replayable events recorded/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the empty-events copy only when the run truly has no events", async () => {
+    run.mockResolvedValue(detail({ events: [] }));
+    renderWithProviders(<RunDetailPage />, { route: "/library/0bd902d9d393", path: "/library/:runId" });
+
+    expect(
+      await screen.findByText(/no replayable events recorded/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("slider", { name: /replay timeline/i }),
+    ).not.toBeInTheDocument();
+  });
 });
