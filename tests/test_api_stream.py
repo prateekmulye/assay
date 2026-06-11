@@ -228,6 +228,51 @@ async def test_stream_client_disconnect_persists_aborted(
 
 
 @pytest.mark.asyncio
+async def test_stream_cache_hit_short_circuits_to_reporter(sqlite_warehouse, monkeypatch):
+    """A fresh cached verdict short-circuits the run: only router + reporter execute,
+    the done event carries the cached decision, and the report notes the cache hit.
+    Only the router's LLM is patched — every other node would blow up if it ran."""
+    import src.agents.router as router_mod
+    from src.agents.router import TickerResolution
+    from src.llm.schemas import FinalDecision
+    from src.memory.cache import store_verdict
+
+    cached = FinalDecision(action="BUY", conviction=0.9, score=88, rationale="cached verdict")
+    await store_verdict("AAPL", cached)
+
+    class _RouterStructured:
+        async def ainvoke(self, messages, config=None, **kwargs):
+            return TickerResolution(
+                resolved_ticker="AAPL", screener="america", exchange="NASDAQ"
+            )
+
+    class _RouterLLM:
+        def with_structured_output(self, schema, method=None):
+            return _RouterStructured()
+
+    monkeypatch.setattr(router_mod, "get_llm", lambda tier: _RouterLLM())
+
+    events = await _collect(
+        analyze_event_stream(
+            ticker="AAPL", investor_mode="Neutral", debate_mode="on", run_id="run-cache"
+        )
+    )
+
+    assert events[-1]["event"] == "done"
+    completed = {
+        json.loads(e["data"])["node"] for e in events if e["event"] == "node_complete"
+    }
+    assert completed == {"router", "reporter"}, "cache hit must skip the full pipeline"
+
+    done = json.loads(events[-1]["data"])
+    assert done["final_decision"]["action"] == "BUY"
+    assert done["final_decision"]["score"] == 88
+    assert done["final_decision"]["rationale"] == "cached verdict"
+    assert "verdict cache" in done["final_report"]
+    assert "Served from verdict cache | yes" in done["final_report"]
+
+
+@pytest.mark.asyncio
 async def test_stream_without_warehouse_is_unchanged(offline_graph):
     # env_isolation (autouse) scrubbed DATABASE_URL -> warehouse disabled. The
     # stream must be exactly the pre-WP-4 contract: same event names, valid JSON
