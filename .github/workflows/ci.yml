@@ -1,10 +1,23 @@
 # .github/workflows/ci.yml
+#
+# WP-12 pipeline — five parallel jobs:
+#   test           backend lint + types + offline pytest (py3.11/3.13 matrix)
+#   web            SPA lint + typecheck + vitest + production build
+#   db-integration `pytest -m db` against a real pgvector Postgres service
+#                  (alembic upgrade + vector roundtrips — the paths unit tests mock)
+#   security       gitleaks (secrets) + pip-audit (PyPI advisories) + npm audit
+#   e2e-smoke      prod compose stack boot + curl smoke + trivy image scan
+#                  (push-to-main + manual only — keeps PR feedback fast)
+#
+# Live tests (real Ollama Cloud / Firecrawl) are NEVER run in CI; no real API
+# keys exist here. The e2e job uses APP_FAKE_LLM=1 (deterministic, no network).
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -49,3 +62,225 @@ jobs:
           # No real keys in CI; the env-isolation fixture also scrubs these.
           RUN_LIVE: "0"
         run: pytest -q -m "not live and not db"
+
+  web:
+    name: web (lint + types + tests + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install (npm ci)
+        run: npm ci
+
+      - name: Lint (eslint)
+        run: npm run lint
+
+      - name: Type-check (tsc)
+        run: npm run typecheck
+
+      - name: Tests (vitest)
+        run: npm run test:run
+
+      - name: Production build (vite)
+        run: npm run build
+
+  db-integration:
+    name: db integration (alembic + pgvector)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: finresearch
+          POSTGRES_PASSWORD: finresearch
+          POSTGRES_DB: finresearch
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U finresearch -d finresearch"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install project + all optional groups
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[all]"
+
+      - name: Postgres integration tests (alembic upgrade + vector roundtrips)
+        env:
+          DATABASE_URL: postgresql+asyncpg://finresearch:finresearch@localhost:5432/finresearch
+        # The trailing -m overrides the default 'not live and not db' in addopts.
+        run: pytest -q -m db
+
+  security:
+    name: security (gitleaks + pip-audit + npm audit)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history for gitleaks)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks (secret scanning, full history)
+        # Public repo under a personal account: no GITLEAKS_LICENSE needed.
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install project + pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[all]" pip-audit
+
+      - name: pip-audit (Python dependency advisories)
+        # Audits the full resolved environment; --skip-editable skips only the
+        # local project itself (not on PyPI). The job stays hard-failing
+        # (never continue-on-error); every suppression below is an explicit,
+        # justified escape to be REMOVED once the corresponding Dependabot
+        # bump PR lands.
+        #
+        # Escapes (audited 2026-06-10): advisories in the exact-pinned LLM
+        # framework stack. All have upstream fixes, but bumping
+        # langgraph/langchain-core pins is a coordinated dependency-
+        # finalization change (frozen WP-I contract), not a CI patch —
+        # Dependabot (.github/dependabot.yml) now files those bumps weekly.
+        run: >-
+          pip-audit --skip-editable
+          --ignore-vuln CVE-2026-26013
+          --ignore-vuln CVE-2026-40087
+          --ignore-vuln CVE-2026-44843
+          --ignore-vuln PYSEC-2026-76
+          --ignore-vuln PYSEC-2026-83
+          --ignore-vuln CVE-2026-27794
+          --ignore-vuln CVE-2025-71176
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: npm audit (fail on high/critical)
+        working-directory: web
+        run: npm audit --audit-level=high
+
+  e2e-smoke:
+    name: e2e smoke (prod compose + trivy)
+    # Boots the full Caddy+app+db stack — minutes of Docker work, so run it on
+    # pushes to main and manual dispatch only; PRs stay on the fast jobs above.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Deterministic image/container names (finresearch-app, finresearch-caddy).
+      COMPOSE_PROJECT_NAME: finresearch
+      POSTGRES_PASSWORD: ci
+      APP_FAKE_LLM: "1" # deterministic offline demo LLM — zero external calls
+      # Dummy values: APP_FAKE_LLM short-circuits every LLM/tool call before
+      # these are read. Real keys are never configured in CI.
+      OLLAMA_API_KEY: ci-dummy
+      FIRECRAWL_API_KEY: ci-dummy
+      # CADDY_DOMAIN stays unset -> Caddy serves plain :80 (no TLS in CI).
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build the prod stack
+        run: docker compose -f docker-compose.prod.yml build
+
+      - name: Trivy scan (app runtime image)
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: finresearch-app:latest
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+          # Justified escapes only — every entry carries a removal condition.
+          trivyignores: .trivyignore
+
+      - name: Boot the stack (fake-LLM demo mode, plain :80)
+        run: docker compose -f docker-compose.prod.yml up -d --wait --wait-timeout 240
+
+      - name: "Smoke: SPA shell served at /"
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 5 --retry-delay 2 --retry-connrefused http://localhost/ | tee /tmp/index.html >/dev/null
+          grep -q "<title>FinResearch" /tmp/index.html
+          grep -q 'id="root"' /tmp/index.html
+
+      - name: "Smoke: /healthz via the Caddy proxy"
+        run: |
+          set -euo pipefail
+          curl -fsS http://localhost/healthz | grep -q '"ok"'
+
+      - name: "Smoke: security headers on the edge"
+        run: |
+          set -euo pipefail
+          curl -fsSI http://localhost/ | tee /tmp/headers.txt
+          grep -qi '^x-content-type-options: nosniff' /tmp/headers.txt
+          grep -qi '^x-frame-options: DENY' /tmp/headers.txt
+          grep -qi '^referrer-policy:' /tmp/headers.txt
+          grep -qi '^content-security-policy:' /tmp/headers.txt
+          grep -qi '^strict-transport-security:' /tmp/headers.txt
+
+      - name: "Smoke: POST /api/analyze streams SSE to done"
+        run: |
+          set -euo pipefail
+          curl -NsS --max-time 240 -X POST http://localhost/api/analyze \
+            -H 'Content-Type: application/json' \
+            -H 'Accept: text/event-stream' \
+            -d '{"ticker":"AAPL"}' -o /tmp/sse.log
+          grep -q '^event: node_complete' /tmp/sse.log
+          grep -q '^event: done' /tmp/sse.log
+          ! grep -q '^event: error' /tmp/sse.log
+
+      - name: "Smoke: run shows up in GET /api/library"
+        run: |
+          set -euo pipefail
+          curl -fsS http://localhost/api/library | tee /tmp/library.json
+          grep -q '"AAPL"' /tmp/library.json
+          grep -q '"finished"' /tmp/library.json
+
+      - name: Stack logs (on failure)
+        if: failure()
+        run: |
+          docker compose -f docker-compose.prod.yml ps || true
+          docker compose -f docker-compose.prod.yml logs --tail=200 || true
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.prod.yml down -v
