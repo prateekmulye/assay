@@ -2,7 +2,7 @@
 
 We drive `build_graph(debate_mode).astream(input, stream_mode=["updates","messages","values"])`.
 Because stream_mode is a LIST, LangGraph yields 2-tuples `(mode, chunk)` (verified
-against langgraph 1.0.4):
+against langgraph 1.0.10):
 
   mode == "updates":  chunk is dict[node_name, state_delta]  -> node_start + node_complete
   mode == "messages": chunk is (message, metadata)           -> token (metadata.langgraph_node)

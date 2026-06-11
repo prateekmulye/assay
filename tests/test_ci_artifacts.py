@@ -194,16 +194,12 @@ class TestVulnEscapesCannotRot:
     bumps a pin, the corresponding escape MUST be deleted — this test makes the
     bump PR fail until it is."""
 
-    # advisory id -> the exact vulnerable pin it excuses
-    ESCAPED = {
-        "CVE-2026-26013": 'langchain-core==1.2.5',
-        "CVE-2026-40087": 'langchain-core==1.2.5',
-        "CVE-2026-44843": 'langchain-core==1.2.5',
-        "PYSEC-2026-76": 'langchain-openai==1.1.6',
-        "PYSEC-2026-83": 'langgraph==1.0.4',
-        "CVE-2026-27794": 'langgraph==1.0.4',  # transitive langgraph-checkpoint
-        "CVE-2025-71176": 'pytest==8.4.2',
-    }
+    # advisory id -> the exact vulnerable pin it excuses.
+    # EMPTY since the WP-14 sweep bumped every vulnerable pin (langchain-core
+    # 1.4.4, langchain-openai 1.1.16, langgraph 1.0.10 + langgraph-checkpoint
+    # >=4, pytest 9.0.3) and deleted all ci.yml/--ignore-vuln + .trivyignore
+    # escapes. Any new escape MUST be added here with its vulnerable pin.
+    ESCAPED: dict[str, str] = {}
 
     def test_every_escape_still_excuses_a_live_vulnerable_pin(self) -> None:
         ci = CI_YML.read_text(encoding="utf-8")
