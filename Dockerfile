@@ -64,5 +64,8 @@ ENTRYPOINT ["/app/docker/entrypoint.sh"]
 
 # ---- Stage 4: edge (compose service: caddy) --------------------------------
 FROM caddy:2-alpine AS caddy
+# Pull in Alpine security fixes the base image hasn't rebuilt with yet
+# (e.g. libcrypto3/libssl3 — trivy gates this image at CRITICAL,HIGH in CI).
+RUN apk upgrade --no-cache
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=web-builder /web/dist /srv
