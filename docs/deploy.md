@@ -103,6 +103,41 @@ docker compose -f docker-compose.prod.yml exec -T db \
 Cron that daily and ship the dump off-box. `app_runs` (JSONL traces) and
 `caddy_data` (certs — Caddy reissues if lost) are nice-to-have, not critical.
 
+## 7. CI/CD (GitHub Actions)
+
+CI (`.github/workflows/ci.yml`) runs five parallel jobs on every PR/push:
+backend matrix (`test`), frontend (`web`), real-Postgres `db-integration`
+(pgvector service + `pytest -m db`), `security` (gitleaks + pip-audit +
+`npm audit`), and — on pushes to main + manual dispatch only — `e2e-smoke`,
+which builds this exact prod compose stack with `APP_FAKE_LLM=1`, curl-smokes
+`/`, `/healthz`, the `/api/analyze` SSE stream, `/api/library`, and the
+security headers, and Trivy-scans the app image (CRITICAL/HIGH gate).
+No real API keys ever reach CI.
+
+The deploy pipeline (`.github/workflows/deploy.yml`) triggers after a green CI
+run on main (plus manual dispatch) but is **inert by default** — every job is
+skipped until you arm it. To enable, in the GitHub repo go to *Settings →
+Secrets and variables → Actions* and set:
+
+1. **Variable** `DEPLOY_ENABLED` = `true` (a variable, not a secret —
+   `if:` conditions can only read the `vars` context).
+2. **Secrets** `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (the private key whose
+   public half is in the VPS user's `~/.ssh/authorized_keys`).
+
+The VPS must have the repo cloned at `/opt/finresearchai` with `.env`
+configured per §3. Once armed, each deploy:
+
+- pushes both image targets to GHCR (`ghcr.io/prateekmulye/finresearchai-app`
+  and `...-caddy`, tagged `latest` + commit sha) — the rollback artifact;
+- SSHes to the VPS and runs `git pull --ff-only` +
+  `docker compose -f docker-compose.prod.yml up -d --build` (§5's update path:
+  the VPS builds from source; it does not pull GHCR images).
+
+To pause deploys, set `DEPLOY_ENABLED` to anything but `true` — the workflow
+goes back to green no-op. Dependabot (`.github/dependabot.yml`) files weekly
+grouped update PRs for pip, npm (`web/`), GitHub Actions, and Docker base
+images.
+
 ## Local stack testing (no domain)
 
 ```bash
