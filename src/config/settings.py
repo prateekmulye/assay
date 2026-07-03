@@ -61,6 +61,16 @@ class Settings(BaseSettings):
     collector_enabled: bool = False
     collector_interval_hours: int = 24
 
+    # X (Twitter) social signal (additive): pay-per-use API at $0.005 per post
+    # read. The bearer token alone authorizes app-only reads (consumer key/
+    # secret are NOT needed and should never be configured here). The monthly
+    # post cap is the hard spend ceiling, enforced warehouse-side increment-
+    # first: 1600 posts/month ≈ $8/mo ≈ $96/year. Cached posts are free.
+    x_bearer_token: str | None = None
+    x_posts_monthly_cap: int = 1600
+    x_posts_per_fetch: int = 15  # API bounds for search/recent: 10..100
+    x_cache_ttl_hours: int = 24
+
     # API demo guard (WP-5, additive): daily live-run caps enforced by
     # src/api/demo_guard.py (warehouse-backed; no-op when warehouse disabled).
     # ADMIN_TOKEN unlocks the X-Admin-Token bypass; unset/empty = no bypass.

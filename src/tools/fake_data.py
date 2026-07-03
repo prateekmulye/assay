@@ -164,3 +164,35 @@ def fake_daily_bars(ticker: str, start: datetime | None) -> list[dict[str, Any]]
             )
         day += timedelta(days=1)
     return bars
+
+
+# --- X social posts (fake mode) ---------------------------------------------
+
+_SOCIAL_TEMPLATES: tuple[str, ...] = (
+    "{t} earnings call was quietly the most bullish thing I've read this quarter",
+    "unpopular opinion: {t} is priced like growth is over. it isn't.",
+    "trimmed my {t} position today — valuation doing all the lifting here",
+    "the {t} product cycle chatter on the floor is real. watch guidance.",
+    "{t} insiders selling into strength again. draw your own conclusions.",
+    "institutional flows into {t} three weeks straight per today's tape",
+)
+
+
+def fake_social_posts(ticker: str, limit: int = 4) -> list[dict[str, Any]]:
+    """Deterministic canned X posts for fake mode (same _h idiom as the rest)."""
+    ticker = (ticker or "DEMO").upper()
+    start = _h(f"{ticker}:x") % len(_SOCIAL_TEMPLATES)
+    base = datetime(2026, 1, 5, 14, 30, tzinfo=UTC)
+    posts: list[dict[str, Any]] = []
+    for i in range(min(max(limit, 0), len(_SOCIAL_TEMPLATES))):
+        idx = (start + i) % len(_SOCIAL_TEMPLATES)
+        posts.append(
+            {
+                "ts": base - timedelta(hours=3 * i),
+                "text": _SOCIAL_TEMPLATES[idx].format(t=ticker),
+                "url": f"https://x.com/i/web/status/9{_h(f'{ticker}:x:{i}') % 10**15}",
+                "likes": 20 + _h(f"{ticker}:xl:{i}") % 400,
+                "reposts": 3 + _h(f"{ticker}:xr:{i}") % 90,
+            }
+        )
+    return posts

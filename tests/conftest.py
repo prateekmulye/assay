@@ -334,6 +334,10 @@ def env_isolation(monkeypatch):
         "DEMO_RUNS_GLOBAL_PER_DAY",
         "APP_FAKE_LLM",
         "FAKE_LLM",
+        "X_BEARER_TOKEN",
+        "X_POSTS_MONTHLY_CAP",
+        "X_POSTS_PER_FETCH",
+        "X_CACHE_TTL_HOURS",
     ):
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("RUN_LIVE", "0")

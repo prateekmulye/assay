@@ -277,15 +277,30 @@ async def upsert_news(
 
 
 async def list_news_items(
-    session: AsyncSession, instrument_id: int, limit: int = 20
+    session: AsyncSession,
+    instrument_id: int,
+    limit: int = 20,
+    *,
+    source: str | None = None,
+    since: datetime | None = None,
 ) -> list[NewsItem]:
-    """News for the instrument, newest first (ts DESC, id DESC tie-break)."""
-    result = await session.execute(
+    """News for the instrument, newest first (ts DESC, id DESC tie-break).
+
+    Optional filters (additive): ``source`` exact-matches the source column
+    (e.g. "x" for social posts); ``since`` keeps items with ts >= since —
+    together they power the X tool's freshness-cache read.
+    """
+    stmt = (
         select(NewsItem)
         .where(NewsItem.instrument_id == instrument_id)
         .order_by(NewsItem.ts.desc(), NewsItem.id.desc())
         .limit(limit)
     )
+    if source is not None:
+        stmt = stmt.where(NewsItem.source == source)
+    if since is not None:
+        stmt = stmt.where(NewsItem.ts >= since)
+    result = await session.execute(stmt)
     return list(result.scalars().all())
 
 
@@ -549,12 +564,21 @@ async def latest_verdict(session: AsyncSession, ticker: str) -> Verdict | None:
 
 async def increment_quota(session: AsyncSession, key: str, day: date) -> int:
     """Atomic upsert+increment for (key, day); returns the new count."""
+    return await increment_quota_by(session, key, day, 1)
+
+
+async def increment_quota_by(
+    session: AsyncSession, key: str, day: date, amount: int
+) -> int:
+    """Atomic upsert+increment by ``amount`` for (key, day); returns the new
+    count. Used both by the demo guard (amount=1 per run) and the X social
+    budget (amount=posts-per-fetch, keyed on the first of the month)."""
     insert = _dialect_insert(session)
     stmt = (
         insert(DemoQuota)
-        .values(key=key, day=day, count=1)
+        .values(key=key, day=day, count=amount)
         .on_conflict_do_update(
-            index_elements=["key", "day"], set_={"count": DemoQuota.count + 1}
+            index_elements=["key", "day"], set_={"count": DemoQuota.count + amount}
         )
         .returning(DemoQuota.count)
     )

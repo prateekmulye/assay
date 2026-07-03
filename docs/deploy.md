@@ -88,6 +88,7 @@ Edit `.env`. Every variable the prod stack reads:
 | `OLLAMA_API_KEY`    | yes      | Ollama Cloud key (LLM backbone). |
 | `FIRECRAWL_API_KEY` | yes      | Firecrawl key (news analyst web research). |
 | `ADMIN_TOKEN`       | recommended | `X-Admin-Token` header bypassing rate/daily-demo limits. Generate: `openssl rand -hex 24`. |
+| `X_BEARER_TOKEN`    | optional | X (Twitter) API bearer token for the social signal. Pay-per-use ($0.005/post read) — spend is hard-capped warehouse-side (`X_POSTS_MONTHLY_CAP`, default 1600 posts ≈ $8/mo) and served cache-first. Unset = feature off. |
 | `APP_FAKE_LLM`      | no (default `0`) | `1` = deterministic offline demo LLM. Leave `0` in production. |
 
 Everything else (`TRUST_PROXY=1`, `COLLECTOR_ENABLED=1`, `DATABASE_URL`,

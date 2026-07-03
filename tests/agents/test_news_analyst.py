@@ -132,3 +132,64 @@ async def test_news_analyst_llm_failure_degrades(monkeypatch):
     assert "News unavailable:" in rep["summary"]
     assert "LLM error" in rep["summary"]
     assert out["run_metrics"][0]["node"] == "news_analyst"
+
+
+class _CapturingStructured:
+    def __init__(self, result):
+        self._result = result
+        self.messages = None
+
+    async def ainvoke(self, messages, config=None):
+        self.messages = messages
+        return self._result
+
+
+class _CapturingLLM:
+    def __init__(self, result):
+        self.structured = _CapturingStructured(result)
+
+    def with_structured_output(self, schema, method=None):
+        return self.structured
+
+
+async def test_news_analyst_social_posts_are_fenced_in_prompt(monkeypatch):
+    hits = [NewsHit(title="Apple beats", url="https://n.example", snippet="q", markdown=None)]
+    monkeypatch.setattr(news_mod, "search_news", lambda q, limit=5: hits)
+
+    async def _social(ticker, exchange="NASDAQ", screener="america"):
+        return [
+            {"ts": None, "text": "services margin is the story", "url": "u1",
+             "likes": 90, "reposts": 32},
+            {"ts": None, "text": "cached take", "url": "u2", "likes": 0, "reposts": 0},
+        ]
+
+    monkeypatch.setattr(news_mod, "fetch_social_posts", _social)
+    report = AnalystReport(summary="ok", confidence=0.5)
+    llm = _CapturingLLM(report)
+    monkeypatch.setattr(news_mod, "get_llm", lambda tier: llm)
+
+    await news_analyst({"resolved_ticker": "AAPL"})
+
+    human = llm.structured.messages[-1].content
+    assert "<social_posts>" in human and "</social_posts>" in human
+    assert "services margin is the story [90 likes · 32 reposts]" in human
+    # Zero-metric (cached) posts render without a metrics suffix.
+    assert "- cached take\n" in human or human.rstrip().endswith("- cached take\n</social_posts>")
+    # The fence is declared untrusted in the system prompt.
+    assert "<social_posts>" in llm.structured.messages[0].content
+
+
+async def test_news_analyst_no_social_means_no_block(monkeypatch):
+    hits = [NewsHit(title="Apple beats", url="https://n.example", snippet="q", markdown=None)]
+    monkeypatch.setattr(news_mod, "search_news", lambda q, limit=5: hits)
+
+    async def _social(ticker, exchange="NASDAQ", screener="america"):
+        return []
+
+    monkeypatch.setattr(news_mod, "fetch_social_posts", _social)
+    report = AnalystReport(summary="ok", confidence=0.5)
+    llm = _CapturingLLM(report)
+    monkeypatch.setattr(news_mod, "get_llm", lambda tier: llm)
+
+    await news_analyst({"resolved_ticker": "AAPL"})
+    assert "<social_posts>" not in llm.structured.messages[-1].content
