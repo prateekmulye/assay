@@ -12,6 +12,7 @@ import { AlertTriangle, Library } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 
+import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import {
@@ -131,6 +132,13 @@ export function LibraryPage() {
         eyebrow="Research library"
         title="Every run, replayable."
         description="A searchable archive of past analyses. Filter by ticker or status, scan the verdict and cost at a glance, and open any run to replay the full agent stream exactly as it happened — even when your live quota is spent."
+        actions={
+          data && (
+            <p className="font-mono text-2xs tabular-nums uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
+              {total} {total === 1 ? "run" : "runs"} recorded
+            </p>
+          )
+        }
       />
 
       {quotaExhausted && <QuotaExhaustedBanner />}
@@ -151,13 +159,9 @@ export function LibraryPage() {
             title="Couldn’t load the library"
             description="The run archive didn’t respond. This is usually a cold backend — retry in a moment."
           >
-            <button
-              type="button"
-              onClick={() => void refetch()}
-              className="rounded-md bg-[var(--color-beam)] px-4 py-2 text-sm font-medium text-[var(--color-key-fg)] transition-[filter,box-shadow] hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]"
-            >
+            <Button variant="key" size="md" onClick={() => void refetch()}>
               Retry
-            </button>
+            </Button>
           </EmptyState>
         ) : runs.length === 0 ? (
           <EmptyState
@@ -171,7 +175,7 @@ export function LibraryPage() {
           >
             <Link
               to={hasFilters ? "/library" : "/"}
-              className="rounded-md bg-[var(--color-beam)] px-4 py-2 text-sm font-medium text-[var(--color-key-fg)] transition-[filter,box-shadow] hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]"
+              className={buttonVariants({ variant: "key", size: "md" })}
             >
               {hasFilters ? "Clear filters" : "Run your first analysis"}
             </Link>
@@ -179,9 +183,9 @@ export function LibraryPage() {
         ) : (
           <>
             <ul className="space-y-3">
-              {runs.map((run) => (
+              {runs.map((run, i) => (
                 <li key={run.run_id}>
-                  <LibraryRow run={run} />
+                  <LibraryRow run={run} index={i} />
                 </li>
               ))}
             </ul>

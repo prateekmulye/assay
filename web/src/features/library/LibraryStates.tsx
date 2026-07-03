@@ -7,19 +7,20 @@ import { ChevronLeft, ChevronRight, Clapperboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-/** Glass-shimmer placeholder rows that match the LibraryRow silhouette. */
+/** Shimmer placeholder rows matching the h-14 ledger-line silhouette (§6.3-6:
+ *  a luminance sweep, never opacity-pulse; flat surface under reduced motion). */
 export function LibrarySkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <ul className="space-y-3" aria-hidden="true">
       {Array.from({ length: rows }).map((_, i) => (
         <li
           key={i}
-          className="panel animate-shimmer flex items-center gap-5 overflow-hidden rounded-lg py-4 pl-5 pr-4"
+          className="panel animate-shimmer flex h-14 items-center gap-4 overflow-hidden px-4"
         >
-          <span className="h-6 w-20 shrink-0 rounded-full bg-[var(--color-surface-3)]" />
-          <span className="h-5 w-16 rounded bg-[var(--color-surface-3)]" />
-          <span className="h-1.5 w-16 rounded-full bg-[var(--color-surface-3)]" />
-          <span className="ml-auto h-3 w-40 rounded bg-[var(--color-surface-3)]" />
+          <span className="h-5 w-24 shrink-0 rounded-sm bg-[var(--color-surface-3)]" />
+          <span className="h-4 w-16 rounded-sm bg-[var(--color-surface-3)]" />
+          <span className="h-[3px] w-20 rounded-full bg-[var(--color-surface-3)]" />
+          <span className="ml-auto h-3 w-44 rounded-sm bg-[var(--color-surface-3)]" />
         </li>
       ))}
     </ul>
@@ -29,6 +30,8 @@ export function LibrarySkeleton({ rows = 5 }: { rows?: number }) {
 /**
  * LibraryPager — Prev/Next over an offset window with a mono "N–M of T"
  * readout. Disabled states gate the edges; the page owns offset math.
+ * (DOM shape note: the readout <p> and the button cluster share one row div —
+ * the page test reads the readout through that structure.)
  */
 export function LibraryPager({
   offset,
@@ -54,9 +57,9 @@ export function LibraryPager({
     <div className="flex items-center justify-between gap-4 pt-2">
       <p className="font-mono text-2xs tabular-nums text-[var(--color-fg-subtle)]">
         {from}
-        <span className="px-0.5 text-[var(--color-fg-subtle)]">–</span>
+        <span className="px-0.5">–</span>
         {to}
-        <span className="px-1 text-[var(--color-fg-subtle)]">of</span>
+        <span className="px-1">of</span>
         {total}
         {isFetching && (
           <span className="ml-2 text-[var(--color-beam)]">· updating</span>
@@ -88,20 +91,22 @@ export function LibraryPager({
 
 /**
  * QuotaExhaustedBanner — when live runs are spent, the library reframes itself
- * as the place to GO (not a dead end). Amber (hold/replay) tint per DESIGN.md.
+ * as the place to GO (not a dead end). State speaks as a 2px hold filament on
+ * a graphite panel (borders-as-containment are abolished, §2.5); the glyph +
+ * words carry the meaning with the color.
  */
 export function QuotaExhaustedBanner({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex items-start gap-3 rounded-lg border px-5 py-4",
+        "panel relative flex items-start gap-3 overflow-hidden px-5 py-4",
         className,
       )}
-      style={{
-        borderColor: "var(--color-hold)",
-        background: "var(--color-hold-dim)",
-      }}
     >
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-[2px] bg-[var(--color-hold)]"
+      />
       <Clapperboard
         className="mt-0.5 size-5 shrink-0 text-[var(--color-hold)]"
         aria-hidden="true"

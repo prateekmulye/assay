@@ -1,8 +1,10 @@
 /**
- * NewsFeed — the newest-first headline tiles the news analyst ingests. Each is
- * a panel tile: source + relative time eyebrow, the title linking OUT to the
- * article (new tab, rel=noopener — it leaves the app), and a snippet. The whole
- * tile is the click target (Fitts). Empty → an outcome-oriented nudge.
+ * NewsFeed — the newest-first headlines the news analyst ingests, as ONE
+ * graphite panel of hairline-divided rows (§8.14: rules, not boxes — the tile
+ * pile is gone). Each row is a whole-row link OUT to the article (new tab,
+ * rel=noopener — it leaves the app): source + relative time eyebrow, title,
+ * snippet. Row hover steps the luminance (surface-1 → surface-2). Empty → an
+ * outcome-oriented nudge.
  */
 import { ArrowUpRight, Newspaper } from "lucide-react";
 import { Link } from "react-router";
@@ -11,36 +13,34 @@ import { buttonVariants } from "@/components/ui/button";
 import type { NewsItem } from "@/lib/api";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
-function NewsTile({ item }: { item: NewsItem }) {
+function NewsRow({ item }: { item: NewsItem }) {
   return (
     <a
       href={item.url}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={`${item.title} (opens in a new tab)`}
-      className="group block focus-visible:outline-none"
+      className="group -mx-2 block rounded-md px-2 py-3 transition-colors duration-[180ms] ease-[var(--ease-out)] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-[var(--color-beam)] hover:bg-[var(--color-surface-2)]"
     >
-      <article className="panel overflow-hidden rounded-xl px-4 py-3 transition-[transform,box-shadow,border-color] duration-[200ms] ease-[var(--ease-out)] group-hover:-translate-y-0.5 group-hover:shadow-[var(--shadow-lifted)] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-[var(--color-beam)]">
-        <div className="mb-1 flex items-center gap-2 font-mono text-2xs text-[var(--color-fg-subtle)]">
-          <span className="truncate uppercase tracking-wide text-[var(--color-fg-muted)]">
-            {item.source ?? "source"}
-          </span>
-          <span aria-hidden="true">·</span>
-          <span className="tabular-nums">{formatRelativeTime(item.ts)}</span>
-          <ArrowUpRight
-            className="ml-auto size-3.5 text-[var(--color-fg-subtle)] transition-[transform,color] duration-[200ms] group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[var(--color-fg)]"
-            aria-hidden="true"
-          />
-        </div>
-        <h3 className="text-sm font-medium leading-snug text-[var(--color-fg)] group-hover:text-[var(--color-fg)]">
-          {item.title}
-        </h3>
-        {item.snippet && (
-          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--color-fg-muted)]">
-            {item.snippet}
-          </p>
-        )}
-      </article>
+      <div className="mb-1 flex items-center gap-2 font-mono text-2xs text-[var(--color-fg-subtle)]">
+        <span className="truncate uppercase tracking-wide text-[var(--color-fg-muted)]">
+          {item.source ?? "source"}
+        </span>
+        <span aria-hidden="true">·</span>
+        <span className="tabular-nums">{formatRelativeTime(item.ts)}</span>
+        <ArrowUpRight
+          className="ml-auto size-3.5 text-[var(--color-fg-subtle)] transition-[transform,color] duration-[180ms] ease-[var(--ease-out)] group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[var(--color-fg)]"
+          aria-hidden="true"
+        />
+      </div>
+      <h3 className="text-sm font-medium leading-snug text-[var(--color-fg)]">
+        {item.title}
+      </h3>
+      {item.snippet && (
+        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--color-fg-muted)]">
+          {item.snippet}
+        </p>
+      )}
     </a>
   );
 }
@@ -49,30 +49,39 @@ export function NewsFeed({
   ticker,
   items,
   isLoading,
+  className,
 }: {
   ticker: string;
   items: NewsItem[];
   isLoading: boolean;
+  className?: string;
 }) {
   return (
-    <section className="space-y-3">
-      <p className="flex items-center gap-2 px-1 font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
+    <section className={cn("panel space-y-3 p-5 sm:p-6", className)}>
+      <p className="kicker flex items-center gap-2">
         <Newspaper className="size-3.5" aria-hidden="true" />
         News the analysts ingest
       </p>
 
       {isLoading ? (
-        <ul className="space-y-2.5" aria-hidden="true">
+        <ul className="space-y-2" aria-hidden="true">
           {Array.from({ length: 4 }).map((_, i) => (
             <li
               key={i}
-              className="panel h-20 animate-shimmer rounded-xl bg-[var(--color-surface-1)]"
+              className="animate-shimmer h-16 rounded-sm bg-[var(--color-surface-2)]"
             />
           ))}
         </ul>
       ) : items.length === 0 ? (
-        <div className="panel flex flex-col items-center gap-2 rounded-xl px-5 py-8 text-center">
-          <Newspaper className="size-5 text-[var(--color-fg-subtle)]" aria-hidden="true" />
+        <div className="flex flex-col items-center gap-2.5 px-5 py-8 text-center">
+          <span className="flex items-center gap-2" aria-hidden="true">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="size-1 rounded-full bg-[var(--color-fg-subtle)] opacity-30"
+              />
+            ))}
+          </span>
           <p className="text-sm font-medium text-[var(--color-fg)]">
             No headlines stored yet
           </p>
@@ -89,10 +98,10 @@ export function NewsFeed({
           </Link>
         </div>
       ) : (
-        <ul className="space-y-2.5">
+        <ul className="divide-y divide-[var(--color-line)]">
           {items.map((item, i) => (
             <li key={`${item.url}:${i}`}>
-              <NewsTile item={item} />
+              <NewsRow item={item} />
             </li>
           ))}
         </ul>

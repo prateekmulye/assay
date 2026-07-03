@@ -1,9 +1,10 @@
 /**
- * ExplorerSearch — the search-first hero. One mono command line drives BOTH
- * lanes (instruments + research memory), so the recruiter types once and the
- * whole page reorganises. Heavier than the library filter (it IS the page's
- * primary affordance — Fitts: large hit target, top-of-fold). The page owns
- * debouncing + the URL; this stays presentational.
+ * ExplorerSearch — "the lens" (DESIGN.md §8.17): the observatory's hero
+ * instrument. One h-14 milled well (sunken --color-well fill, inverted inset
+ * shadow) with a mono command line and a beam caret; focus turns the rim to
+ * beam light. It drives BOTH lanes (instruments + research memory), so the
+ * recruiter types once and the whole page reorganises (Fitts: large target,
+ * top-of-fold). The page owns debouncing + the URL; this stays presentational.
  */
 import { Search, X } from "lucide-react";
 import { useId } from "react";
@@ -39,11 +40,14 @@ export function ExplorerSearch({
         spellCheck={false}
         maxLength={256}
         className={cn(
-          "h-14 w-full rounded-lg pl-12 pr-12",
-          "bg-[var(--color-surface-2)] font-mono text-base font-medium text-[var(--color-fg)]",
-          "border border-[var(--color-line-strong)]",
+          "h-14 w-full rounded-md pl-12 pr-12",
+          "border bg-[var(--color-well)] shadow-[var(--shadow-well)]",
+          // NOTE: not `text-base` — the --color-base surface token makes
+          // Tailwind emit `text-base` as a COLOR utility (11% ink) that beats
+          // the font-size utility of the same name. Size set explicitly.
+          "font-mono text-[1rem]/[1.55rem] font-medium text-[var(--color-fg)] [caret-color:var(--color-beam)]",
           "placeholder:font-normal placeholder:text-[var(--color-fg-subtle)]",
-          "shadow-[inset_0_1px_0_0_oklch(100%_0_0/4%)] transition-[border-color,box-shadow] duration-[120ms]",
+          "transition-[border-color,box-shadow] duration-[180ms] ease-[var(--ease-out)]",
           "focus:border-[var(--color-beam)] focus:shadow-[var(--shadow-glow-beam)] focus:outline-none",
         )}
       />
@@ -52,7 +56,7 @@ export function ExplorerSearch({
           type="button"
           onClick={() => onChange("")}
           aria-label="Clear search"
-          className="absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--color-fg-subtle)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
+          className="absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-[var(--color-fg-subtle)] transition-colors duration-[100ms] after:absolute after:-inset-1.5 after:content-[''] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
         >
           <X className="size-4" aria-hidden="true" />
         </button>

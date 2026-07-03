@@ -15,15 +15,17 @@ import { AlertTriangle, SearchX, TrendingUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { ExplorerSearch } from "@/features/market/ExplorerSearch";
 import {
   CoverageStrip,
-  KeywordModeBanner,
+  KeywordModeChip,
   LaneHeader,
   LaneNotice,
   LaneSkeleton,
   ResearchLanePrompt,
+  SemanticModeChip,
 } from "@/features/market/ExplorerStates";
 import { InstrumentRow } from "@/features/market/InstrumentRow";
 import { ResearchHitRow } from "@/features/market/ResearchHitRow";
@@ -130,7 +132,8 @@ export function MarketPage() {
         />
       )}
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      {/* Mirror-binary lanes (§10-Market): coverage | research, 1fr 1fr. */}
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Lane 1 — Instruments */}
         <section aria-labelledby="lane-instruments">
           <LaneHeader
@@ -148,13 +151,14 @@ export function MarketPage() {
               title="Couldn’t load instruments"
               description="The coverage index didn’t respond — usually a cold backend. Retry in a moment."
             >
-              <button
-                type="button"
+              <Button
+                variant="panel"
+                size="sm"
+                className="mt-1"
                 onClick={() => void instrumentsQuery.refetch()}
-                className="mt-1 rounded-md bg-[var(--color-beam)] px-3 py-1.5 text-xs font-medium text-[var(--color-key-fg)] transition-[filter,box-shadow] hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]"
               >
                 Retry
-              </button>
+              </Button>
             </LaneNotice>
           ) : instruments.length === 0 ? (
             <LaneNotice
@@ -187,8 +191,13 @@ export function MarketPage() {
             Research memory hits
           </span>
           <div className="space-y-2.5">
+            {/* Search-mode honesty chips (§8.17): say plainly whether hits
+                came from meaning (pgvector) or a keyword fallback. */}
             {searchable && searchQuery.data?.mode === "keyword" && (
-              <KeywordModeBanner />
+              <KeywordModeChip />
+            )}
+            {searchable && searchQuery.data?.mode === "semantic" && (
+              <SemanticModeChip />
             )}
             {!searchable ? (
               <ResearchLanePrompt />
@@ -200,13 +209,14 @@ export function MarketPage() {
                 title="Search is unavailable"
                 description="The research index didn’t respond. Instruments above still work — retry the search shortly."
               >
-                <button
-                  type="button"
+                <Button
+                  variant="panel"
+                  size="sm"
+                  className="mt-1"
                   onClick={() => void searchQuery.refetch()}
-                  className="mt-1 rounded-md bg-[var(--color-beam)] px-3 py-1.5 text-xs font-medium text-[var(--color-key-fg)] transition-[filter,box-shadow] hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]"
                 >
                   Retry
-                </button>
+                </Button>
               </LaneNotice>
             ) : hits.length === 0 ? (
               <LaneNotice

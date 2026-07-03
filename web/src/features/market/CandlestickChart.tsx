@@ -146,14 +146,19 @@ export function CandlestickChart({ bars }: { bars: PriceBar[] }) {
 
   const tokens = useMemo(
     () => ({
-      // Hex fallbacks mirror the styles/index.css :root tokens (--color-bull
-      // oklch(72% 0.15 152) / --color-bear oklch(64% 0.19 22) / --color-fg-muted
-      // oklch(74% 0.012 260)) — keep them in sync if the DESIGN palette moves.
-      bull: cssVar("--color-bull", "#3fbf7f"),
-      bear: cssVar("--color-bear", "#e0524a"),
-      fg: cssVar("--color-fg-muted", "#b7bcc6"),
-      line: "rgba(255,255,255,0.06)",
-      crosshair: "rgba(235,238,245,0.28)",
+      // Hex fallbacks are the COMPUTED sRGB values of the v3 tokens (§3:
+      // --color-bull oklch(74% 0.16 150) / --color-bear oklch(72% 0.17 25) /
+      // --color-fg-muted oklch(76% 0.014 90) / --color-beam oklch(97% 0.01 90)
+      // / --color-surface-3 oklch(22.5% 0.009 75)) — regenerate if the palette
+      // moves. Only tests/SSR ever see them; the probe wins in the browser.
+      bull: cssVar("--color-bull", "#51c672"),
+      bear: cssVar("--color-bear", "#fd736d"),
+      fg: cssVar("--color-fg-muted", "#b4b1a7"),
+      beam: cssVar("--color-beam", "#f8f5ee"),
+      surface3: cssVar("--color-surface-3", "#1e1b17"),
+      // Grid per §8.15: horizontal-only whispers at ivory 4% (canvas-safe
+      // literal — the chart cannot read OKLCH tokens).
+      line: "rgba(248, 245, 238, 0.04)",
     }),
     [],
   );
@@ -180,22 +185,33 @@ export function CandlestickChart({ bars }: { bars: PriceBar[] }) {
       },
       rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.26 } },
       timeScale: { borderVisible: false, fixLeftEdge: true, fixRightEdge: true },
+      // Crosshair per §8.15: 1px beam, dashed, labels on surface-3.
       crosshair: {
-        vertLine: { color: tokens.crosshair, width: 1, style: 3, labelVisible: false },
-        horzLine: { color: tokens.crosshair, width: 1, style: 3 },
+        vertLine: {
+          color: withAlpha(tokens.beam, 0.35),
+          width: 1,
+          style: 3,
+          labelVisible: false,
+        },
+        horzLine: {
+          color: withAlpha(tokens.beam, 0.35),
+          width: 1,
+          style: 3,
+          labelBackgroundColor: tokens.surface3,
+        },
       },
       handleScale: false,
       handleScroll: false,
       autoSize: false,
     });
 
+    // Candles per §8.15: solid signal bodies, no borders, wicks at 80%.
     const candle = chart.addCandlestickSeries({
       upColor: tokens.bull,
       downColor: tokens.bear,
-      borderUpColor: tokens.bull,
-      borderDownColor: tokens.bear,
-      wickUpColor: tokens.bull,
-      wickDownColor: tokens.bear,
+      borderVisible: false,
+      wickUpColor: withAlpha(tokens.bull, 0.8),
+      wickDownColor: withAlpha(tokens.bear, 0.8),
       priceLineVisible: false,
       lastValueVisible: true,
     });
@@ -271,8 +287,8 @@ export function CandlestickChart({ bars }: { bars: PriceBar[] }) {
           value: b.volume ?? 0,
           color:
             b.close >= b.open
-              ? withAlpha(tokens.bull, 0.28)
-              : withAlpha(tokens.bear, 0.28),
+              ? withAlpha(tokens.bull, 0.2)
+              : withAlpha(tokens.bear, 0.2),
         })),
       );
     }

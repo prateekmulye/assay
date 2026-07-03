@@ -1,41 +1,29 @@
 /**
- * PricePanel — the chart tile: a header (kicker + last-close delta + range
- * pills), the candlestick canvas, and the loading / empty / error states. The
- * range pills are ghost buttons (NotebookLM recipe) that re-key the prices query
- * by `days`; the active pill carries the panel-raised fill. When a ticker has no
- * bars yet, the empty state is an outcome-oriented nudge (Peak-End): "analyze
- * TICKER to backfill", deep-linking to / with the ticker prefilled.
+ * PricePanel — the lit specimen (§10-Market): the candles carry the page's
+ * whole chroma budget, so the panel chrome around them is pure graphite —
+ * kicker + segmented range keys (§8.4/§8.15), then the canvas. The price and
+ * signed change live in the DossierHeader hero, not here (one statement of
+ * chroma per fact). Range keys re-key the prices query by `days`; the switch
+ * settles in 400ms --ease-out via the chart's own data transition. When a
+ * ticker has no bars yet, the empty state is an outcome-oriented nudge
+ * (§8.8): "Analyze {ticker} to backfill" — a rail key, since the header
+ * already spends the view's one beam-filled key.
  */
-import { CandlestickChart as ChartIcon, LineChart, Radio } from "lucide-react";
+import { CandlestickChart as ChartIcon, LineChart } from "lucide-react";
 import { Link } from "react-router";
 
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { SegmentedKeys } from "@/features/library/SegmentedKeys";
 import type { PriceBar } from "@/lib/api";
-import { cn, formatPercent } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 import { CandlestickChart } from "./CandlestickChart";
 import { RANGE_OPTIONS, type RangeKey } from "./dossierRange";
 
-function ChangeBadge({ bars }: { bars: PriceBar[] }) {
-  if (bars.length < 2) return null;
-  const first = bars[0]?.close;
-  const last = bars[bars.length - 1]?.close;
-  if (first == null || last == null || !first) return null;
-  const frac = (last - first) / first;
-  const up = frac >= 0;
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-2xs tabular-nums"
-      style={{
-        color: up ? "var(--color-bull)" : "var(--color-bear)",
-        background: up ? "var(--color-bull-dim)" : "var(--color-bear-dim)",
-      }}
-    >
-      {up ? "▲" : "▼"} {formatPercent(frac, { signed: true })}
-      <span className="text-[var(--color-fg-subtle)]">over range</span>
-    </span>
-  );
-}
+const RANGE_KEY_OPTIONS = RANGE_OPTIONS.map(({ key, label }) => ({
+  value: key,
+  label,
+}));
 
 export function PricePanel({
   ticker,
@@ -45,6 +33,7 @@ export function PricePanel({
   isLoading,
   isError,
   onRetry,
+  className,
 }: {
   ticker: string;
   bars: PriceBar[];
@@ -53,65 +42,46 @@ export function PricePanel({
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
+  className?: string;
 }) {
   return (
-    <section className="panel space-y-4 rounded-lg p-5 sm:p-6">
+    <section className={cn("panel space-y-4 p-5 sm:p-6", className)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <p className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
-            Daily price action
-          </p>
-          {bars.length >= 2 && <ChangeBadge bars={bars} />}
-        </div>
-
-        {/* Range pills — ghost buttons, active = panel-raised. */}
-        <div
-          className="inline-flex items-center gap-0.5 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-1)] p-1"
-          role="group"
-          aria-label="Chart range"
-        >
-          {RANGE_OPTIONS.map((opt) => (
-            <button
-              key={opt.key}
-              type="button"
-              aria-pressed={range === opt.key}
-              onClick={() => onRange(opt.key)}
-              className={cn(
-                "rounded-md px-3 py-1 font-mono text-2xs font-medium tracking-wide transition-colors duration-[120ms]",
-                range === opt.key
-                  ? "bg-[var(--color-surface-3)] text-[var(--color-fg)] shadow-[inset_0_1px_0_0_var(--edge-light)]"
-                  : "text-[var(--color-fg-subtle)] hover:text-[var(--color-fg-muted)]",
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        <p className="kicker">Daily price action</p>
+        <SegmentedKeys
+          options={RANGE_KEY_OPTIONS}
+          value={range}
+          onChange={onRange}
+          layoutId="dossier-range-key"
+          groupLabel="Chart range"
+        />
       </div>
 
       {isLoading ? (
         <div
-          className="h-[340px] w-full animate-shimmer rounded-xl bg-[var(--color-surface-1)] sm:h-[420px]"
+          className="animate-shimmer h-[340px] w-full rounded-md bg-[var(--color-surface-2)] sm:h-[420px]"
           aria-hidden="true"
         />
       ) : isError ? (
-        <div className="flex h-[340px] flex-col items-center justify-center gap-3 rounded-xl border border-[var(--color-line)] sm:h-[420px]">
-          <LineChart className="size-6 text-[var(--color-fg-subtle)]" aria-hidden="true" />
+        <div className="well flex h-[340px] flex-col items-center justify-center gap-3 sm:h-[420px]">
+          <LineChart
+            className="size-6 text-[var(--color-fg-subtle)]"
+            aria-hidden="true"
+          />
           <p className="text-sm text-[var(--color-fg-muted)]">
             Couldn’t load price bars
           </p>
-          <button
-            type="button"
-            onClick={onRetry}
-            className="rounded-md bg-[var(--color-beam)] px-3 py-1.5 text-xs font-medium text-[var(--color-key-fg)] transition-[filter,box-shadow] hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]"
-          >
+          <Button variant="panel" size="sm" onClick={onRetry}>
             Retry
-          </button>
+          </Button>
         </div>
       ) : bars.length === 0 ? (
-        <div className="flex h-[340px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--color-line-strong)] px-6 text-center sm:h-[420px]">
-          <span className="flex size-12 items-center justify-center rounded-lg bg-[var(--color-surface-3)] shadow-[inset_0_1px_0_0_var(--edge-light)]">
-            <ChartIcon className="size-5 text-[var(--color-fg-subtle)]" aria-hidden="true" />
+        <div className="well flex h-[340px] flex-col items-center justify-center gap-3 px-6 text-center sm:h-[420px]">
+          <span className="flex size-12 items-center justify-center rounded-md bg-[var(--color-surface-2)] shadow-[inset_0_1px_0_0_var(--edge-light)]">
+            <ChartIcon
+              className="size-5 text-[var(--color-fg-subtle)]"
+              aria-hidden="true"
+            />
           </span>
           <div className="max-w-sm space-y-1">
             <p className="text-sm font-medium text-[var(--color-fg)]">
@@ -125,9 +95,8 @@ export function PricePanel({
           <Link
             to="/"
             state={{ ticker }}
-            className={cn(buttonVariants({ variant: "key", size: "sm" }), "mt-1")}
+            className={cn(buttonVariants({ variant: "rail", size: "sm" }), "mt-1")}
           >
-            <Radio className="size-4" aria-hidden="true" />
             Analyze {ticker} to backfill
           </Link>
         </div>

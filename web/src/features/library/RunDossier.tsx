@@ -1,9 +1,10 @@
 /**
- * RunDossier — the replay theater header. A flight-recorder card: ticker +
- * verdict badge as the identity (Peak-End: the outcome is stated up front so a
- * paused mid-replay still carries its resolution), a mono metrics strip (score ·
- * cost · tokens · duration · date · source), and the "Run this ticker live" CTA
- * that deep-links to / with the ticker prefilled via router state.
+ * RunDossier — the replay theater's flight-recorder header (§10-Library):
+ * OUTCOME UP FRONT. Peak-End: the verdict badge + score lead beside the ticker
+ * so a paused mid-replay still carries its resolution; beneath, a borderless
+ * mono metric tape (score · cost · tokens · replay length · run id · recorded).
+ * The "Run {ticker} live" CTA is a RAIL key by contract — the ledger's one
+ * beam-filled key budget stays with the page-level empty states.
  *
  * React.memo'd: the replay theater re-renders ~60fps while the playhead moves,
  * but this header's props (the fetched run + the fixed duration label) never
@@ -32,12 +33,10 @@ export const RunDossier = memo(function RunDossier({
   const ticker = run.ticker ?? "—";
 
   return (
-    <div className="panel space-y-4 rounded-xl p-5 sm:p-6">
+    <div className="panel-raised space-y-4 rounded-xl p-5 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
-          <p className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
-            Run replay
-          </p>
+          <p className="kicker">Run replay</p>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="font-mono text-3xl font-semibold tracking-tight text-[var(--color-fg)]">
               {ticker}
@@ -47,7 +46,7 @@ export const RunDossier = memo(function RunDossier({
           <div className="flex flex-wrap items-center gap-2 pt-1">
             {run.debate_mode && <DebateChip mode={run.debate_mode} />}
             {run.status && <StatusChip status={run.status} />}
-            <span className="rounded-full border border-[var(--color-line)] px-2 py-0.5 font-mono text-2xs lowercase tracking-wide text-[var(--color-fg-subtle)]">
+            <span className="rounded-sm bg-[var(--color-surface-2)] px-2 py-0.5 font-mono text-2xs lowercase tracking-wide text-[var(--color-fg-subtle)]">
               {run.source}
             </span>
           </div>
@@ -57,7 +56,7 @@ export const RunDossier = memo(function RunDossier({
           <Link
             to="/"
             state={{ ticker }}
-            className={`${buttonVariants({ variant: "key", size: "md" })} shrink-0`}
+            className={`${buttonVariants({ variant: "rail", size: "md" })} shrink-0`}
           >
             <Radio className="size-4" aria-hidden="true" />
             Run {ticker} live
@@ -65,8 +64,8 @@ export const RunDossier = memo(function RunDossier({
         )}
       </div>
 
-      {/* Metrics strip — the recorder readout. */}
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-t border-[var(--color-line)] pt-4 font-mono text-sm sm:grid-cols-4">
+      {/* Metric tape — borderless, hairline rule above (a rule, not a box). */}
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-t pt-4 font-mono text-sm sm:grid-cols-4">
         <Stat label="Score" value={fd ? String(fd.score) : "—"} />
         <Stat label="Cost" value={formatUsd(run.cost?.cost_usd)} />
         <Stat label="Tokens" value={formatInt(run.cost?.total_tokens)} />

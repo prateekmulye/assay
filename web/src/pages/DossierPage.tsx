@@ -16,6 +16,7 @@ import { FileSearch } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 
+import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DossierHeader } from "@/features/market/DossierHeader";
 import { DEFAULT_RANGE, daysForRange, type RangeKey } from "@/features/market/dossierRange";
@@ -105,10 +106,12 @@ export function DossierPage() {
           title={`${symbol} isn’t in coverage`}
           description="No instrument resolves to this symbol — it may be mistyped, or the wrong exchange suffix. Search the explorer for what’s covered, or analyze it live to add it."
         >
+          {/* rail, not key — the header above already spends this view's one
+              beam-filled key on the same action (§13.13). */}
           <Link
             to="/"
             state={{ ticker: symbol }}
-            className="rounded-md bg-[var(--color-beam)] px-4 py-2 text-sm font-medium text-[var(--color-key-fg)] transition-[filter,box-shadow] hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]"
+            className={buttonVariants({ variant: "rail", size: "md" })}
           >
             Analyze {symbol} live
           </Link>
@@ -121,32 +124,42 @@ export function DossierPage() {
 
   return (
     <div className="space-y-6">
-      <DossierHeader ticker={symbol} exchange={exchange} instrument={instrument} />
-
-      {/* Hero: the price panel spans the bento's full width. */}
-      <PricePanel
+      <DossierHeader
         ticker={symbol}
+        exchange={exchange}
+        instrument={instrument}
         bars={bars}
-        range={range}
-        onRange={setRange}
-        isLoading={pricesQuery.isLoading}
-        isError={pricesQuery.isError && !pricesNotFound}
-        onRetry={() => void pricesQuery.refetch()}
+        priceLoading={pricesQuery.isLoading}
       />
 
-      {/* Below: fundamentals + news, side-by-side on wide screens. */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <FundamentalsPanel
+      {/* The observatory bento (§10-Market): the chart is the lit specimen at
+          8 columns — the candles carry the page's chroma — with the graphite
+          fundamentals tape + news feed stacked in the 4-column wing. §5 bento
+          gap: 8px routing channels, one milled block. */}
+      <div className="grid gap-2 lg:grid-cols-12 lg:items-start">
+        <PricePanel
           ticker={symbol}
-          data={fundamentalsNotFound ? null : (fundamentalsQuery.data ?? null)}
-          isLoading={fundamentalsQuery.isLoading}
-          notFound={fundamentalsNotFound}
+          bars={bars}
+          range={range}
+          onRange={setRange}
+          isLoading={pricesQuery.isLoading}
+          isError={pricesQuery.isError && !pricesNotFound}
+          onRetry={() => void pricesQuery.refetch()}
+          className="lg:col-span-8"
         />
-        <NewsFeed
-          ticker={symbol}
-          items={newsNotFound ? [] : (newsQuery.data?.items ?? [])}
-          isLoading={newsQuery.isLoading}
-        />
+        <div className="grid gap-2 lg:col-span-4">
+          <FundamentalsPanel
+            ticker={symbol}
+            data={fundamentalsNotFound ? null : (fundamentalsQuery.data ?? null)}
+            isLoading={fundamentalsQuery.isLoading}
+            notFound={fundamentalsNotFound}
+          />
+          <NewsFeed
+            ticker={symbol}
+            items={newsNotFound ? [] : (newsQuery.data?.items ?? [])}
+            isLoading={newsQuery.isLoading}
+          />
+        </div>
       </div>
     </div>
   );

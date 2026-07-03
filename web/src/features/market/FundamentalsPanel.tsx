@@ -1,12 +1,12 @@
 /**
- * FundamentalsPanel — the latest snapshot as a mono metric tape (Bloomberg
- * energy): market cap abbreviated, P/E, EPS, revenue growth %, profit margin %,
- * each tabular so the column never jitters. Growth and margin are signed so a
- * contraction reads negative at a glance. A snapshot timestamp grounds the data
- * in time (System Status Visibility). Missing snapshot → an outcome-oriented
- * empty state, not a dead "no data".
+ * FundamentalsPanel — the latest snapshot as a borderless mono metric tape
+ * (§8.14: row hairlines only, kicker labels left, tabular values right, h-11
+ * rows). Growth and margin follow Functional Signal Inversion (§3.5): the
+ * sign is colored by outcome utility AND paired with a directional arrow
+ * glyph — never color alone. A snapshot timestamp grounds the data in time.
+ * Missing snapshot → an outcome-oriented empty state, not a dead "no data".
  */
-import { BarChart3, Gauge } from "lucide-react";
+import { Gauge } from "lucide-react";
 import { Link } from "react-router";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -19,34 +19,38 @@ import {
   formatRelativeTime,
 } from "@/lib/utils";
 
-function Metric({
+function TapeRow({
   label,
   value,
-  tint,
+  signed,
 }: {
   label: string;
   value: string;
-  tint?: string;
+  /** Signed fraction for Functional Inversion tint + arrow; omit for neutral. */
+  signed?: number | null;
 }) {
+  const tinted = signed != null && signed !== 0;
+  const up = (signed ?? 0) > 0;
   return (
-    <div className="flex flex-col gap-1 rounded-lg bg-[var(--color-surface-1)] px-3 py-2.5">
-      <span className="font-mono text-2xs uppercase tracking-[0.14em] text-[var(--color-fg-subtle)]">
+    <div className="flex h-11 items-center justify-between gap-4 border-b last:border-b-0">
+      <dt className="font-mono text-2xs uppercase tracking-[0.14em] text-[var(--color-fg-subtle)]">
         {label}
-      </span>
-      <span
-        className="font-mono text-base font-semibold tabular-nums leading-none"
-        style={{ color: tint ?? "var(--color-fg)" }}
+      </dt>
+      <dd
+        className="flex items-baseline gap-1.5 font-mono text-sm font-medium tabular-nums"
+        style={{
+          color: tinted
+            ? up
+              ? "var(--color-bull)"
+              : "var(--color-bear)"
+            : "var(--color-fg)",
+        }}
       >
-        {value}
-      </span>
+        {tinted && <span aria-hidden="true">{up ? "▲" : "▼"}</span>}
+        <span>{value}</span>
+      </dd>
     </div>
   );
-}
-
-/** Tint a signed fraction by direction (positive bull, negative bear, 0 muted). */
-function signedTint(v: number | null): string {
-  if (v == null || v === 0) return "var(--color-fg)";
-  return v > 0 ? "var(--color-bull)" : "var(--color-bear)";
 }
 
 export function FundamentalsPanel({
@@ -54,39 +58,48 @@ export function FundamentalsPanel({
   data,
   isLoading,
   notFound,
+  className,
 }: {
   ticker: string;
   data: Fundamentals | null;
   isLoading: boolean;
   /** A 404 (no snapshot) is the expected empty path, not an error. */
   notFound: boolean;
+  className?: string;
 }) {
   return (
-    <section className="panel space-y-4 rounded-lg p-5 sm:p-6">
+    <section className={cn("panel space-y-3 p-5 sm:p-6", className)}>
       <div className="flex items-center justify-between gap-3">
-        <p className="flex items-center gap-2 font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
+        <p className="kicker flex items-center gap-2">
           <Gauge className="size-3.5" aria-hidden="true" />
           Fundamentals
         </p>
         {data && (
-          <span className="font-mono text-2xs text-[var(--color-fg-subtle)]">
+          <span className="font-mono text-2xs tabular-nums text-[var(--color-fg-subtle)]">
             snapshot {formatRelativeTime(data.ts)}
           </span>
         )}
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" aria-hidden="true">
+        <div className="space-y-1.5" aria-hidden="true">
           {Array.from({ length: 5 }).map((_, i) => (
             <div
               key={i}
-              className="h-16 animate-shimmer rounded-lg bg-[var(--color-surface-1)]"
+              className="animate-shimmer h-9 rounded-sm bg-[var(--color-surface-2)]"
             />
           ))}
         </div>
       ) : notFound || !data ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-[var(--color-line)] px-5 py-8 text-center">
-          <BarChart3 className="size-5 text-[var(--color-fg-subtle)]" aria-hidden="true" />
+        <div className="flex flex-col items-center gap-2.5 px-5 py-8 text-center">
+          <span className="flex items-center gap-2" aria-hidden="true">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="size-1 rounded-full bg-[var(--color-fg-subtle)] opacity-30"
+              />
+            ))}
+          </span>
           <p className="text-sm font-medium text-[var(--color-fg)]">
             No fundamentals snapshot yet
           </p>
@@ -103,19 +116,19 @@ export function FundamentalsPanel({
           </Link>
         </div>
       ) : (
-        <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <Metric label="Market cap" value={formatCompactUsd(data.market_cap)} />
-          <Metric label="P / E" value={formatRatio(data.pe_ratio)} />
-          <Metric label="EPS" value={formatRatio(data.eps)} />
-          <Metric
+        <dl>
+          <TapeRow label="Market cap" value={formatCompactUsd(data.market_cap)} />
+          <TapeRow label="P / E" value={formatRatio(data.pe_ratio)} />
+          <TapeRow label="EPS" value={formatRatio(data.eps)} />
+          <TapeRow
             label="Rev growth"
             value={formatPercent(data.revenue_growth, { signed: true })}
-            tint={signedTint(data.revenue_growth)}
+            signed={data.revenue_growth}
           />
-          <Metric
+          <TapeRow
             label="Profit margin"
             value={formatPercent(data.profit_margin, { signed: true })}
-            tint={signedTint(data.profit_margin)}
+            signed={data.profit_margin}
           />
         </dl>
       )}

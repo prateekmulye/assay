@@ -1,9 +1,10 @@
 /**
- * ResearchHitRow — one "research memory" hit. The same row silhouette as an
- * instrument (Gestalt similarity links the lanes) but the destination differs
- * by kind: a `news` hit links OUT to the article (rel=noopener, new tab — it
- * leaves the app), a `run` hit links IN to that run's replay at /library/:runId
- * (router state prefills the ticker for the replay CTA, mirroring LibraryRow).
+ * ResearchHitRow — one "research memory" hit. The same tile anatomy as an
+ * instrument row (Gestalt similarity binds the mirror lanes) but the
+ * destination differs by kind: a `news` hit links OUT to the article
+ * (rel=noopener, new tab — it leaves the app), a `run` hit links IN to that
+ * run's replay at /library/:runId (router state prefills the ticker for the
+ * replay CTA, mirroring LibraryRow).
  *
  * `score` is a cosine DISTANCE in semantic mode (lower = closer) — we never
  * dress it up as a relevance %; it's shown raw + mono only as a quiet honesty
@@ -19,42 +20,40 @@ import { KindChip } from "./marketChips";
 
 function HitBody({ hit }: { hit: SearchHit }) {
   return (
-    <>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <KindChip kind={hit.kind} />
-          <span className="font-mono text-2xs font-semibold tracking-tight text-[var(--color-fg)]">
-            {hit.ticker}
+    <div className="min-w-0 flex-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <KindChip kind={hit.kind} />
+        <span className="font-mono text-2xs font-medium tracking-tight text-[var(--color-fg)]">
+          {hit.ticker}
+        </span>
+        <span className="font-mono text-2xs text-[var(--color-fg-subtle)]">
+          {formatRelativeTime(hit.ts)}
+        </span>
+        {hit.score != null && (
+          <span
+            className="ml-auto font-mono text-2xs tabular-nums text-[var(--color-fg-subtle)]"
+            title="Cosine distance — lower is closer"
+          >
+            d {hit.score.toFixed(3)}
           </span>
-          <span className="font-mono text-2xs text-[var(--color-fg-subtle)]">
-            {formatRelativeTime(hit.ts)}
-          </span>
-          {hit.score != null && (
-            <span
-              className="ml-auto font-mono text-2xs tabular-nums text-[var(--color-fg-subtle)]"
-              title="Cosine distance — lower is closer"
-            >
-              d {hit.score.toFixed(3)}
-            </span>
-          )}
-        </div>
-        <p className="mt-1 truncate text-sm font-medium text-[var(--color-fg)]">
-          {hit.title}
-        </p>
-        {hit.snippet && (
-          <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-[var(--color-fg-muted)]">
-            {hit.snippet}
-          </p>
         )}
       </div>
-    </>
+      <p className="mt-1 truncate text-sm font-medium text-[var(--color-fg)]">
+        {hit.title}
+      </p>
+      {hit.snippet && (
+        <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-[var(--color-fg-muted)]">
+          {hit.snippet}
+        </p>
+      )}
+    </div>
   );
 }
 
-export function ResearchHitRow({ hit }: { hit: SearchHit }) {
-  const tileCls =
-    "panel flex items-start gap-3 overflow-hidden rounded-xl px-4 py-3 transition-[transform,box-shadow,border-color] duration-[200ms] ease-[var(--ease-out)] group-hover:-translate-y-0.5 group-hover:shadow-[var(--shadow-lifted)] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-[var(--color-beam)]";
+const TILE_CLS =
+  "panel flex items-start gap-3 overflow-hidden px-4 py-3 [transition:translate_var(--spring-press),box-shadow_180ms_var(--ease-out),background-color_180ms_var(--ease-out)] group-hover:-translate-y-0.5 group-hover:bg-[var(--color-surface-2)] group-hover:shadow-[var(--shadow-lifted)] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-[var(--color-beam)]";
 
+export function ResearchHitRow({ hit }: { hit: SearchHit }) {
   if (hit.kind === "news") {
     return (
       <a
@@ -64,10 +63,10 @@ export function ResearchHitRow({ hit }: { hit: SearchHit }) {
         aria-label={`Open article: ${hit.title} (opens in a new tab)`}
         className="group block focus-visible:outline-none"
       >
-        <div className={tileCls}>
+        <div className={TILE_CLS}>
           <HitBody hit={hit} />
           <ArrowUpRight
-            className="mt-0.5 size-4 shrink-0 text-[var(--color-fg-subtle)] transition-[transform,color] duration-[200ms] group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[var(--color-fg)]"
+            className="mt-0.5 size-4 shrink-0 text-[var(--color-fg-subtle)] transition-[transform,color] duration-[180ms] ease-[var(--ease-out)] group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[var(--color-fg)]"
             aria-hidden="true"
           />
         </div>
@@ -82,10 +81,10 @@ export function ResearchHitRow({ hit }: { hit: SearchHit }) {
       aria-label={`Replay run for ${hit.ticker}: ${hit.title}`}
       className="group block focus-visible:outline-none"
     >
-      <div className={tileCls}>
+      <div className={TILE_CLS}>
         <HitBody hit={hit} />
         <ChevronRight
-          className="mt-0.5 size-4 shrink-0 text-[var(--color-fg-subtle)] transition-[transform,color] duration-[200ms] group-hover:translate-x-0.5 group-hover:text-[var(--color-fg)]"
+          className="mt-0.5 size-4 shrink-0 text-[var(--color-fg-subtle)] transition-[transform,color] duration-[180ms] ease-[var(--ease-out)] group-hover:translate-x-0.5 group-hover:text-[var(--color-fg)]"
           aria-hidden="true"
         />
       </div>

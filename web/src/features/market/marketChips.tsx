@@ -1,14 +1,16 @@
 /**
- * marketChips — the small terminal-tile atoms shared across the explorer lanes
- * and the dossier header: the exchange chip, the "watched" indicator dot, and
- * the kind chip (news | run) for research-memory hits. Mono everywhere (these
- * IS data), signal color always backed by a glyph or word per DESIGN.md §2.
+ * marketChips — the engraved-chip atoms (DESIGN.md §8.5) shared across the
+ * explorer lanes and the dossier header: the exchange chip, the "watched"
+ * indicator dot, and the kind chip (news | run) for research-memory hits.
+ * Chip anatomy: --radius-sm, graphite fill, NO border (pills stay reserved for
+ * LED lozenges); chroma appears only where it encodes state (watched = the
+ * system has analyzed it = bull "done"), always backed by a word or label.
  */
 import { Eye, FileText, Newspaper } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-/** Exchange code in a hairline pill — the venue an instrument trades on. */
+/** Exchange code in a graphite chip — the venue an instrument trades on. */
 export function ExchangeChip({
   exchange,
   className,
@@ -19,7 +21,7 @@ export function ExchangeChip({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border border-[var(--color-line)] px-2 py-0.5",
+        "inline-flex items-center rounded-sm bg-[var(--color-surface-2)] px-2 py-0.5",
         "font-mono text-2xs uppercase tracking-wide text-[var(--color-fg-subtle)]",
         className,
       )}
@@ -30,10 +32,10 @@ export function ExchangeChip({
 }
 
 /**
- * WatchedDot — a small bull-green dot when an instrument is on the watchlist
- * (the system has analyzed it before, so data is backfilled). Color is backed
- * by an accessible label; absent state renders a hollow ring so the column
- * still aligns (Gestalt continuity) without implying "watched".
+ * WatchedDot — a small bull LED when an instrument is on the watchlist (the
+ * system has analyzed it before, so data is backfilled). State color is backed
+ * by an accessible label; no glow — emission is reserved for live computation
+ * (§1 clause 2). The absent state is a hollow ring so the column still aligns.
  */
 export function WatchedDot({ watched }: { watched: boolean }) {
   return (
@@ -47,7 +49,7 @@ export function WatchedDot({ watched }: { watched: boolean }) {
         className={cn(
           "size-2 rounded-full",
           watched
-            ? "bg-[var(--color-bull)] shadow-[0_0_6px_var(--color-bull)]"
+            ? "bg-[var(--color-bull)]"
             : "border border-[var(--color-line-strong)]",
         )}
       />
@@ -59,13 +61,10 @@ export function WatchedDot({ watched }: { watched: boolean }) {
 export function KindChip({ kind }: { kind: "news" | "run" }) {
   const cfg =
     kind === "news"
-      ? { Icon: Newspaper, label: "news", tint: "var(--color-fg-muted)" }
-      : { Icon: FileText, label: "run", tint: "var(--color-fg-muted)" };
+      ? { Icon: Newspaper, label: "news" }
+      : { Icon: FileText, label: "run" };
   return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full border border-[var(--color-line)] px-2 py-0.5 font-mono text-2xs lowercase tracking-wide"
-      style={{ color: cfg.tint }}
-    >
+    <span className="inline-flex items-center gap-1 rounded-sm bg-[var(--color-surface-2)] px-2 py-0.5 font-mono text-2xs lowercase tracking-wide text-[var(--color-fg-muted)]">
       <cfg.Icon className="size-3" aria-hidden="true" />
       {cfg.label}
     </span>
@@ -77,11 +76,10 @@ export function WatchedChip({ watched }: { watched: boolean }) {
   if (!watched) return null;
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-2xs lowercase tracking-wide"
+      className="inline-flex items-center gap-1 rounded-sm px-2 py-0.5 font-mono text-2xs lowercase tracking-wide"
       style={{
         color: "var(--color-bull)",
         background: "var(--color-bull-dim)",
-        border: "1px solid var(--color-bull)",
       }}
     >
       <Eye className="size-3" aria-hidden="true" />

@@ -1,15 +1,16 @@
 /**
- * runChips — the small, reusable terminal-tile atoms shared by the library row
+ * runChips — the engraved-chip atoms (DESIGN.md §8.5) shared by the ledger row
  * and the replay dossier header: status chip, debate on/off chip, and the
- * conviction micro-bar. Kept in one file so a recruiter sees consistent run
- * metadata everywhere a run is summarised. Signal color is always backed by a
- * word (never color alone) per DESIGN.md §2.
+ * conviction meter. Chip anatomy is frozen here so run metadata reads the same
+ * everywhere: --radius-sm, dim fill, NO border (pills are reserved for LED
+ * lozenges), mono --text-2xs, and signal chroma ONLY when it encodes state —
+ * always backed by a glyph + the literal word (never color alone, §1).
  */
-import { CircleCheck, CircleSlash, OctagonX } from "lucide-react";
+import { CircleCheck, CircleSlash, OctagonX, Radio } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-/** finished -> healthy green · error -> bear red · aborted -> amber hold. */
+/** finished -> bull (done) · error -> bear · aborted -> hold · running -> beam. */
 const STATUS_CFG: Record<
   string,
   { tint: string; dim: string; Icon: typeof CircleCheck; label: string }
@@ -34,23 +35,23 @@ const STATUS_CFG: Record<
   },
   running: {
     tint: "var(--color-beam)",
-    dim: "var(--color-surface-2)",
-    Icon: CircleCheck,
+    dim: "var(--color-beam-dim)",
+    Icon: Radio,
     label: "running",
   },
 };
 
 export function StatusChip({ status }: { status: string }) {
   const cfg = STATUS_CFG[status] ?? {
-    tint: "var(--color-fg-subtle)",
+    tint: "var(--color-fg-muted)",
     dim: "var(--color-surface-2)",
     Icon: CircleSlash,
     label: status,
   };
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-2xs font-medium lowercase tracking-wide"
-      style={{ color: cfg.tint, background: cfg.dim, border: `1px solid ${cfg.tint}` }}
+      className="inline-flex items-center gap-1 rounded-sm px-2 py-0.5 font-mono text-2xs font-medium lowercase tracking-wide"
+      style={{ color: cfg.tint, background: cfg.dim }}
     >
       <cfg.Icon className="size-3" aria-hidden="true" />
       {cfg.label}
@@ -58,15 +59,14 @@ export function StatusChip({ status }: { status: string }) {
   );
 }
 
+/** Debate topology chip — pure run metadata, so it stays graphite (§8.5). */
 export function DebateChip({ mode }: { mode: string }) {
   const on = mode === "on";
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-2xs tracking-wide",
-        on
-          ? "border-[var(--color-line-strong)] text-[var(--color-fg-muted)]"
-          : "border-[var(--color-line)] text-[var(--color-fg-subtle)]",
+        "inline-flex items-center gap-1 rounded-sm bg-[var(--color-surface-2)] px-2 py-0.5 font-mono text-2xs tracking-wide",
+        on ? "text-[var(--color-fg-muted)]" : "text-[var(--color-fg-subtle)]",
       )}
     >
       <span aria-hidden="true">{on ? "⇄" : "→"}</span>
@@ -76,9 +76,9 @@ export function DebateChip({ mode }: { mode: string }) {
 }
 
 /**
- * Conviction micro-bar — a thin meter for a 0..1 conviction, tinted by the
- * verdict so it reads at a glance without a number stealing focus from the
- * SignalBadge. The literal percent is exposed to assistive tech.
+ * Conviction meter — the ledger row's ONLY chroma besides the verdict chip
+ * (§10-Library): a 3px recessed track with a signal-tinted fill. The literal
+ * percent is exposed to assistive tech and echoed in mono beside the track.
  */
 export function ConvictionMeter({
   conviction,
@@ -93,7 +93,7 @@ export function ConvictionMeter({
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <div
-        className="h-1.5 w-16 overflow-hidden rounded-full bg-[var(--color-surface-3)]"
+        className="h-[3px] w-20 overflow-hidden rounded-full bg-[var(--color-well)] shadow-[var(--shadow-well)]"
         role="meter"
         aria-valuemin={0}
         aria-valuemax={100}

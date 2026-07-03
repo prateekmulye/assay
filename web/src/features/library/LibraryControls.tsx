@@ -1,14 +1,18 @@
 /**
- * LibraryControls — the search + filter command bar for the run history.
- * Ticker search is a mono command-line input (it IS data); status is a
- * segmented control (Fitts/Hick: one tap per filter, no dropdown). The page
- * owns debouncing + the query; this is presentational.
+ * LibraryControls — the ledger's command bar. The ticker filter is a milled
+ * well (§8.4: sunken --color-well fill, inverted inset shadow, mono uppercase
+ * display, beam caret + beam rim on focus); status is a segmented-keys control
+ * (Fitts/Hick: one tap per filter, no dropdown) whose pressed key slides on
+ * the shared-layout spring. The page owns debouncing + the URL; this stays
+ * presentational.
  */
 import { Search, X } from "lucide-react";
 import { useId } from "react";
 
 import { type RunStatus } from "@/lib/api";
 import { cn } from "@/lib/utils";
+
+import { SegmentedKeys } from "./SegmentedKeys";
 
 export type StatusFilter = "all" | RunStatus;
 
@@ -35,10 +39,7 @@ export function LibraryControls({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="sm:w-72">
-        <label
-          htmlFor={inputId}
-          className="mb-1.5 block font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]"
-        >
+        <label htmlFor={inputId} className="kicker mb-1.5 block">
           Filter ticker
         </label>
         <div className="relative">
@@ -55,10 +56,11 @@ export function LibraryControls({
             spellCheck={false}
             maxLength={15}
             className={cn(
-              "h-10 w-full rounded-lg pl-9 pr-9",
-              "bg-[var(--color-surface-2)] font-mono text-sm font-medium uppercase tracking-wide text-[var(--color-fg)]",
-              "border border-[var(--color-line-strong)] placeholder:font-normal placeholder:normal-case placeholder:tracking-normal placeholder:text-[var(--color-fg-subtle)]",
-              "transition-[border-color,box-shadow] duration-[120ms]",
+              "h-11 w-full rounded-md pl-9 pr-9",
+              "border bg-[var(--color-well)] shadow-[var(--shadow-well)]",
+              "font-mono text-sm font-medium uppercase tracking-wide text-[var(--color-fg)] [caret-color:var(--color-beam)]",
+              "placeholder:font-normal placeholder:normal-case placeholder:tracking-normal placeholder:text-[var(--color-fg-subtle)]",
+              "transition-[border-color,box-shadow] duration-[180ms] ease-[var(--ease-out)]",
               "focus:border-[var(--color-beam)] focus:shadow-[var(--shadow-glow-beam)] focus:outline-none",
             )}
           />
@@ -67,7 +69,7 @@ export function LibraryControls({
               type="button"
               onClick={() => onTicker("")}
               aria-label="Clear ticker filter"
-              className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-[var(--color-fg-subtle)] transition-colors hover:text-[var(--color-fg)]"
+              className="absolute right-1.5 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-[var(--color-fg-subtle)] transition-colors duration-[100ms] after:absolute after:-inset-1.5 after:content-[''] hover:text-[var(--color-fg)]"
             >
               <X className="size-3.5" aria-hidden="true" />
             </button>
@@ -76,27 +78,13 @@ export function LibraryControls({
       </div>
 
       <fieldset>
-        <legend className="mb-1.5 font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
-          Status
-        </legend>
-        <div className="inline-flex h-10 items-center gap-0.5 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-1)] p-1">
-          {STATUS_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              aria-pressed={status === opt.value}
-              onClick={() => onStatus(opt.value)}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-[120ms]",
-                status === opt.value
-                  ? "bg-[var(--color-surface-3)] text-[var(--color-fg)] shadow-[inset_0_1px_0_0_var(--edge-light)]"
-                  : "text-[var(--color-fg-subtle)] hover:text-[var(--color-fg-muted)]",
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        <legend className="kicker mb-1.5">Status</legend>
+        <SegmentedKeys
+          options={STATUS_OPTIONS}
+          value={status}
+          onChange={onStatus}
+          layoutId="library-status-key"
+        />
       </fieldset>
     </div>
   );

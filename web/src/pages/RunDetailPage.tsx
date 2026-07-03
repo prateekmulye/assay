@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, FileSearch } from "lucide-react";
 import { Link, useParams } from "react-router";
 
+import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Cockpit } from "@/features/analyze/cockpit/Cockpit";
 import { useEventPlayer } from "@/features/analyze/cockpit/eventPlayer";
@@ -80,7 +81,7 @@ export function RunDetailPage() {
         >
           <Link
             to="/library"
-            className="rounded-md bg-[var(--color-beam)] px-4 py-2 text-sm font-medium text-[var(--color-key-fg)] transition-[filter,box-shadow] hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]"
+            className={buttonVariants({ variant: "key", size: "md" })}
           >
             Browse the library
           </Link>
@@ -108,20 +109,22 @@ function ReplayTheater({ run }: { run: RunDetail }) {
 
       <RunDossier run={run} durationLabel={formatMs(player.durationMs)} />
 
-      {/* Error/aborted outcome banner — replay still works up to the failure. */}
+      {/* Error/aborted outcome banner — replay still works up to the failure.
+          State speaks as a 2px filament on a graphite panel (§2.5: rules, not
+          boxes), glyph + words carrying the meaning with the color. */}
       {failed && (
         <div
           role="note"
-          className="flex items-start gap-3 rounded-lg border px-5 py-4"
-          style={{
-            borderColor:
-              run.status === "error" ? "var(--color-bear)" : "var(--color-hold)",
-            background:
-              run.status === "error"
-                ? "var(--color-bear-dim)"
-                : "var(--color-hold-dim)",
-          }}
+          className="panel relative flex items-start gap-3 overflow-hidden px-5 py-4"
         >
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-[2px]"
+            style={{
+              background:
+                run.status === "error" ? "var(--color-bear)" : "var(--color-hold)",
+            }}
+          />
           <AlertTriangle
             className="mt-0.5 size-5 shrink-0"
             style={{
