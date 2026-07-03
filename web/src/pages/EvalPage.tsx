@@ -94,7 +94,7 @@ export function EvalPage() {
         <div className="space-y-8">
           <RunRail runs={runs} activeLabel={active.label} />
 
-          <VerdictBand summary={summary} />
+          <VerdictBand summary={summary} fresh={active === runs[0]} />
 
           <MethodologyTape />
 
@@ -102,9 +102,7 @@ export function EvalPage() {
           <Panel className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
-                  Cost vs. quality, per ticker
-                </h2>
+                <h2 className="kicker">Cost vs. quality, per ticker</h2>
                 <p className="mt-1 max-w-xl text-sm leading-relaxed text-[var(--color-fg-muted)]">
                   Each point is one ticker. Up and to the right, the debate
                   decided better and cost more — it earned its place. Down and to
@@ -116,7 +114,7 @@ export function EvalPage() {
 
             <Suspense
               fallback={
-                <div className="panel animate-shimmer h-[24rem] overflow-hidden rounded-xl" />
+                <div className="panel animate-shimmer h-[24rem] overflow-hidden" />
               }
             >
               <CostQualityScatter pairs={pairs} />
@@ -126,10 +124,7 @@ export function EvalPage() {
           {/* The receipts. */}
           <section aria-labelledby="receipts-heading">
             <div className="mb-3 flex items-baseline justify-between px-1">
-              <h2
-                id="receipts-heading"
-                className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]"
-              >
+              <h2 id="receipts-heading" className="kicker">
                 Per-ticker receipts
               </h2>
               <span className="font-mono text-2xs tabular-nums text-[var(--color-fg-subtle)]">

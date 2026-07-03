@@ -1,13 +1,17 @@
 /**
- * PairTable — the receipts. Every ticker as a dense terminal row (the
- * LibraryRow tape vocabulary), so the verdict band's aggregate claim is fully
- * auditable. Reading order per row: ticker · verdict (on → off SignalBadge pair
- * + an agree/diverge cue) · score on/off/Δ · the cost/latency/token delta tape
- * (each tinted by OUTCOME UTILITY) · the judge preference chip with confidence.
+ * PairTable — the receipts. One milled panel; every ticker is a dense row
+ * separated by hairline RULES only (§8.14: no vertical rules, no cell boxes —
+ * borders-as-containment are abolished). Reading order per row: ticker ·
+ * verdict (on → off SignalBadge pair + an agree/diverge cue) · score Δ
+ * (right-aligned mono) · the cost/latency/token delta tape (each tinted by
+ * OUTCOME UTILITY) · the judge preference chip with confidence. Row hover is a
+ * luminance lift (surface-1 → surface-2, 150ms), never a border.
  *
  * Sortable by score delta or cost delta (client-side, two keys) — the two
- * questions a skeptic asks: "where did it decide better?" and "where did it cost
- * more?". On mobile the row stacks; on wide screens it's a single scan line.
+ * questions a skeptic asks: "where did it decide better?" and "where did it
+ * cost more?". Sortable headers are real buttons; the SORTED column carries a
+ * 2px beam filament under its header + an arrow glyph (§8.14). On mobile the
+ * row stacks; on wide screens it's a single scan line.
  */
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -26,26 +30,35 @@ import {
 import { JudgePrefChip } from "./JudgeBadges";
 import { type SortKey, type SortState, nextSort, sortPairs } from "./pairSort";
 
+const GRID_COLS = "lg:grid-cols-[7rem_minmax(9rem,1fr)_7rem_1fr_8rem]";
+
 export function PairTable({ pairs }: { pairs: EvalPair[] }) {
   const [sort, setSort] = useState<SortState>({ key: "scoreDelta", dir: "desc" });
   const rows = useMemo(() => sortPairs(pairs, sort), [pairs, sort]);
 
   return (
-    <div>
-      {/* Column legend / sort controls. Hidden as a grid on mobile (rows stack
-          with inline labels there). */}
-      <div className="mb-2 hidden grid-cols-[7rem_minmax(9rem,1fr)_8rem_1fr_8rem] items-center gap-4 px-4 font-mono text-2xs uppercase tracking-wider text-[var(--color-fg-subtle)] lg:grid">
+    <div className="panel overflow-hidden p-0">
+      {/* Column rail (lg+; rows stack with inline labels on mobile). th =
+          kicker style; the sorted column's beam filament sits ON the hairline. */}
+      <div
+        className={cn(
+          "hidden h-9 items-stretch gap-4 border-b px-4 font-mono text-2xs uppercase tracking-[0.14em] text-[var(--color-fg-subtle)] lg:grid",
+          GRID_COLS,
+        )}
+      >
         <SortButton label="Ticker" col="ticker" sort={sort} onSort={setSort} />
-        <span>verdict on → off</span>
-        <SortButton label="Score Δ" col="scoreDelta" sort={sort} onSort={setSort} />
-        <span className="inline-flex items-center gap-1">
-          <SortButton label="Cost Δ" col="costDelta" sort={sort} onSort={setSort} />
-          <span className="text-[var(--color-fg-subtle)]">· lat · tok</span>
+        <span className="self-center">verdict on → off</span>
+        <span className="flex justify-end">
+          <SortButton label="Score Δ" col="scoreDelta" sort={sort} onSort={setSort} />
         </span>
-        <span className="text-right">judge</span>
+        <span className="flex items-center gap-1">
+          <SortButton label="Cost Δ" col="costDelta" sort={sort} onSort={setSort} />
+          <span>· lat · tok</span>
+        </span>
+        <span className="self-center text-right">judge</span>
       </div>
 
-      <ul className="space-y-1.5">
+      <ul className="divide-y">
         {rows.map((pair) => (
           <li key={pair.ticker}>
             <Row pair={pair} />
@@ -75,21 +88,36 @@ function SortButton({
       onClick={() => onSort(nextSort(sort, col))}
       aria-label={`Sort by ${label}${active ? `, ${sort.dir}ending` : ""}`}
       className={cn(
-        "inline-flex items-center gap-1 uppercase tracking-wider transition-colors hover:text-[var(--color-fg)]",
+        "relative inline-flex h-full items-center gap-1 uppercase tracking-[0.14em] transition-colors duration-[150ms] hover:text-[var(--color-fg)]",
+        // 44px hit area on a visually 36px control (§8 global rule).
+        "after:absolute after:inset-x-0 after:-inset-y-1 after:content-['']",
         active ? "text-[var(--color-fg)]" : "text-[var(--color-fg-subtle)]",
       )}
     >
       {label}
       <Icon className="size-3" aria-hidden="true" />
+      {active && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-0 h-[2px] bg-[var(--color-beam)]"
+        />
+      )}
     </button>
   );
 }
 
 function Row({ pair }: { pair: EvalPair }) {
   return (
-    <div className="panel grid grid-cols-1 gap-3 rounded-xl p-4 lg:grid-cols-[7rem_minmax(9rem,1fr)_8rem_1fr_8rem] lg:items-center lg:gap-4 lg:py-3">
-      {/* Ticker */}
-      <span className="font-mono text-base font-semibold tracking-tight text-[var(--color-fg)]">
+    <div
+      className={cn(
+        "grid grid-cols-1 gap-3 p-4 transition-colors duration-[150ms] hover:bg-[var(--color-surface-2)] lg:min-h-11 lg:items-center lg:gap-4 lg:py-2",
+        GRID_COLS,
+      )}
+    >
+      {/* Ticker. NB: no `text-base` here — the theme's `--color-base` shadows
+          Tailwind's text-base font-size utility into `color: base` (near-black);
+          the body default is already 16px. */}
+      <span className="font-mono tracking-tight text-[var(--color-fg)] [font-weight:550]">
         {pair.ticker}
       </span>
 
@@ -116,8 +144,8 @@ function Row({ pair }: { pair: EvalPair }) {
         <Verdict action={pair.actionOff} score={pair.scoreOff} muted />
       </div>
 
-      {/* Score delta */}
-      <div className="flex items-center gap-2 lg:block">
+      {/* Score delta — numerics right-aligned on the scan line (§8.14). */}
+      <div className="flex items-center gap-2 lg:justify-end">
         <LabelMobile>score Δ</LabelMobile>
         <ScoreDelta value={pair.scoreDelta} />
       </div>
@@ -164,7 +192,7 @@ function Verdict({
 }) {
   if (!action) {
     return (
-      <span className="rounded-full border border-[var(--color-line)] px-2 py-0.5 font-mono text-2xs text-[var(--color-fg-subtle)]">
+      <span className="px-1 font-mono text-2xs text-[var(--color-fg-subtle)]">
         —
       </span>
     );
@@ -180,7 +208,7 @@ function ScoreDelta({ value }: { value: number | null }) {
   const tone = deltaTone(value, "more-is-better");
   return (
     <span
-      className="font-mono text-sm font-semibold tabular-nums"
+      className="font-mono text-sm font-medium tabular-nums"
       style={{ color: value == null ? "var(--color-fg-subtle)" : toneColor(tone) }}
     >
       {value == null ? "—" : value > 0 ? `+${value}` : `${value}`}
@@ -212,7 +240,7 @@ function DeltaCell({
   );
 }
 
-/** A mobile-only inline label (the grid header is hidden under lg). */
+/** A mobile-only inline label (the column rail is hidden under lg). */
 function LabelMobile({ children }: { children: React.ReactNode }) {
   return (
     <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-fg-subtle)] lg:hidden">

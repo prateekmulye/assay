@@ -10,9 +10,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EvalPair } from "./evalFormat";
 
-/** Capture the data recharts' <Scatter> receives, and the <Cell> fills. */
+/** Capture the data recharts' <Scatter> receives, and the <Cell> paint. */
 const scatterData = vi.fn();
 const cellFills: string[] = [];
+const cellStrokes: string[] = [];
 
 vi.mock("recharts", () => {
   const Pass = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
@@ -29,8 +30,9 @@ vi.mock("recharts", () => {
       scatterData(data);
       return <div data-testid="scatter">{children}</div>;
     },
-    Cell: ({ fill }: { fill: string }) => {
+    Cell: ({ fill, stroke }: { fill: string; stroke?: string }) => {
       cellFills.push(fill);
+      cellStrokes.push(stroke ?? "");
       return <div data-testid="cell" data-fill={fill} />;
     },
     XAxis: () => null,
@@ -73,6 +75,7 @@ function pair(over: Partial<EvalPair>): EvalPair {
 beforeEach(() => {
   scatterData.mockReset();
   cellFills.length = 0;
+  cellStrokes.length = 0;
 });
 
 describe("CostQualityScatter", () => {
@@ -110,7 +113,7 @@ describe("CostQualityScatter", () => {
     expect(screen.getByText(/2 tickers not plotted/i)).toBeInTheDocument();
   });
 
-  it("colors points by judge preference (on=bull, off=bear, tie=hold, null=dim)", () => {
+  it("colors points per §3.5 (on=bull, off=conservative — never bear, tie=dim, unjudged=hollow)", () => {
     render(
       <CostQualityScatter
         pairs={[
@@ -123,10 +126,12 @@ describe("CostQualityScatter", () => {
     );
     expect(cellFills).toEqual([
       "var(--color-bull)",
-      "var(--color-bear)",
-      "var(--color-hold)",
+      "var(--color-conservative)",
       "var(--color-fg-subtle)",
+      "transparent",
     ]);
+    // The unjudged point is HOLLOW: no fill, a 1px line-strong stroke.
+    expect(cellStrokes[3]).toBe("var(--color-line-strong)");
   });
 
   it("shows the no-data state when nothing is plottable", () => {

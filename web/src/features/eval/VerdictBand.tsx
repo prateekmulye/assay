@@ -1,15 +1,16 @@
 /**
  * VerdictBand — the headline claim of the screen, as an asymmetric bento of
- * mono stat tiles (NotebookLM "Asymmetric Bento Verdict Band"). The hero tile —
- * judge-prefers-debate rate — is isolated by SIZE (spans two columns) and a slow
- * breathing oscillation (Von Restorff + "this feed is live"); the six
- * supporting tiles are smaller, each delta color-encoded by OUTCOME UTILITY
- * with a directional arrow (Functional Signal Inversion) so a recruiter reads
- * cost-up-as-penalty without reading the label.
+ * mono stat tiles (DESIGN.md §10 "the lab report"). The hero tile is the MEAN
+ * SCORE DELTA — the debate's payoff — as a giant mono `--text-4xl` figure
+ * tinted by OUTCOME UTILITY with a directional arrow (Functional Signal
+ * Inversion, §3.5), isolated by size (2×2 in the bento — Von Restorff) and
+ * breathing only while the freshest run is on screen. The six supporting tiles
+ * carry the judge's read (honest "n/a" when nothing was refereed — never a
+ * fake 0%), the agreement rates, and the debate's price (cost / latency /
+ * tokens), each delta signal-inverted so cost-up reads as friction without
+ * reading the label.
  *
  * `aria-live="polite"` on the band so a screen reader announces the verdict.
- * Null-safe throughout: when nothing was judged the hero shows the honest
- * "no verdicts judged" state instead of a fake 0%.
  */
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 
@@ -29,83 +30,94 @@ import {
   toneColor,
 } from "./evalFormat";
 
-export function VerdictBand({ summary }: { summary: EvalSummary }) {
+export function VerdictBand({
+  summary,
+  fresh = false,
+}: {
+  summary: EvalSummary;
+  /** True when this band shows the newest stored run — only a fresh feed
+   *  breathes (§6.3-5); a deep-linked archive run sits still. */
+  fresh?: boolean;
+}) {
   const reduced = useReducedMotion();
+  const heroTone = deltaTone(summary.meanScoreDelta, "more-is-better");
+  const heroDir = deltaArrow(summary.meanScoreDelta);
+  const HeroArrow =
+    heroDir === "up" ? ArrowUpRight : heroDir === "down" ? ArrowDownRight : Minus;
 
   return (
     <section
       aria-label="Debate-on versus debate-off verdict"
       aria-live="polite"
-      className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+      className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5"
     >
-      {/* HERO — judge prefers debate. Spans 2 cols, breathes. With the hero at
-          2×2 and six supporting tiles, lg's 5-col bento fills exactly. */}
+      {/* HERO — the debate's payoff: mean conviction shift, on − off. Spans
+          2×2 so lg's 5-col bento fills exactly with the six supporting tiles. */}
       <div
         className={cn(
-          "panel-raised relative col-span-2 flex flex-col justify-between overflow-hidden rounded-xl p-5 sm:row-span-1 lg:col-span-2 lg:row-span-2",
-          !reduced && "animate-breathe-tile",
+          "panel-raised relative col-span-2 flex flex-col justify-between overflow-hidden p-5 lg:row-span-2",
+          fresh && !reduced && "animate-breathe-tile",
         )}
       >
-        <div className="flex items-center gap-2">
-          <span
-            aria-hidden="true"
-            className="size-1.5 rounded-full"
-            style={{ background: "var(--color-bull)" }}
-          />
-          <p className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-muted)]">
-            Judge prefers debate
-          </p>
-        </div>
+        <p className="kicker">Mean score Δ</p>
 
-        {summary.judged ? (
+        {summary.meanScoreDelta != null ? (
           <div className="mt-4">
             <p
-              className="font-mono text-5xl font-semibold leading-none tracking-tight tabular-nums sm:text-6xl"
-              style={{ color: "var(--color-fg)", letterSpacing: "0.01em" }}
+              className="flex items-center gap-2 font-mono text-4xl leading-none tabular-nums [font-weight:560]"
+              style={{ color: toneColor(heroTone) }}
             >
-              {formatRate(summary.judgePrefersOnRate)}
+              <HeroArrow className="size-7 shrink-0" aria-hidden="true" />
+              {formatSigned(summary.meanScoreDelta)}
             </p>
-            <p className="mt-3 max-w-[22ch] text-xs leading-relaxed text-[var(--color-fg-muted)]">
-              of {summary.nJudged} refereed{" "}
-              {summary.nJudged === 1 ? "ticker" : "tickers"}, the deep-model judge
-              picked the debate pipeline over the single-pass baseline.
+            <p className="mt-3 max-w-[28ch] text-xs leading-relaxed text-[var(--color-fg-muted)]">
+              conviction score, debate on − off
+              {summary.scoreDeltaStdev != null && (
+                <> · ±{summary.scoreDeltaStdev.toFixed(1)} σ</>
+              )}{" "}
+              across {summary.nTickers}{" "}
+              {summary.nTickers === 1 ? "ticker" : "tickers"}
             </p>
           </div>
         ) : (
           <div className="mt-4">
-            <p className="font-mono text-3xl font-semibold leading-none tabular-nums text-[var(--color-fg-subtle)]">
-              n/a
+            <p className="font-mono text-4xl leading-none tabular-nums text-[var(--color-fg-subtle)] [font-weight:560]">
+              —
             </p>
-            <p className="mt-3 max-w-[24ch] text-xs leading-relaxed text-[var(--color-fg-muted)]">
-              No verdicts were refereed in this run — the judge was skipped or
-              unavailable, so the preference rate can&rsquo;t be computed.
+            <p className="mt-3 max-w-[28ch] text-xs leading-relaxed text-[var(--color-fg-muted)]">
+              this run recorded no paired conviction scores, so the debate&rsquo;s
+              payoff can&rsquo;t be measured.
             </p>
           </div>
         )}
       </div>
 
-      {/* Supporting tiles — rates (neutral, no polarity) then signed deltas. */}
+      {/* Judge tiles — honest "n/a" when nothing was refereed (§10). */}
+      <RateTile
+        label="Judge prefers debate"
+        rate={summary.judgePrefersOnRate}
+        na={!summary.judged}
+        hint={
+          summary.judged
+            ? `of ${summary.nJudged} refereed ${
+                summary.nJudged === 1 ? "ticker" : "tickers"
+              }, the deep-model judge picked the debate pipeline`
+            : "no verdicts were refereed in this run — the judge was skipped or unavailable"
+        }
+      />
+      <RateTile
+        label="Judge agreement"
+        rate={summary.judgeAgreementRate}
+        na={!summary.judged}
+        hint={summary.judged ? "referee concurred with the call" : "no verdicts judged"}
+      />
       <RateTile
         label="Action agreement"
         rate={summary.actionAgreementRate}
         hint="on vs off picked the same verdict"
       />
-      <RateTile
-        label="Judge agreement"
-        rate={summary.judgeAgreementRate}
-        hint={summary.judged ? "referee concurred with the call" : "no verdicts judged"}
-      />
-      <DeltaTile
-        label="Mean score Δ"
-        value={summary.meanScoreDelta}
-        polarity="more-is-better"
-        format={formatSigned}
-        hint={
-          summary.scoreDeltaStdev != null
-            ? `conviction score, on − off · ±${summary.scoreDeltaStdev.toFixed(1)} σ`
-            : "conviction score, on − off"
-        }
-      />
+
+      {/* The debate's price — signed deltas, Functional Signal Inversion. */}
       <DeltaTile
         label="Mean cost Δ"
         value={summary.meanCostDelta}
@@ -132,23 +144,29 @@ export function VerdictBand({ summary }: { summary: EvalSummary }) {
 }
 
 /** A neutral 0..1 rate tile (no good/bad polarity — agreement isn't a win or a
- *  loss, it's context). Null-safe. */
+ *  loss, it's context). `na` distinguishes "not applicable" (nothing judged →
+ *  honest "n/a") from "no data recorded" (—). */
 function RateTile({
   label,
   rate,
   hint,
+  na = false,
 }: {
   label: string;
   rate: number | null;
   hint: string;
+  na?: boolean;
 }) {
   return (
-    <div className="panel flex flex-col justify-between rounded-xl p-4">
-      <p className="font-mono text-2xs uppercase tracking-[0.16em] text-[var(--color-fg-subtle)]">
-        {label}
-      </p>
-      <p className="mt-2 font-mono text-2xl font-semibold leading-none tabular-nums text-[var(--color-fg)]">
-        {formatRate(rate)}
+    <div className="panel flex flex-col justify-between p-4">
+      <p className="kicker">{label}</p>
+      <p
+        className={cn(
+          "mt-2 font-mono text-2xl font-medium leading-none tabular-nums",
+          rate == null ? "text-[var(--color-fg-subtle)]" : "text-[var(--color-fg)]",
+        )}
+      >
+        {rate == null ? (na ? "n/a" : "—") : formatRate(rate)}
       </p>
       <p className="mt-2 text-2xs leading-snug text-[var(--color-fg-subtle)]">
         {hint}
@@ -178,12 +196,10 @@ function DeltaTile({
   const Arrow = dir === "up" ? ArrowUpRight : dir === "down" ? ArrowDownRight : Minus;
 
   return (
-    <div className="panel flex flex-col justify-between rounded-xl p-4">
-      <p className="font-mono text-2xs uppercase tracking-[0.16em] text-[var(--color-fg-subtle)]">
-        {label}
-      </p>
+    <div className="panel flex flex-col justify-between p-4">
+      <p className="kicker">{label}</p>
       <p
-        className="mt-2 flex items-center gap-1 font-mono text-2xl font-semibold leading-none tabular-nums"
+        className="mt-2 flex items-center gap-1 font-mono text-2xl font-medium leading-none tabular-nums"
         style={{ color: value == null ? "var(--color-fg-subtle)" : color }}
       >
         <Arrow className="size-4 shrink-0" aria-hidden="true" />

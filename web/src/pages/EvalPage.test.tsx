@@ -79,14 +79,15 @@ beforeEach(() => {
 });
 
 describe("EvalPage", () => {
-  it("renders the verdict band hero rate and the methodology cue from the newest run", async () => {
+  it("renders the verdict band hero delta and the methodology cue from the newest run", async () => {
     evalResults.mockResolvedValue({ results: [run()] });
     renderWithProviders(<EvalPage />, { route: "/eval", path: "/eval" });
 
-    // Hero judge-prefers-debate rate.
+    // Judge-prefers-debate tile rate.
     expect(await screen.findByText("75%")).toBeInTheDocument();
-    // All four delta tiles render, token Δ included, with the stdev annotation
-    // on the score tile.
+    // The v3 hero is the mean score delta (giant mono figure, §10) with the
+    // stdev annotation in its caption; the price tiles render, token Δ included.
+    expect(screen.getByText("+12.5")).toBeInTheDocument();
     expect(screen.getByText("Mean token Δ")).toBeInTheDocument();
     expect(screen.getByText("+1,200")).toBeInTheDocument();
     expect(screen.getByText(/±3\.0 σ/)).toBeInTheDocument();
@@ -169,8 +170,9 @@ describe("EvalPage", () => {
       ],
     });
     renderWithProviders(<EvalPage />, { route: "/eval", path: "/eval" });
-    // Hero shows the honest "n/a", not a fake 0%.
-    expect(await screen.findByText("n/a")).toBeInTheDocument();
+    // BOTH judge tiles (prefers-debate + agreement) show the honest "n/a",
+    // never a fake 0% (§10) — while the delta tiles keep their own "—" idiom.
+    expect(await screen.findAllByText("n/a")).toHaveLength(2);
     expect(
       screen.getByText(/no verdicts were refereed in this run/i),
     ).toBeInTheDocument();

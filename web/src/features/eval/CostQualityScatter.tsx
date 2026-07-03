@@ -2,16 +2,18 @@
  * CostQualityScatter — the spatial proof of the screen. One point per ticker:
  * x = cost delta (the debate's price), y = score delta (the debate's payoff).
  * The (0,0) origin is the ABLATION BASELINE — the system with the debate OFF
- * (NotebookLM "Zero-Point Crosshair"). Quadrant tints turn position into a
- * literal verdict: top-right faint green = "debate earns its place" (better
- * score, and yes it cost more); bottom-left faint red = "ablate" (worse score
- * AND cheaper off). Points are colored by which pipeline the judge preferred so
- * the A/B semantic is readable at a glance. Hover = a panel Onion-Peel tooltip
- * with the full per-ticker tape (mono).
+ * (NotebookLM "Zero-Point Crosshair") — drawn as a `--color-line-strong`
+ * crosshair (§8.15). Quadrant tints turn position into a literal verdict:
+ * top-right faint bull = "debate earns its place" (better score, and yes it
+ * cost more); bottom-left faint bear = "ablate" (worse score AND cheaper off).
+ * Points are colored by judge preference per §3.5 — on=bull,
+ * off=conservative (informative, never bear), tie=fg-subtle, and unjudged is a
+ * HOLLOW point (1px line-strong stroke, no fill). Hover = an opaque surface-3
+ * Onion-Peel tooltip with the full per-ticker tape (mono, no blur).
  *
- * recharts is themed entirely to DESIGN tokens — no default recharts look.
- * CSS-var fills resolve in SVG (unlike the canvas chart lib in WP-9), so we can
- * use OKLCH tokens directly. recharts is lazy-co-located in the EvalPage chunk.
+ * recharts is themed entirely to DESIGN tokens — OKLCH vars resolve directly
+ * in SVG (unlike the canvas chart lib in WP-9). recharts stays lazy-co-located
+ * in the EvalPage chunk; `isAnimationActive` is false (§8.15).
  */
 import {
   CartesianGrid,
@@ -32,7 +34,7 @@ import {
   formatSignedSeconds,
   formatSignedUsd,
 } from "./evalFormat";
-import { judgeColor } from "./judgeChrome";
+import { judgeColor, judgeFill } from "./judgeChrome";
 
 interface Point {
   ticker: string;
@@ -65,7 +67,7 @@ export function CostQualityScatter({ pairs }: { pairs: EvalPair[] }) {
 
   if (plotted === 0) {
     return (
-      <div className="flex h-[360px] flex-col items-center justify-center gap-2 rounded-xl border border-[var(--color-line)] text-center">
+      <div className="well flex h-[360px] flex-col items-center justify-center gap-2 text-center">
         <p className="text-sm font-medium text-[var(--color-fg)]">
           No plottable tickers
         </p>
@@ -85,7 +87,8 @@ export function CostQualityScatter({ pairs }: { pairs: EvalPair[] }) {
       <div className="relative h-[360px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 16, right: 24, bottom: 36, left: 8 }}>
-            {/* Quadrant tints — position becomes a verdict (NotebookLM). */}
+            {/* Quadrant tints — position becomes a verdict (§8.15: bull/bear
+                at 5%; this is outcome state, not judge chroma). */}
             {/* Top-right: better score AND costs more → "earns its place". */}
             <ReferenceArea
               x1={0}
@@ -107,9 +110,12 @@ export function CostQualityScatter({ pairs }: { pairs: EvalPair[] }) {
               stroke="none"
             />
 
+            {/* Grid: ivory at 4%, "2 4" dashes (§8.15) — a registration
+                etching, not a cage. */}
             <CartesianGrid
-              stroke="var(--color-line)"
-              strokeDasharray="2 5"
+              stroke="var(--color-fg)"
+              strokeOpacity={0.04}
+              strokeDasharray="2 4"
               vertical
               horizontal
             />
@@ -118,13 +124,13 @@ export function CostQualityScatter({ pairs }: { pairs: EvalPair[] }) {
               type="number"
               dataKey="x"
               domain={xDomain}
+              ticks={[xDomain[0], xDomain[0] / 2, 0, xDomain[1] / 2, xDomain[1]]}
               tick={{
                 fill: "var(--color-fg-subtle)",
                 fontSize: 11,
                 fontFamily: "var(--font-mono)",
               }}
-              tickFormatter={(v: number) => formatSignedUsd(v)}
-              stroke="var(--color-line-strong)"
+              tickFormatter={(v: number) => (v === 0 ? "$0" : formatSignedUsd(v))}
               tickLine={false}
               axisLine={false}
             />
@@ -132,31 +138,25 @@ export function CostQualityScatter({ pairs }: { pairs: EvalPair[] }) {
               type="number"
               dataKey="y"
               domain={yDomain}
+              ticks={[yDomain[0], yDomain[0] / 2, 0, yDomain[1] / 2, yDomain[1]]}
               tick={{
                 fill: "var(--color-fg-subtle)",
                 fontSize: 11,
                 fontFamily: "var(--font-mono)",
               }}
-              tickFormatter={(v: number) => (v > 0 ? `+${v}` : `${v}`)}
-              stroke="var(--color-line-strong)"
+              tickFormatter={(v: number) => {
+                // Kill float-noise ticks ("28.799999999") from the padded domain.
+                const n = Number(v.toFixed(1));
+                return n > 0 ? `+${n}` : `${n}`;
+              }}
               tickLine={false}
               axisLine={false}
               width={44}
             />
 
-            {/* The Ablation Baseline crosshair through (0,0). */}
-            <ReferenceLine
-              x={0}
-              stroke="var(--color-fg-muted)"
-              strokeOpacity={0.5}
-              strokeWidth={1}
-            />
-            <ReferenceLine
-              y={0}
-              stroke="var(--color-fg-muted)"
-              strokeOpacity={0.5}
-              strokeWidth={1}
-            />
+            {/* The Ablation Baseline crosshair through (0,0) — §8.15. */}
+            <ReferenceLine x={0} stroke="var(--color-line-strong)" strokeWidth={1} />
+            <ReferenceLine y={0} stroke="var(--color-line-strong)" strokeWidth={1} />
 
             <Tooltip
               cursor={{ stroke: "var(--color-beam)", strokeOpacity: 0.3 }}
@@ -164,14 +164,24 @@ export function CostQualityScatter({ pairs }: { pairs: EvalPair[] }) {
             />
 
             <Scatter data={points} isAnimationActive={false}>
-              {points.map((p) => (
-                <Cell
-                  key={p.ticker}
-                  fill={judgeColor(p.pair.judgePreferred)}
-                  stroke="var(--color-base)"
-                  strokeWidth={1.5}
-                />
-              ))}
+              {points.map((p) =>
+                p.pair.judgePreferred == null ? (
+                  // Unjudged: hollow — 1px line-strong stroke, no fill (§3.5).
+                  <Cell
+                    key={p.ticker}
+                    fill="transparent"
+                    stroke="var(--color-line-strong)"
+                    strokeWidth={1}
+                  />
+                ) : (
+                  <Cell
+                    key={p.ticker}
+                    fill={judgeColor(p.pair.judgePreferred)}
+                    stroke="var(--color-base)"
+                    strokeWidth={1.5}
+                  />
+                ),
+              )}
             </Scatter>
           </ScatterChart>
         </ResponsiveContainer>
@@ -187,7 +197,7 @@ export function CostQualityScatter({ pairs }: { pairs: EvalPair[] }) {
         </span>
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute bottom-12 left-3 font-mono text-[10px] uppercase tracking-wider"
+          className="pointer-events-none absolute bottom-14 left-16 font-mono text-[10px] uppercase tracking-wider"
           style={{ color: "var(--color-bear)" }}
         >
           ↙ ablate
@@ -211,7 +221,8 @@ export function CostQualityScatter({ pairs }: { pairs: EvalPair[] }) {
   );
 }
 
-/** A panel Onion-Peel tooltip: the full per-ticker tape in mono. */
+/** The Onion-Peel tooltip: an opaque surface-3 pane (§8.15 — no blur, lifted
+ *  shadow) carrying the full per-ticker tape in mono. */
 function ScatterTooltip({
   active,
   payload,
@@ -223,7 +234,7 @@ function ScatterTooltip({
   if (!first) return null;
   const { pair } = first.payload;
   return (
-    <div className="panel-raised min-w-[12rem] rounded-lg p-3 font-mono text-2xs shadow-[var(--shadow-lifted)]">
+    <div className="min-w-[12rem] rounded-lg bg-[var(--color-surface-3)] p-3 font-mono text-2xs shadow-[var(--shadow-lifted)]">
       <div className="mb-2 flex items-center justify-between gap-3">
         <span className="text-sm font-semibold tracking-tight text-[var(--color-fg)]">
           {pair.ticker}
@@ -276,20 +287,16 @@ function TooltipRow({
   );
 }
 
+/** The tooltip's judge word — engraved-chip anatomy (§8.5: dim fill, colored
+ *  word, no border); unjudged stays plain graphite text. */
 function JudgePref({ pref }: { pref: EvalPair["judgePreferred"] }) {
   if (pref == null) {
-    return (
-      <span className="text-[var(--color-fg-subtle)]">unjudged</span>
-    );
+    return <span className="text-[var(--color-fg-subtle)]">unjudged</span>;
   }
   return (
     <span
-      className="rounded-full px-1.5 py-0.5 text-[10px] uppercase tracking-wide"
-      style={{
-        color: judgeColor(pref),
-        background: "var(--color-surface-2)",
-        border: `1px solid ${judgeColor(pref)}`,
-      }}
+      className="rounded-sm px-1.5 py-0.5 text-[10px] uppercase tracking-wide"
+      style={{ color: judgeColor(pref), background: judgeFill(pref) }}
     >
       {pref === "tie" ? "tie" : `prefers ${pref}`}
     </span>

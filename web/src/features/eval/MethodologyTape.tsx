@@ -3,11 +3,12 @@
  *
  * The brief mandates the PROXY honesty cue ride prominently. The trap is making
  * it read as an error/warning (amber alarm), which triggers anxiety instead of
- * trust (NotebookLM). So this is framed as a confident "methodology note": a
- * flask glyph, a graphite tape with a beam lit tick (confident paper, not a
- * banner), a one-line headline, and the full caveat in a collapsible —
- * Onion-Peel disclosure so the detail is there for the skeptic without taxing
- * the casual reader.
+ * trust. v3 (§10) re-tones it from the old azure info-banner to CONFIDENT
+ * GRAPHITE PAPER: a hairline-framed strip (rules above and below — §2.5, never
+ * a box), a mono "JUDGE-PROXY · METHODOLOGY" kicker, fg-muted body, and a beam
+ * lit tick on the left edge — the same light language as the bench rule. The
+ * full caveat stays behind an Onion-Peel collapsible so the detail is there for
+ * the skeptic without taxing the casual reader.
  */
 import { FlaskConical } from "lucide-react";
 import { useId, useState } from "react";
@@ -20,25 +21,23 @@ export function MethodologyTape() {
 
   return (
     <div
-      className="grain panel relative overflow-hidden px-4 py-3"
+      className="relative border-y py-3 pl-4 pr-1 sm:pl-5"
       role="note"
       aria-label="Methodology and honesty disclaimer"
     >
-      {/* Confident paper, not warning (v3 §10): graphite tape + a beam lit
-          tick on the left edge — the same light language as the bench rule. */}
+      {/* The lit tick — a short beam segment on the left edge (confident
+          paper, not a warning). Static light: it marks, it doesn't glow-loop. */}
       <span
         aria-hidden="true"
-        className="absolute inset-y-3 left-0 w-[2px] bg-[var(--color-beam)] shadow-[0_0_8px_0_var(--color-beam-dim)]"
+        className="absolute left-0 top-1/2 h-6 w-[2px] -translate-y-1/2 bg-[var(--color-beam)] shadow-[0_0_8px_0_var(--color-beam-dim)]"
       />
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-[var(--color-surface-2)] text-[var(--color-fg-muted)]">
+        <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-[var(--color-surface-2)] text-[var(--color-fg-muted)] shadow-[inset_0_1px_0_0_var(--edge-light)]">
           <FlaskConical className="size-4" aria-hidden="true" />
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-2xs font-medium uppercase tracking-[0.16em] text-[var(--color-fg-subtle)]">
-            Methodology
-          </p>
+          <p className="kicker">Judge-proxy · methodology</p>
           <p className="mt-1 text-sm font-medium leading-snug text-[var(--color-fg)]">
             {PROXY_HEADLINE}
           </p>

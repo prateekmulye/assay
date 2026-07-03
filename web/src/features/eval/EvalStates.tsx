@@ -4,40 +4,34 @@
  * (mirrors LibraryStates / ExplorerStates).
  *
  * The empty state is the one that matters: a recruiter who lands here before any
- * eval has run must see EXACTLY how to produce one — so it's a designed, on-brand
- * mono code tile with the real command, not a dead end.
+ * eval has run must see EXACTLY how to produce one — so the real command sits in
+ * a milled command well (a sunken mono surface, §8.4), not a dead end. No
+ * decorative chroma: the traffic-light theater is gone (One Rule clause 1).
  */
 import { AlertTriangle, FlaskConical } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Panel } from "@/components/ui/panel";
 
-/** Full-page panel-shimmer skeleton matching the verdict-band → scatter rhythm. */
+/** Full-page shimmer skeleton matching the rail → verdict-band → scatter
+ *  rhythm (heights mirror the real components so nothing jumps on load). */
 export function EvalSkeleton() {
   return (
     <div className="space-y-6" aria-hidden="true">
-      {/* Run rail */}
-      <div className="flex gap-3">
-        {Array.from({ length: 3 }).map((_, i) => (
+      {/* Run rail — the segmented well */}
+      <div className="well animate-shimmer h-[4.25rem] w-full max-w-xl overflow-hidden" />
+      {/* Verdict band bento */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="panel-raised animate-shimmer col-span-2 h-44 overflow-hidden lg:row-span-2" />
+        {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="panel animate-shimmer h-16 w-40 overflow-hidden rounded-xl"
-          />
-        ))}
-      </div>
-      {/* Verdict band */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-        <div className="panel-raised animate-shimmer col-span-2 h-40 overflow-hidden rounded-lg lg:row-span-2" />
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className="panel animate-shimmer h-[4.75rem] overflow-hidden rounded-xl"
+            className="panel animate-shimmer h-[5.25rem] overflow-hidden"
           />
         ))}
       </div>
       {/* Scatter */}
-      <div className="panel animate-shimmer h-[24rem] overflow-hidden rounded-lg" />
+      <div className="panel animate-shimmer h-[24rem] overflow-hidden" />
     </div>
   );
 }
@@ -59,7 +53,7 @@ export function EvalError({ onRetry }: { onRetry: () => void }) {
 }
 
 /** The honest empty state: there are no stored eval runs yet. Shows the exact
- *  command, in a designed mono code tile, so the path forward is obvious. */
+ *  command in a milled command well, so the path forward is obvious. */
 export function EvalEmpty() {
   return (
     <EmptyState
@@ -68,24 +62,23 @@ export function EvalEmpty() {
       title="Run the ablation to see it here"
       description="The debate-on vs debate-off A/B hasn’t been recorded yet. Run the harness against the curated ticker snapshot and its summary + per-ticker comparison land on this screen."
     >
-      <Panel className="terminal-tile mt-1 w-full max-w-lg !rounded-lg p-0 text-left">
-        <div className="flex items-center justify-between border-b border-[var(--color-line)] px-4 py-2">
-          <span className="font-mono text-2xs uppercase tracking-[0.16em] text-[var(--color-fg-subtle)]">
-            run the eval
-          </span>
-          <span className="flex gap-1" aria-hidden="true">
-            <span className="size-2 rounded-full bg-[var(--color-bear)] opacity-60" />
-            <span className="size-2 rounded-full bg-[var(--color-hold)] opacity-60" />
-            <span className="size-2 rounded-full bg-[var(--color-bull)] opacity-60" />
+      <div className="well mt-1 w-full max-w-lg overflow-hidden text-left">
+        <div className="flex items-center justify-between border-b px-4 py-2">
+          <span className="kicker">run the eval</span>
+          <span
+            className="font-mono text-2xs text-[var(--color-fg-subtle)]"
+            aria-hidden="true"
+          >
+            sh
           </span>
         </div>
         <pre className="overflow-x-auto px-4 py-3 font-mono text-xs leading-relaxed text-[var(--color-fg)]">
-          <span className="select-none text-[var(--color-beam)]">$ </span>
+          <span className="select-none text-[var(--color-fg-subtle)]">$ </span>
           python -m src.eval.run \{"\n"}
           {"    "}--tickers evals/tickers.json \{"\n"}
           {"    "}--label demo
         </pre>
-      </Panel>
+      </div>
     </EmptyState>
   );
 }

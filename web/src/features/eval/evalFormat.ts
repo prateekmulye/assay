@@ -218,11 +218,13 @@ export function formatSignedSeconds(value: number | null): string {
   return `${sign}${value.toFixed(1)}s`;
 }
 
-/** A signed integer delta with thousands grouping ("+1,240", "-90"). */
+/** A signed integer delta with thousands grouping ("+1,240", "-90"). Rounds —
+ *  a MEAN token delta arrives fractional and must still display as an int. */
 export function formatSignedInt(value: number | null): string {
   if (value == null || Number.isNaN(value)) return "—";
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toLocaleString("en-US")}`;
+  const rounded = Math.round(value);
+  const sign = rounded > 0 ? "+" : "";
+  return `${sign}${rounded.toLocaleString("en-US")}`;
 }
 
 /* ------------------------------------------------------- the proxy disclaimer */
