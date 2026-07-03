@@ -5,12 +5,7 @@
 # and (when the advisory also appears in the PyPI feed) be mirrored as a
 # pip-audit --ignore-vuln escape in ci.yml plus an entry in the
 # TestVulnEscapesCannotRot.ESCAPED map so it cannot rot.
-# (Python-side escapes are currently ZERO — WP-14 bumped langchain-core
-# to 1.4.4, clearing CVE-2026-34070 and CVE-2026-44843.)
 #
-# CVE-2026-42504 — Go stdlib (net/mail MIME decoding) v1.26.3 compiled INTO
-# the upstream caddy binary in caddy:2-alpine. Not fixable on our side (apk
-# cannot patch a static Go binary); Caddy does not parse inbound MIME mail.
-# REMOVE when caddy:2-alpine ships a binary built with Go >= 1.26.4
-# (docker pull && trivy image caddy:2-alpine to check).
-CVE-2026-42504
+# Currently ZERO escapes. (The former CVE-2026-42504 entry excused the Go
+# stdlib inside the upstream caddy binary — the caddy image was retired with
+# the move to Cloudflare Tunnel, so the escape went with it.)

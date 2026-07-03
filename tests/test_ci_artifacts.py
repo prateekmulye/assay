@@ -10,7 +10,7 @@ What is locked down:
   * e2e-smoke is fenced off PRs (push-to-main + workflow_dispatch only) and
     boots the prod compose stack with APP_FAKE_LLM=1.
   * deploy.yml is a green NO-OP until the repo variable DEPLOY_ENABLED is
-    'true'; it pushes BOTH GHCR targets and parameterizes SSH via secrets.
+    'true'; it pushes the app GHCR image and parameterizes SSH via secrets.
   * dependabot.yml covers all four ecosystems weekly, with grouped updates.
 """
 from __future__ import annotations
@@ -136,13 +136,12 @@ class TestCiWorkflow:
         assert "trivyignores: .trivyignore" in text
         assert (ROOT / ".trivyignore").is_file()
 
-    def test_trivy_scans_both_compose_images(self, jobs: dict) -> None:
-        # The prod stack ships TWO images (app runtime + the Caddy edge); both
-        # must pass the same CRITICAL/HIGH gate.
+    def test_trivy_scans_the_apps_only_image(self, jobs: dict) -> None:
+        # The prod stack ships ONE built image (app runtime — cloudflared is a
+        # pulled upstream image, Caddy is retired); it must pass the gate.
         text = _steps_text(jobs["e2e-smoke"])
         assert "image-ref: finresearch-app:latest" in text
-        assert "image-ref: finresearch-caddy:latest" in text
-        assert text.count("aquasecurity/trivy-action@") >= 2
+        assert "finresearch-caddy" not in text, "the caddy image was retired"
 
     def test_no_real_api_key_secrets_ever_reach_ci(self, raw: str) -> None:
         # The only secret CI may touch is the ephemeral GITHUB_TOKEN.
@@ -180,12 +179,11 @@ class TestDeployWorkflow:
         # workflow_run fires on failed CI too; the job gate must filter it.
         assert "workflow_run.conclusion == 'success'" in wf["jobs"]["build-push"]["if"]
 
-    def test_pushes_both_ghcr_targets(self, wf: dict) -> None:
+    def test_pushes_the_app_ghcr_target(self, wf: dict) -> None:
         text = _steps_text(wf["jobs"]["build-push"])
         assert "ghcr.io/prateekmulye/finresearchai-app" in text
-        assert "ghcr.io/prateekmulye/finresearchai-caddy" in text
         assert "target: runtime" in text
-        assert "target: caddy" in text
+        assert "finresearchai-caddy" not in text, "the caddy image was retired"
         # packages:write is scoped to the build-push job only; the SSH job
         # keeps the workflow-default read-only token.
         assert wf["jobs"]["build-push"]["permissions"]["packages"] == "write"
@@ -201,7 +199,9 @@ class TestDeployWorkflow:
         # branch HEAD (a commit landing mid-pipeline must not ship unvalidated).
         assert "workflow_run.head_sha" in text
         assert "git checkout --detach" in text
-        assert "docker-compose.prod.yml up -d --build" in text
+        # --profile tunnel: without it cloudflared (the only public path in)
+        # would silently not come up on deploy.
+        assert "--profile tunnel -f docker-compose.prod.yml up -d --build" in text
 
     def test_ssh_action_is_sha_pinned(self, wf: dict) -> None:
         # ssh-action receives the VPS private key: secret-adjacent third-party

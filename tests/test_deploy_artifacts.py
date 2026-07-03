@@ -1,16 +1,18 @@
-"""WP-11 deploy-artifact guards — cheap string/YAML asserts that keep CI honest
+"""Deploy-artifact guards — cheap string/YAML asserts that keep CI honest
 without needing Docker.
 
-What is locked down:
+What is locked down (Cloudflare-Tunnel era — Caddy is retired):
   * Dockerfile installs the db extra (the bare ``.[api]`` install broke the image
     the moment src/api started importing src/warehouse in WP-5) plus the web/data
-    extras the collector + analysts need at runtime; ships migrations + alembic.ini;
-    bakes the fastembed model; runs as a non-root user.
+    extras the collector + analysts need at runtime; ships migrations + alembic.ini
+    AND the built SPA dist; bakes the fastembed model; runs as a non-root user.
   * docker/entrypoint.sh migrates (alembic upgrade head) BEFORE exec'ing uvicorn.
-  * docker-compose.prod.yml exposes ONLY Caddy to the host; POSTGRES_PASSWORD is
-    required (no default baked into the prod file).
-  * Caddyfile carries the security headers, the /api reverse proxy, and the SPA
-    fallback.
+  * docker-compose.prod.yml has ZERO externally reachable ports (app is
+    loopback-only, db fully internal, cloudflared dials out); POSTGRES_PASSWORD
+    is required (no default baked into the prod file); the tunnel is
+    profile-gated so CI can boot app+db without a token.
+  * The Caddyfile is gone for good — security headers + SPA serving moved into
+    src/api/edge.py where tests/test_api_static.py covers them.
 """
 from __future__ import annotations
 
@@ -27,7 +29,6 @@ DOCKERFILE = ROOT / "Dockerfile"
 ENTRYPOINT = ROOT / "docker" / "entrypoint.sh"
 COMPOSE_PROD = ROOT / "docker-compose.prod.yml"
 COMPOSE_DEV = ROOT / "docker-compose.yml"
-CADDYFILE = ROOT / "Caddyfile"
 
 
 # ---------------------------------------------------------------- Dockerfile
@@ -49,14 +50,23 @@ class TestDockerfile:
         assert {"api", "db", "web", "data"} <= extras, f"missing extras: {extras}"
 
     def test_multi_stage_targets(self, text: str) -> None:
-        for target in ("web-builder", "py-builder", "runtime", "caddy"):
+        for target in ("web-builder", "py-builder", "runtime"):
             assert re.search(rf"^FROM \S+ AS {target}$", text, re.M), f"missing stage {target}"
+        # Caddy is retired: no fourth stage may reappear silently.
+        assert " AS caddy" not in text, "the caddy edge stage was retired (Cloudflare Tunnel)"
 
     def test_web_is_built_not_copied_as_source(self, text: str) -> None:
         assert "npm ci" in text and "npm run build" in text
-        # The runtime stage must NOT carry web source; only the caddy stage takes dist.
+        # The runtime stage takes ONLY the built dist, never web source.
         runtime = text.split("AS runtime")[1].split("\nFROM ")[0]
         assert "COPY web" not in runtime, "runtime stage must not copy web source"
+
+    def test_runtime_ships_spa_dist_and_pins_web_dist(self, text: str) -> None:
+        # Post-Caddy the app serves the SPA itself (src/api/edge.py): the
+        # runtime image must carry dist and point WEB_DIST at it.
+        runtime = text.split("AS runtime")[1].split("\nFROM ")[0]
+        assert re.search(r"COPY --from=web-builder \S*/dist \./web/dist", runtime)
+        assert "WEB_DIST=/app/web/dist" in runtime
 
     def test_runtime_ships_migrations_and_alembic_ini(self, text: str) -> None:
         runtime = text.split("AS runtime")[1].split("\nFROM ")[0]
@@ -76,10 +86,10 @@ class TestDockerfile:
         assert "USER appuser" in runtime
         assert "entrypoint.sh" in runtime
 
-    def test_caddy_stage_ships_caddyfile_and_dist(self, text: str) -> None:
-        caddy = text.split("AS caddy")[1]
-        assert "COPY Caddyfile /etc/caddy/Caddyfile" in caddy
-        assert re.search(r"COPY --from=web-builder \S*/dist /srv", caddy)
+    def test_caddyfile_is_gone(self) -> None:
+        assert not (ROOT / "Caddyfile").exists(), (
+            "Caddyfile was retired — headers + SPA serving live in src/api/edge.py"
+        )
 
 
 # ------------------------------------------------------------- entrypoint.sh
@@ -120,14 +130,28 @@ class TestComposeProd:
         return yaml.safe_load(raw)["services"]
 
     def test_three_services(self, services: dict) -> None:
-        assert set(services) == {"caddy", "app", "db"}
+        assert set(services) == {"cloudflared", "app", "db"}
 
-    def test_only_caddy_publishes_host_ports(self, services: dict) -> None:
-        assert "ports" not in services["app"], "app must stay internal (Caddy fronts it)"
+    def test_zero_externally_reachable_ports(self, services: dict) -> None:
+        # The tunnel dials OUT; nothing may listen on a public interface.
         assert "ports" not in services["db"], "db must stay internal"
-        published = {str(p) for p in services["caddy"]["ports"]}
-        assert any(p.startswith("80:") for p in published)
-        assert any(p.startswith("443:") for p in published)
+        assert "ports" not in services["cloudflared"], "cloudflared needs no inbound ports"
+        published = [str(p) for p in services["app"].get("ports", [])]
+        for p in published:
+            assert p.startswith("127.0.0.1:"), (
+                f"app port {p!r} must bind loopback only — Cloudflare Tunnel "
+                "is the sole public path in"
+            )
+
+    def test_cloudflared_is_profile_gated_tunnel_runner(self, raw: str, services: dict) -> None:
+        cf = services["cloudflared"]
+        assert cf["image"].startswith("cloudflare/cloudflared")
+        assert cf["profiles"] == ["tunnel"], (
+            "cloudflared must be profile-gated so CI/tokenless runs boot app+db alone"
+        )
+        assert "tunnel" in cf["command"] and "run" in cf["command"]
+        assert "TUNNEL_TOKEN" in raw
+        assert cf["depends_on"]["app"]["condition"] == "service_healthy"
 
     def test_postgres_password_is_required_no_default(self, raw: str) -> None:
         # ${POSTGRES_PASSWORD:?...} makes compose refuse to start without it; a
@@ -146,9 +170,8 @@ class TestComposeProd:
             assert key in env
 
     def test_dependency_and_restart_policy(self, services: dict) -> None:
-        assert services["caddy"]["depends_on"]["app"]["condition"] == "service_healthy"
         assert services["app"]["depends_on"]["db"]["condition"] == "service_healthy"
-        for name in ("caddy", "app", "db"):
+        for name in ("cloudflared", "app", "db"):
             assert services[name]["restart"] == "unless-stopped"
 
     def test_app_and_db_have_healthchecks(self, services: dict) -> None:
@@ -161,50 +184,3 @@ class TestComposeProd:
     def test_dev_compose_untouched_db_only(self) -> None:
         dev = yaml.safe_load(COMPOSE_DEV.read_text(encoding="utf-8"))
         assert set(dev["services"]) == {"db"}, "docker-compose.yml stays the dev-only db"
-
-
-# -------------------------------------------------------------------- Caddyfile
-class TestCaddyfile:
-    @pytest.fixture()
-    def text(self) -> str:
-        return CADDYFILE.read_text(encoding="utf-8")
-
-    def test_domain_from_env_with_port_80_fallback(self, text: str) -> None:
-        assert "{$CADDY_DOMAIN::80}" in text
-
-    def test_security_headers(self, text: str) -> None:
-        for header in (
-            "Strict-Transport-Security",
-            "X-Content-Type-Options",
-            "Referrer-Policy",
-            "X-Frame-Options",
-            "Content-Security-Policy",
-            "Permissions-Policy",
-        ):
-            assert header in text, f"missing {header}"
-
-    def test_permissions_policy_disables_sensitive_features(self, text: str) -> None:
-        pp = next(line for line in text.splitlines() if "Permissions-Policy" in line)
-        for feature in ("camera=()", "microphone=()", "geolocation=()"):
-            assert feature in pp, f"Permissions-Policy must disable {feature}"
-
-    def test_csp_allows_self_connect_for_sse(self, text: str) -> None:
-        csp = next(line for line in text.splitlines() if "Content-Security-Policy" in line)
-        assert "connect-src 'self'" in csp
-        assert "default-src 'self'" in csp
-
-    def test_api_and_healthz_proxy_to_app(self, text: str) -> None:
-        assert "/api/*" in text
-        assert "/healthz" in text
-        assert "reverse_proxy app:7860" in text
-
-    def test_sse_streaming_is_unbuffered(self, text: str) -> None:
-        # flush_interval -1 disables proxy buffering — without it Caddy batches
-        # the token SSE stream and the live cockpit stops feeling live.
-        assert "flush_interval -1" in text
-
-    def test_spa_fallback_and_caching(self, text: str) -> None:
-        assert "try_files {path} /index.html" in text
-        assert "file_server" in text
-        assert "immutable" in text, "hashed /assets/* should be long-cached"
-        assert "no-cache" in text, "index.html must not be cached"

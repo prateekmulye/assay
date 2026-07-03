@@ -192,13 +192,14 @@ jobs:
 
   e2e-smoke:
     name: e2e smoke (prod compose + trivy)
-    # Boots the full Caddy+app+db stack — minutes of Docker work, so run it on
-    # pushes to main and manual dispatch only; PRs stay on the fast jobs above.
+    # Boots the app+db prod stack (cloudflared is profile-gated off in CI) —
+    # minutes of Docker work, so run it on pushes to main and manual dispatch
+    # only; PRs stay on the fast jobs above.
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      # Deterministic image/container names (finresearch-app, finresearch-caddy).
+      # Deterministic image/container names (finresearch-app).
       COMPOSE_PROJECT_NAME: finresearch
       POSTGRES_PASSWORD: ci
       APP_FAKE_LLM: "1" # deterministic offline demo LLM — zero external calls
@@ -206,7 +207,8 @@ jobs:
       # these are read. Real keys are never configured in CI.
       OLLAMA_API_KEY: ci-dummy
       FIRECRAWL_API_KEY: ci-dummy
-      # CADDY_DOMAIN stays unset -> Caddy serves plain :80 (no TLS in CI).
+      # TUNNEL_TOKEN stays unset -> the profile-gated cloudflared service is
+      # never started; the app is smoked on its loopback port directly.
 
     steps:
       - name: Checkout
@@ -215,7 +217,7 @@ jobs:
       - name: Build the prod stack
         run: docker compose -f docker-compose.prod.yml build
 
-      - name: Trivy scan (app runtime image)
+      - name: Trivy scan (app runtime image — the only image the stack ships)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: finresearch-app:latest
@@ -225,34 +227,25 @@ jobs:
           # Justified escapes only — every entry carries a removal condition.
           trivyignores: .trivyignore
 
-      - name: Trivy scan (caddy edge image)
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: finresearch-caddy:latest
-          severity: CRITICAL,HIGH
-          exit-code: "1"
-          ignore-unfixed: true
-          trivyignores: .trivyignore
-
-      - name: Boot the stack (fake-LLM demo mode, plain :80)
+      - name: Boot the stack (fake-LLM demo mode, app on loopback :7860)
         run: docker compose -f docker-compose.prod.yml up -d --wait --wait-timeout 240
 
-      - name: "Smoke: SPA shell served at /"
+      - name: "Smoke: SPA shell served at / by the app itself"
         run: |
           set -euo pipefail
-          curl -fsS --retry 5 --retry-delay 2 --retry-connrefused http://localhost/ | tee /tmp/index.html >/dev/null
+          curl -fsS --retry 5 --retry-delay 2 --retry-connrefused http://localhost:7860/ | tee /tmp/index.html >/dev/null
           grep -q "<title>FinResearch" /tmp/index.html
           grep -q 'id="root"' /tmp/index.html
 
-      - name: "Smoke: /healthz via the Caddy proxy"
+      - name: "Smoke: /healthz"
         run: |
           set -euo pipefail
-          curl -fsS http://localhost/healthz | grep -q '"ok"'
+          curl -fsS http://localhost:7860/healthz | grep -q '"ok"'
 
-      - name: "Smoke: security headers on the edge"
+      - name: "Smoke: security headers served by the app (src/api/edge.py)"
         run: |
           set -euo pipefail
-          curl -fsSI http://localhost/ | tee /tmp/headers.txt
+          curl -fsSI http://localhost:7860/ | tee /tmp/headers.txt
           grep -qi '^x-content-type-options: nosniff' /tmp/headers.txt
           grep -qi '^x-frame-options: DENY' /tmp/headers.txt
           grep -qi '^referrer-policy:' /tmp/headers.txt
@@ -263,7 +256,7 @@ jobs:
       - name: "Smoke: POST /api/analyze streams SSE to done"
         run: |
           set -euo pipefail
-          curl -NsS --max-time 240 -X POST http://localhost/api/analyze \
+          curl -NsS --max-time 240 -X POST http://localhost:7860/api/analyze \
             -H 'Content-Type: application/json' \
             -H 'Accept: text/event-stream' \
             -d '{"ticker":"AAPL"}' -o /tmp/sse.log
@@ -274,7 +267,7 @@ jobs:
       - name: "Smoke: run shows up in GET /api/library"
         run: |
           set -euo pipefail
-          curl -fsS http://localhost/api/library | tee /tmp/library.json
+          curl -fsS http://localhost:7860/api/library | tee /tmp/library.json
           grep -q '"AAPL"' /tmp/library.json
           grep -q '"finished"' /tmp/library.json
 

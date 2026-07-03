@@ -16,9 +16,9 @@ def trust_proxy() -> bool:
 
 def client_key(request: Request) -> str:
     # X-Forwarded-For is client-spoofable, so only honor it when TRUST_PROXY is set
-    # (i.e. we are knowingly behind a trusted proxy — the Caddy edge in
-    # docker-compose.prod.yml). When trusted, take the LAST hop the proxy
-    # appended, not the client-controlled first.
+    # (i.e. we are knowingly behind a trusted proxy — the Cloudflare Tunnel
+    # edge in docker-compose.prod.yml). When trusted, take the LAST hop the
+    # proxy appended, not the client-controlled first.
     # Otherwise key on the real socket peer so the limiter can't be trivially bypassed.
     if trust_proxy():
         fwd = request.headers.get("x-forwarded-for")

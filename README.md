@@ -180,14 +180,17 @@ JSONL traces; you lose the library, market explorer, and search.
 
 ### c) Production
 
-One VPS, three containers (Caddy auto-HTTPS → FastAPI → Postgres):
+Runs for **$0/month**: an Oracle Always-Free VM (or any always-on Linux box) with
+three containers — Cloudflare Tunnel (outbound-only, zero open inbound ports) →
+FastAPI (serves the API + built SPA) → Postgres. Cloudflare terminates TLS at
+its edge; there is no in-stack web server and no certificate to manage.
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose --profile tunnel -f docker-compose.prod.yml up -d --build
 ```
 
-Full runbook — DNS, secrets, first-run checks, updates, backups, and the gated GitHub
-Actions deploy pipeline — in [`docs/deploy.md`](./docs/deploy.md).
+Full runbook — free VM, tunnel setup, secrets, first-run checks, updates, backups,
+and the gated GitHub Actions deploy pipeline — in [`docs/deploy.md`](./docs/deploy.md).
 
 ## API
 
@@ -213,8 +216,8 @@ Everything under `/api`, liveness at the root:
 - **Data:** yfinance, Firecrawl, tradingview-ta
 - **Frontend:** React 19, Vite, TypeScript, Tailwind v4 + shadcn/ui, TanStack Query,
   @xyflow/react, lightweight-charts, Recharts, Motion
-- **Ops:** Docker Compose, Caddy (auto-HTTPS), GitHub Actions (5-job CI + gated deploy),
-  Dependabot, gitleaks / pip-audit / Trivy
+- **Ops:** Docker Compose, Cloudflare Tunnel (zero-inbound-port edge), GitHub Actions
+  (5-job CI + gated deploy), Dependabot, gitleaks / pip-audit / Trivy
 
 ## Repository layout
 

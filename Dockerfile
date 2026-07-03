@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
-# WP-11 production image. Four stages:
-#   web-builder -> Vite build of the SPA (consumed only by the caddy stage)
+# Production image. Three stages:
+#   web-builder -> Vite build of the SPA (dist lands in the runtime stage)
 #   py-builder  -> self-contained venv with the runtime extras
-#   runtime     -> the FastAPI app (compose target: app)
-#   caddy       -> Caddy + the built SPA (compose target: caddy)
+#   runtime     -> FastAPI serving the API + the built SPA (compose: app)
+# TLS/edge is Cloudflare's (Tunnel) — no in-stack web server anymore.
 
 # ---- Stage 1: build the Vite SPA ------------------------------------------
 FROM node:22-slim AS web-builder
@@ -50,6 +50,10 @@ COPY src ./src
 COPY alembic.ini ./alembic.ini
 COPY migrations ./migrations
 COPY docker/entrypoint.sh ./docker/entrypoint.sh
+# The built SPA (dist only, never web source): src/api/edge.py serves it with
+# the client-routing fallback. WEB_DIST matches the app's default lookup.
+COPY --from=web-builder /web/dist ./web/dist
+ENV WEB_DIST=/app/web/dist
 RUN mkdir -p /app/runs \
  && chmod +x /app/docker/entrypoint.sh \
  && chown -R appuser:appuser /app
@@ -61,11 +65,3 @@ EXPOSE 7860
 # One worker keeps the in-memory rate limiter coherent; scale out via the
 # Redis seam + more replicas if needed.
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
-
-# ---- Stage 4: edge (compose service: caddy) --------------------------------
-FROM caddy:2-alpine AS caddy
-# Pull in Alpine security fixes the base image hasn't rebuilt with yet
-# (e.g. libcrypto3/libssl3 — trivy gates this image at CRITICAL,HIGH in CI).
-RUN apk upgrade --no-cache
-COPY Caddyfile /etc/caddy/Caddyfile
-COPY --from=web-builder /web/dist /srv

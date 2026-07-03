@@ -27,6 +27,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.demo_guard import DailyQuotaExceeded, daily_quota_handler
+from src.api.edge import SecurityHeadersMiddleware, mount_spa
 from src.api.lifespan import lifespan
 from src.api.ratelimit import get_rate_limiter
 from src.api.routes import analyze as analyze_routes
@@ -45,6 +46,7 @@ def create_app(
     rate_window_s: int = 3600,
     runs_dir: str | None = None,
     allowed_origins: list[str] | None = None,
+    web_dist: str | None = None,
 ) -> FastAPI:
     # Container observability (WP-11): uvicorn configures only its own loggers,
     # so without a root handler the app's INFO lines (watchlist seeding,
@@ -70,6 +72,9 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # Post-Caddy: the app owns its security headers (Cloudflare only
+    # terminates TLS). Added last -> outermost, so every response gets them.
+    app.add_middleware(SecurityHeadersMiddleware)
 
     app.state.limiter = get_rate_limiter(limit=rate_limit, window_s=rate_window_s)
     app.state.runs_path = Path(runs_dir or os.getenv("RUNS_DIR", "runs"))
@@ -87,6 +92,13 @@ def create_app(
 
     # Daily demo caps render as a structured 429 the UI can act on.
     app.add_exception_handler(DailyQuotaExceeded, daily_quota_handler)
+
+    # Post-Caddy: serve the built SPA (with client-routing fallback) straight
+    # from the app when a dist exists. Registered after the routers so /api/*
+    # always wins; absent dist (dev, API-only) changes nothing.
+    dist = Path(web_dist or os.getenv("WEB_DIST", "web/dist"))
+    if (dist / "index.html").is_file():
+        mount_spa(app, dist)
 
     return app
 

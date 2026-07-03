@@ -337,6 +337,9 @@ def env_isolation(monkeypatch):
     ):
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("RUN_LIVE", "0")
+    # A locally built web/dist must not flip create_app() into SPA-serving
+    # mode mid-suite — tests opt in explicitly via create_app(web_dist=...).
+    monkeypatch.setenv("WEB_DIST", "tests-no-web-dist")
     # Construct Settings without reading the on-disk .env in tests.
     monkeypatch.setattr(
         settings_mod.Settings,

@@ -6,12 +6,12 @@
 # is provisioned and DEPLOY_ENABLED + the three VPS_* secrets are set, this
 # workflow runs as all-skipped (green no-op). Enablement runbook: docs/deploy.md.
 #
-#   build-push  GHCR images for both Dockerfile targets (runtime + caddy),
+#   build-push  GHCR image for the app (the stack's only built target),
 #               tagged latest + commit sha — the artifact/rollback story.
-#   deploy      SSH to the VPS: git fetch + checkout of the CI-validated SHA,
-#               then `docker compose up -d --build` (the canonical update path
-#               from docs/deploy.md §5; the VPS builds from source and does
-#               not consume GHCR — yet).
+#   deploy      SSH to the host: git fetch + checkout of the CI-validated SHA,
+#               then `docker compose --profile tunnel up -d --build` (the
+#               canonical update path from docs/deploy.md; the host builds
+#               from source and does not consume GHCR — yet).
 name: Deploy
 
 on:
@@ -72,18 +72,6 @@ jobs:
           cache-from: type=gha,scope=app
           cache-to: type=gha,mode=max,scope=app
 
-      - name: Build + push caddy image (caddy target)
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          target: caddy
-          push: true
-          tags: |
-            ghcr.io/prateekmulye/finresearchai-caddy:latest
-            ghcr.io/prateekmulye/finresearchai-caddy:${{ github.event.workflow_run.head_sha || github.sha }}
-          cache-from: type=gha,scope=caddy
-          cache-to: type=gha,mode=max,scope=caddy
-
   deploy:
     name: deploy to VPS (checkout CI SHA + compose up)
     # needs: a skipped build-push skips this job too; the explicit gate is
@@ -108,7 +96,8 @@ jobs:
             # CI start and this SSH must not ship under the previous green.
             git fetch origin main
             git checkout --detach ${{ github.event.workflow_run.head_sha || github.sha }}
-            # Compose builds from source on the VPS (docs/deploy.md §5); the
-            # GHCR images above are the rollback artifact, not the deploy path.
-            docker compose -f docker-compose.prod.yml up -d --build
-            docker compose -f docker-compose.prod.yml ps
+            # Compose builds from source on the host (docs/deploy.md); the
+            # GHCR image above is the rollback artifact, not the deploy path.
+            # --profile tunnel brings cloudflared along (needs TUNNEL_TOKEN in .env).
+            docker compose --profile tunnel -f docker-compose.prod.yml up -d --build
+            docker compose --profile tunnel -f docker-compose.prod.yml ps

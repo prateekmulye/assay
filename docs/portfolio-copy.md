@@ -27,9 +27,10 @@ old Pinecone/RAG prototype). Paste-ready; tweak freely.
 > production app: a FastAPI backend streaming runs over SSE, a write-through Postgres +
 > pgvector warehouse with local BGE-small embeddings powering semantic search, a React
 > 19 glass-shell SPA with a live agent-graph cockpit and timeline replay, a
-> quota-guarded public demo with a deterministic fake-LLM mode, and a Caddy + Docker
-> Compose deployment with a five-job CI pipeline. Everything runs on open-weight models
-> via Ollama Cloud — no OpenAI key, no GPU.
+> quota-guarded public demo with a deterministic fake-LLM mode, and a $0/month Docker
+> Compose deployment behind a Cloudflare Tunnel (zero open inbound ports) with a
+> five-job CI pipeline. Everything runs on open-weight models via Ollama Cloud — no
+> OpenAI key, no GPU.
 
 ## Suggested metrics line
 
@@ -39,6 +40,6 @@ old Pinecone/RAG prototype). Paste-ready; tweak freely.
 ## Links
 
 - Repo: https://github.com/prateekmulye/FinResearchAI
-- Live demo: `finresearch.prateekmulye.dev` (once the VPS is up — until then point the
-  card at the repo's README hero + screenshots)
+- Live demo: `finresearch.prateekmulye.dev` (once the free VM + tunnel are up — until
+  then point the card at the repo's README hero + screenshots)
 - Paper positioned against: https://arxiv.org/abs/2412.20138

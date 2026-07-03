@@ -1,4 +1,4 @@
-# Dev-only warehouse database (WP-1). App + Caddy services arrive in WP-11.
+# Dev-only warehouse database. The full prod stack lives in docker-compose.prod.yml.
 # Start:   docker compose up -d db
 # Connect: DATABASE_URL=postgresql+asyncpg://finresearch:finresearch@localhost:5433/finresearch
 services:

@@ -1,28 +1,23 @@
-# WP-11 production stack: Caddy (auto-HTTPS edge) + app (FastAPI) + db (pgvector).
+# Production stack: cloudflared (Cloudflare Tunnel, outbound-only) + app
+# (FastAPI serves the API *and* the built SPA) + db (pgvector).
 #
-#   cp .env.example .env   # fill in keys, CADDY_DOMAIN, a strong POSTGRES_PASSWORD
-#   docker compose -f docker-compose.prod.yml up -d --build
+#   cp .env.example .env   # keys, TUNNEL_TOKEN, a strong POSTGRES_PASSWORD
+#   docker compose --profile tunnel -f docker-compose.prod.yml up -d --build
 #
-# Only Caddy publishes host ports; app and db stay on the internal network.
+# ZERO inbound ports: cloudflared dials out to Cloudflare's edge, which
+# terminates TLS for the domain. The app publishes 7860 on loopback only
+# (local smoke/debug + CI); db stays fully internal.
 # Full runbook: docs/deploy.md. (docker-compose.yml remains the dev-only db.)
 services:
-  caddy:
-    build:
-      context: .
-      target: caddy
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      # Unset -> plain :80 (local stack testing, no TLS). The default must be
-      # applied HERE: compose would otherwise export CADDY_DOMAIN="" (set but
-      # empty), and Caddy's {$VAR:default} only falls back when the var is
-      # truly unset — an empty site address makes the first block parse as
-      # global options and Caddy crash-loops.
-      CADDY_DOMAIN: ${CADDY_DOMAIN:-:80}
-    volumes:
-      - caddy_data:/data      # ACME account + certs; MUST persist across deploys
-      - caddy_config:/config
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    # The token binds this connector to one tunnel + its DNS route
+    # (finresearch.prateekmulye.dev -> http://app:7860), all configured on the
+    # Cloudflare side. Empty/missing token -> cloudflared exits loudly.
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN:-}
+    # Profile-gated so CI and tokenless local runs can boot app+db alone:
+    # plain `up` skips this service; production adds `--profile tunnel`.
+    profiles: ["tunnel"]
     depends_on:
       app:
         condition: service_healthy
@@ -32,18 +27,21 @@ services:
     build:
       context: .
       target: runtime
-    # No host ports: Caddy is the only way in.
+    ports:
+      # Loopback ONLY — never reachable from outside the host. Cloudflare's
+      # tunnel is the sole public path in.
+      - "127.0.0.1:7860:7860"
     environment:
       DATABASE_URL: postgresql+asyncpg://finresearch:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/finresearch
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
       FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
       ADMIN_TOKEN: ${ADMIN_TOKEN:-}
-      # Caddy appends the real client IP to X-Forwarded-For; the rate limiter
-      # and demo quotas key on it (src/api/client_ip.py).
+      # Cloudflare appends the real client IP to X-Forwarded-For; the rate
+      # limiter and demo quotas key on it (src/api/client_ip.py).
       TRUST_PROXY: "1"
       COLLECTOR_ENABLED: "1"
-      # Same-origin in practice (Caddy serves SPA + API together); locked anyway.
-      ALLOWED_ORIGINS: https://${CADDY_DOMAIN:-localhost}
+      # Same-origin in practice (the app serves SPA + API together); locked anyway.
+      ALLOWED_ORIGINS: https://${PUBLIC_DOMAIN:-localhost}
       RUNS_DIR: /app/runs
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       # Deterministic offline demo mode — leave 0 in production.
@@ -86,7 +84,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  caddy_data:
-  caddy_config:
   pgdata_prod:
   app_runs:
