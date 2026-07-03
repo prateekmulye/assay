@@ -1,650 +1,685 @@
-# FinResearch — Design System v3: SOLARIUM
+# FinResearch — Design System v3: MACHINED LIGHT
 
-> **Identity:** _Solarium — a sunlit glass observatory where the analysis is a model you orbit._
-> **Thesis:** FinResearchAI is not a screen you read; it is a **bright, spatial workspace you
-> lean into.** The multi-agent pipeline is a physical model resting on a daylight light-table —
-> you orbit it, the light rakes across it, cards lift toward your cursor, and the verdict rises
-> up out of the table. **Depth is built from light, shadow, and parallax — never from darkness
-> or a border.**
-> **Bright / daylight-first.** (Light IS the theme; see §2.7 for why no dark inversion.)
+> **Identity:** _Machined Light — a tungsten-lit graphite instrument._
+> **Thesis:** FinResearchAI is a precision instrument milled from graphite and lit by a
+> single tungsten lamp. **Every trace of chroma is a market or state signal. Every glow
+> is live computation. Everything else speaks in luminance.**
+> **Dark-only. No light theme** (justification in §2.7).
 
-This document REPLACES both the v2 "Glass-SaaS × Terminal" system and the interim v3 dark
-"Machined Light" draft (dark direction preserved in agent memory + git history if an A/B is
-ever wanted). It is the implementation contract for the **bright, interactive, 3D-immersive**
-reimagine. Tokens land in `src/styles/index.css` under Tailwind v4 `@theme` (skeleton in §11);
-every treatment in §8 is precise enough to build without asking. Migration map in §12. Never
-use raw hex/oklch in components — token names only. All contrast ratios in §3 were **computed**
-(OKLCH→linear-sRGB→WCAG), not guessed.
+This document REPLACES the v2 "Glass-SaaS shell × Terminal data surfaces" system.
+It is the implementation contract for the v3 reimagine: tokens land in
+`src/styles/index.css` under Tailwind v4 `@theme` (reference block in §11), and every
+component treatment in §8 is precise enough to build without asking. A migration map
+from v2 tokens/classes is in §12. Never use raw hex/oklch in components — token names only.
 
-Sources: NotebookLM "Advanced UI Design and Animation Resources" (Stage Geometry
-`perspective:1200px` + `preserve-3d` for WebGL-free depth; Daylight-Glass materials;
-Light-Driven Depth via `feDiffuseLighting`; Magnetic Tactility; parallax scroll-scrub;
-reduced-motion → flatten Z to 0 + opacity crossfade); Motion v12 via Context7 (`spring()` →
-CSS `linear()`, pointer parallax via `useMotionValue`/`useTransform`/`useSpring`, §6.1);
-current-world spatial-computing references (Apple visionOS glass depth; family.co soft-3D;
-Vercel/Linear for data crispness); 21st.dev component sourcing (§14).
+Sources behind this direction: NotebookLM "Advanced UI Design and Animation Resources"
+(Programmatic Instrument Slate; Diffuse Surface Mapping; Luminous Signal Rationing —
+high-chroma accents restricted to <3% of screen area read as *light emission from
+precision instrumentation*, not pigment); Motion v12 docs via Context7 (`spring()` →
+CSS `linear()` compilation, §6.1); 2026 dark-first patterns (borderless elevation via
+luminance steps; type tuned for dark; single-metric calm); 21st.dev component
+sourcing (curated map + access-path status in §14). All contrast ratios in §3 were
+**computed** (OKLCH→linear-sRGB→WCAG), not guessed.
 
 ---
 
 ## 1. The One Rule
 
-> **The analysis is a physical model on a light-table. Depth comes from light, shadow, and
-> parallax; color is state; motion is you moving around the model.**
+> **Color is state. Light is interaction. Everything else is graphite.**
 
-Four testable clauses:
+Every design decision is testable against three clauses:
 
-1. **Every surface floats on its own Z-plane.** Elevation is expressed as `translateZ` +
-   a layered daylight shadow (§5) — never a border, never a darker fill. If two things are at
-   different importance, they are at different heights.
-2. **Light is declared and it moves.** One sun, upper-left (§2.4). Highlights on top edges,
-   contact-shadows below. When you orbit/hover, the specular sheen and shadows shift with the
-   geometry — light responds to interaction, because that is physics, not decoration.
-3. **Color is state.** Chroma is reserved for market/run/system semantics (BUY/SELL/HOLD,
-   bull/bear, persona, judge, health, quota, phase). The interaction accent (`--beam`) is the
-   ONE non-semantic hue, and it only appears on things you can touch. Everything else is ink on
-   daylight paper.
-4. **Immersion frames; data stays flat.** The 3D is the theater — the room, the tilt, the
-   orbit, the parallax, the hero reveals. The actual numbers live on cards that are **crisp,
-   axis-aligned, and legible** on their own plane. Never tilt a table, a chart, or running text
-   past the point of comfortable reading. Wow in the frame; trust in the data.
+1. **Is this element chromatic?** Then it MUST encode market/run/system state
+   (BUY/SELL/HOLD, bull/bear, persona, judge preference, health, quota, phase). If it
+   doesn't, strip the hue.
+2. **Does this element glow, brighten, or emit?** Then it MUST be interactive or live
+   (focused, hovered, pressed, streaming, running). Emission is never decoration.
+3. **Everything else** — chrome, containers, labels, dividers, canvas — is rendered in
+   graphite and warm-ivory luminance steps under one consistent light source.
 
-**Chroma budget:** at rest, <8% of any viewport's pixels are chromatic (higher than a dark
-theme's 3% — daylight tolerates more color, and the signal chips/candles/scatter must still
-win by saturation + placement, not area). Guard it (Von Restorff).
+Corollary — **the chroma budget**: at rest, less than 3% of any viewport's pixels are
+chromatic. This is what makes the verdict chip, the candles, and the scatter points
+*land*. Guard it jealously (Von Restorff: isolation only works if the field is quiet).
 
-**Onion-Peel disclosure survives:** editorial summaries by default; raw metadata (deltas,
-hashes, event payloads) revealed on demand via a lifted pane that rises in Z (§8.16).
+**The light source** is declared once: **above the composition, 10° left of vertical**
+(SVG `feDistantLight azimuth="250" elevation="62"`). All edge-lights sit on TOP edges;
+all key shadows fall DOWN. No element receives light from nowhere.
+
+**Onion-Peel disclosure survives from v2**: editorial summaries by default; raw
+metadata (deltas, hashes, event payloads) on demand via lifted panes. Recruiters stay
+oriented; engineers who dig get rewarded.
 
 ---
 
-## 2. The spatial system (the new pillar — read before anything)
+## 2. Materials & Surfaces
 
-### 2.1 Stage Geometry (WebFree 3D core)
+### 2.1 The material metaphor
 
-The entire immersion is delivered with **CSS 3D + Motion + the existing xyflow/charts** — zero
-new dependencies (dependency decision in §2.8). The recipe (NLM):
+Surfaces are **machined graphite** — matte, milled, slightly warm under the lamp —
+not glass. The v2 glass language (backdrop-blur, translucent fills, aurora blobs) is
+retired. Depth is expressed the way a physical instrument expresses it:
 
-- **Stage root** (`.stage`, one per immersive region): `perspective: 1200px;
-  perspective-origin: 50% 38%;` — the camera sits slightly above, looking down at the table.
-- **Spatial children** carry `transform-style: preserve-3d;` and live at declared depths via a
-  `--z` token scale (§5). `backface-visibility: hidden;` on anything that rotates.
-- **Only `transform`/`opacity`/`filter` animate.** `will-change: transform` is applied ONLY to
-  actively-orbiting/lifting elements and removed at rest (never blanket).
-- Nested perspective is banned (one stage per region) — it multiplies distortion and cost.
+- **Elevation = luminance.** Each raised step is a lighter graphite (§3.1), never a
+  border. Borders-as-containment ("prison cells") are abolished app-wide.
+- **The milled edge.** Every raised surface carries a 1px inset top edge-light
+  (`--edge-light`) — the lamp catching the milled rim — plus a layered ambient+key
+  shadow (§5). This pair, not a border, is what makes a panel read as a panel.
+- **Wells are sunken.** Inputs and recessed tracks sit BELOW their panel: darker fill
+  (`--color-well`) + inset top shadow (shadow inverts because the light comes from above).
 
-### 2.2 The four depth planes
+### 2.2 Backdrop-blur budget: ONE
 
-Everything on an immersive page belongs to exactly one plane (this is what makes it read as a
-room, not a pile of cards):
+Exactly one `backdrop-filter` surface is permitted in the entire app: the **Lifted
+Pane** (modal/drawer overlay scrim, §8.16), `blur(20px)`, existing only while open.
+Nav, cards, tooltips, tiles: opaque. This is both the GPU budget and the material
+story — instruments don't have frosted parts.
 
-| Plane | `--z` | Contents | Parallax factor |
-| --- | --- | --- | --- |
-| **Backdrop** | `-240px` | Daylight field + horizon + soft light-shafts (§2.6) | 0.15 (barely moves) |
-| **Table** | `-40px` | The pipeline model / chart specimen / the page's primary spatial object | 0.5 |
-| **Cards** | `0` | Data panels, streams, tables, the reading surface | 1.0 (reference) |
-| **Lifted** | `+64px` | Hovered card, decision reveal, lifted pane, tooltips | 1.4 (leads the eye) |
+### 2.3 Atmosphere layers (bottom → top)
 
-Parallax factor = how far the plane translates per unit of pointer/scroll movement. The spread
-(0.15 → 1.4) is the entire illusion of depth; keep these ratios.
+| Layer | What | Cost |
+| --- | --- | --- |
+| 0 | `--color-base` page fill | free |
+| 1 | **Bench light** — one fixed radial field: `background: radial-gradient(120% 90% at 50% -10%, oklch(96% 0.02 90 / 5%), transparent 55%)` on a fixed, pointer-events-none div. Static. This replaces `AuroraBackground` (delete the blobs). | one composited layer |
+| 2 | **Live emission field** — only when a run is live (`[data-live="true"]` on the shell): a second radial field behind the cockpit region, `radial-gradient(80% 60% at 50% 30%, oklch(97% 0.01 90 / 4%), transparent 60%)`, opacity animated 0→1 over 600ms on ignition (§6.3-1). | one composited layer, run-time only |
+| 3 | Content | — |
+| 4 | **Machined grain** — the upgraded `#fin-grain` SVG filter (§7), fixed pseudo-element, ~3.5% opacity, `mix-blend-mode: overlay`, `z-index` top, pointer-events none. STATIC — never animated. | GPU-cached once |
 
-### 2.3 Orbit & parallax (pointer interaction)
+### 2.4 What replaces "glass"
 
-- **Scene orbit:** on pointer move over a `.stage`, the Table plane rotates toward the cursor —
-  `rotateY` ∈ [−5°, +5°], `rotateX` ∈ [+4°, −4°] (inverted: cursor-up tips the far edge down).
-  Driven by Motion: `useMotionValue(px,py)` → `useTransform` to degrees → `useSpring`
-  (`{stiffness: 120, damping: 18, mass: 0.4}` — heavier than the UI spring; a table has mass).
-  Max 5° — past that, text on the table shears and legibility dies (clause 4).
-- **Card magnetism (Magnetic Tactility, NLM):** on hover, a Card lifts to `--z-hover` + tilts
-  ≤3° toward the cursor; a specular highlight (a radial white gradient at 12% following the
-  pointer) crosses its top. Uses the same spring. Pointer-leave settles home.
-- **Idle drift:** with no pointer for >4s, the stage performs a 12s sine breath of ±1.2°
-  `rotateY` so the room feels alive (disabled under reduced motion; §6.4).
-- **Touch/coarse pointers:** device-tilt is NOT used (privacy/robustness); touch gets
-  scroll-parallax only + tap-to-lift. `@media (hover:none)` disables pointer-orbit entirely and
-  flattens the Table to a fixed 8° recede.
+The `.glass` / `.glass-strong` utilities are replaced by `.panel` / `.panel-raised`
+(§11). `GlassCard` is re-skinned as **Panel** (keep the file, swap the classes; rename
+to `panel.tsx` at the implementer's discretion — update imports atomically if so).
 
-### 2.4 Declared light
+### 2.5 Hairline policy
 
-One sun: **upper-left, ~35° elevation** (SVG `feDistantLight azimuth="315" elevation="55"` for
-the grain; the same direction governs every hand-authored shadow and edge-light). Top edges
-get a 1px white inner highlight (`--edge-light`); every shadow falls down-and-right. A card
-lifted in Z casts a LARGER, softer, more-offset shadow — the physics of getting closer to the
-lamp. This shadow-scaling is the primary elevation cue on daylight (§5).
+Hairlines (`--color-line`) are RULES, not boxes: horizontal section rules, table row
+separators, the nav rail's bottom rule, the PageHeader bench rule. The only closed
+1px outlines permitted: form inputs (functional affordance), the `rail` button
+variant, and dashed outlines on skipped/cached pipeline dies.
 
-### 2.5 Scroll as camera dolly
+### 2.6 Dot grid (pipeline canvas only)
 
-Long pages (Analyze-live, Dossier) use scroll as a **dolly through the model**, not a document
-scroll: as you scroll, the Table plane translates in `translateZ` toward the camera and the
-active pipeline stage brightens/rises (Parallax Storytelling, NLM). Implement with native CSS
-`animation-timeline: view()`/`scroll()` where supported (compositor-thread, zero JS), single
-rAF+IntersectionObserver fallback otherwise. NEVER scroll-jack the whole document; the dolly is
-a subtle Z + brightness shift layered on native scroll. Reserve one pinned scroll moment max
-per page (the Analyze pipeline fly-through).
+The xyflow canvas gets a milled registration grid: 1px dots, 24px gap,
+`oklch(96% 0.02 90 / 3%)`. Nowhere else.
 
-### 2.6 Daylight backdrop (replaces v2 aurora)
+### 2.7 No light theme — decided
 
-Backdrop plane, fixed, pointer-events-none, three static layers:
-1. Sky wash: `linear-gradient(180deg, oklch(98% 0.012 85), var(--color-room))` — warm daylight
-   falling from above.
-2. Light shafts: two very soft, low-opacity white cones (~12° from vertical, blur baked into
-   the gradient stops, 6% opacity) raking from upper-left — the sun through glass. STATIC.
-3. Horizon: a single faint warm line at 62% viewport height (`--color-line`) grounding the
-   room. On orbit, layers 1–2 parallax at factor 0.15.
-
-### 2.7 No dark theme — decided
-
-Solarium's identity is daylight and spatial depth built FROM light; a dark inversion destroys
-the "sunlit observatory" metaphor and halves the craft budget (shadows-on-dark don't read;
-the light-table conceit collapses). `color-scheme: light`. This is a deliberate, owned choice —
-the opposite of the v2 "no light theme" stance, made because the whole point is the light.
-A future "dusk" variant (warm low-sun, deeper shadows) is the sanctioned way to add a second
-mood if ever needed — NOT a flat dark inversion.
-
-### 2.8 Dependency decision (explicit — needs sign-off before Phase 2)
-
-- **Phase 1 (this spec, ships zero-dep):** the full Solarium — daylight, planes, orbit,
-  parallax, magnetic cards, verdict rise, scroll-dolly — is delivered with **CSS 3D + Motion
-  v12 + xyflow + lightweight-charts + recharts**, all already in `package.json`. This is the
-  contract implementers build to. It is genuinely immersive and holds 60fps.
-- **Phase 2 (OPTIONAL, gated):** a single, lazy, route-scoped WebGL "atrium" for the Analyze
-  hero — volumetric light, a true orbitable 3D pipeline, glass refraction — would require
-  `three` + `@react-three/fiber` (+ maybe `drei`), ≈150KB gz and a heavyweight dep. This
-  **violates the frozen "no new heavyweight deps" constraint** and is therefore NOT authorized
-  here. It is written up as a proposal to hand to **systems-architect / the user** for a bundle
-  + perf sign-off. If approved, it must be: its own dynamic chunk, never in the entry graph;
-  behind a capability + `prefers-reduced-motion` + `deviceMemory`/`hardwareConcurrency` gate;
-  and it must degrade to the Phase-1 CSS-3D scene, which remains the canonical fallback. **Do
-  not add it silently.** Phase 1 must stand on its own as award-grade.
+This is a monitoring instrument whose identity is emission and luminance rationing;
+inverting it halves the craft budget and destroys the metaphor (emission on white is
+just… ink). Demo/recruiter contexts are screen-based and dark-friendly.
+`color-scheme: dark` stays; the `.dark` variant scoping stays for forward-compat, but
+no light tokens exist. Print/report export, if ever needed, is a separate concern —
+do not attempt it by inverting tokens.
 
 ---
 
-## 3. Color — OKLCH, daylight, computed contrast
+## 3. Color — OKLCH, computed contrast
 
-Dark ink on warm daylight paper. Warm cast (hue 60–85) = sunlight, not clinical white — this is
-what separates Solarium from a generic white SaaS. Targets: **AAA (7:1) on primary data values**
-(they sit on `paper-1`/`paper-2` cards, where all signals below hit AAA), AA (4.5:1) on all
-text, 3:1 on non-text affordances.
+All values OKLCH (perceptually uniform emission across luminance steps). Ratios below
+are computed WCAG ratios, stated honestly. Targets: **AAA (7:1) on primary data
+values**, AA (4.5:1) minimum on all text, 3:1 on non-text affordances.
 
-### 3.1 Daylight surfaces (elevation = brighter + higher, hue 85)
+### 3.1 Graphite surfaces (warm cast, hue 75)
 
-On daylight, higher surfaces catch more light → they are WHITER (inverse of the dark system).
-Elevation is `whiter fill + bigger shadow + more translateZ` — never a border.
+The warm cast (hue 75, chroma 0.006–0.009) is the tungsten lamp on graphite — it is
+what separates this system from every blue-black dev tool. Do not drift it cooler.
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--color-room` | `oklch(95.5% 0.010 85)` | Page canvas (the sunlit room floor) |
-| `--color-paper-1` | `oklch(98.5% 0.005 85)` | Resting card / panel |
-| `--color-paper-2` | `oklch(99.8% 0.003 85)` | Lifted card, hero shelf, decision reveal |
-| `--color-sink` | `oklch(93% 0.012 85)` | Recessed wells, tracks, input troughs |
-| `--color-line` | `oklch(28% 0.02 60 / 10%)` | Hairline rules (ink at low alpha, not grey) |
-| `--color-line-strong` | `oklch(28% 0.02 60 / 18%)` | Emphasized rules, sort filaments |
-| `--edge-light` | `oklch(100% 0 0 / 85%)` | 1px inner top highlight on lifted surfaces |
+| `--color-base` | `oklch(11% 0.006 75)` | Page background (the bench) |
+| `--color-surface-1` | `oklch(14.5% 0.007 75)` | Resting panel |
+| `--color-surface-2` | `oklch(18% 0.008 75)` | Raised panel, hover rows, dies |
+| `--color-surface-3` | `oklch(22.5% 0.009 75)` | Overlay panes, tooltips, active rows |
+| `--color-well` | `oklch(9% 0.005 75)` | Sunken inputs, recessed tracks |
+| `--color-line` | `oklch(96% 0.02 90 / 7%)` | Hairline rules |
+| `--color-line-strong` | `oklch(96% 0.02 90 / 13%)` | Emphasized rules, scrollbar thumb, rail buttons |
+| `--edge-light` | `oklch(96% 0.02 90 / 8%)` | The 1px inset top rim on raised surfaces |
 
-Never pure `#fff` for a surface (glare + no headroom for `paper-2` to read brighter); never
-cool the hue toward blue-white (kills the sunlight).
+Adjacent surface steps are ~3.5 OKLCH-L points apart — perceptually clear on dark
+without borders; the edge-light + shadow pair does the rest.
 
-### 3.2 Ink (warm near-black — tuned for light)
+### 3.2 Text (warm ivory — tuned for dark)
 
-| Token | Value | Ratio (room / paper-1 / paper-2) | Use |
+| Token | Value | Ratio (base / surface-1 / surface-2) | Use |
 | --- | --- | --- | --- |
-| `--color-ink` | `oklch(25.5% 0.02 60)` | 13.9 / 15.2 / 15.7 — AAA | Primary text, ALL primary data values |
-| `--color-ink-muted` | `oklch(43% 0.02 60)` | 7.2 / 7.8 / 8.1 — AAA | Secondary, body prose, streams |
-| `--color-ink-faint` | `oklch(48% 0.018 60)` | 5.8 / 6.3 — AA | Kickers, metadata, disabled. Never data values. |
+| `--color-fg` | `oklch(94.5% 0.012 90)` | 17.4 / 16.9 / 16.0 — AAA | Primary text, ALL primary data values |
+| `--color-fg-muted` | `oklch(76% 0.014 90)` | 9.5 / 9.2 / 8.8 — AAA | Secondary, body prose, streams |
+| `--color-fg-subtle` | `oklch(62% 0.012 90)` | 5.6 / 5.4 — **AA, not AAA** | Kickers, metadata, disabled. Never for data values. |
 
-Light-legibility: UI font uses `font-variation-settings: 'opsz' 16` and weight floor 460 to
-keep hairlines from thinning out on bright paper (NLM). Body max-width `65ch`.
+**Type-tuned-for-dark:** on these surfaces text blooms; body weight is **450** (not
+500), display **600–620** (never 700+). See §4.
 
-### 3.3 The Beam (interaction accent — the ONE non-semantic hue)
+### 3.3 The Beam (interaction light — achromatic)
 
-A daylight sky-azure. It is the only non-state color; it appears exclusively on interactive
-things (focus, links, primary key button, caret, playhead, sort filament, live-edge light).
+There is **no chromatic interaction accent**. The v2 azure is retired (§12). All
+interaction speaks in tungsten light:
 
 | Token | Value | Ratio | Use |
 | --- | --- | --- | --- |
-| `--color-beam` | `oklch(47% 0.185 255)` | 6.0 room / 6.6 paper-1 — AA | Focus ring, links (underline), caret, playhead, active states |
-| `--color-beam-soft` | `oklch(47% 0.185 255 / 12%)` | — | Selection bg, live tints, focus halo fill |
-| `--color-beam-fg` | `oklch(99% 0.003 85)` | 6.4:1 on beam | Text/icons on beam fills |
+| `--color-beam` | `oklch(97% 0.01 90)` | 18.8:1 on base | Focus rings, caret, playhead, live LEDs, key-button fill, crosshair, filament underlines |
+| `--color-key-fg` | `oklch(14.5% 0.01 75)` | 18.2:1 on beam | Text/icons on beam fills |
+| `--color-beam-dim` | `oklch(97% 0.01 90 / 20%)` | — | Selection background, subtle live tints |
 
-Links = `--color-ink` + a `--color-beam` underline; hover thickens the underline. Interactive is
-discoverable by the beam + underline + lift + shape — the beam is never used decoratively.
+Affordance rules that replace azure: links are `--color-fg` with a 1px underline at
+`--color-line-strong`, hover → underline becomes beam; primary actions are beam-filled
+**key** buttons (§8.3); focused anything gets the beam ring (§9.1). Interactive is
+always discoverable by light + underline + shape — never by hue.
 
-### 3.4 Signal colors — the ONLY semantic chroma
+### 3.4 Signal colors — the ONLY chroma
 
-Semantics frozen (glyph + word + color, always). All darkened for daylight; all hit **AAA
-(≥7:1) as text on `paper-1`** (where data values live) and strong AA (~6.8) on the bare room —
-computed, honest.
+Semantics identical to v2 (frozen contract): always glyph + word + color, never color
+alone. All pass **AAA (≥7:1)** as text on base/surface-1/surface-2 — computed.
 
-| Token | Value | Ratio (paper-1) | Meaning |
+| Token | Value | Ratio (surface-1) | Meaning |
 | --- | --- | --- | --- |
-| `--color-bull` | `oklch(42% 0.155 150)` | 7.3:1 | BUY · bull · positive · healthy · done |
-| `--color-bear` | `oklch(44.5% 0.205 25)` | 7.5:1 | SELL · bear · negative · error |
-| `--color-hold` | `oklch(44.5% 0.125 66)` | 7.5:1 | HOLD · warn · degraded · replay-only |
-| `--color-conservative` | `oklch(44% 0.135 255)` | 7.5:1 | Conservative risk persona (cool) |
-| `--color-aggressive` | `oklch(45.5% 0.195 32)` | 7.5:1 | Aggressive risk persona (hot) |
+| `--color-bull` | `oklch(74% 0.16 150)` | 9.1:1 | BUY · bull · positive · healthy · done |
+| `--color-bear` | `oklch(72% 0.17 25)` | 7.4:1 | SELL · bear · negative · error |
+| `--color-hold` | `oklch(80% 0.14 80)` | 10.5:1 | HOLD · warn · degraded · replay-only |
+| `--color-conservative` | `oklch(72% 0.09 235)` | 8.1:1 | Conservative risk persona (cool, measured) |
+| `--color-aggressive` | `oklch(73% 0.14 55)` | 8.0:1 | Aggressive risk persona (hot, risk-on) |
 
-Separation on daylight: bear (hue 25) vs aggressive (hue 32) are close in hue but chroma- and
-context-separated (personas/verdicts always labelled); conservative (255) is the only cool
-signal → instant read against the warm room. Hold (66) sits between — the amber had to go deep
-(ochre) to survive on white, which is correct.
+Notes: bear was brightened from v2 (64%→72% L) specifically to reach AAA — do not
+darken it back for "richness"; use `--color-bear-dim` fills for richness instead.
+Bear (hue 25) vs aggressive (hue 55) are 30° + chroma-separated AND never appear
+without persona/verdict labels. Conservative (235) is intentionally the only cool hue
+on screen — it reads instantly against the warm field.
 
-**Tint fills** (chip/underglow/candle-volume backgrounds — fills only, never text): each signal
-at `/ 14%` alpha, e.g. `--color-bull-tint: oklch(42% 0.155 150 / 14%)`. On daylight these read
-as a soft colored wash under white glass.
+**Dim fills** (badge/chip/underglow backgrounds — fills only, never text):
+`--color-bull-dim: oklch(74% 0.16 150 / 12%)` · `--color-bear-dim: oklch(72% 0.17 25 / 13%)`
+· `--color-hold-dim: oklch(80% 0.14 80 / 12%)` · `--color-conservative-dim: oklch(72% 0.09 235 / 12%)`
+· `--color-aggressive-dim: oklch(73% 0.14 55 / 12%)`.
 
-**Lift shadows** (colored contact-shadow for a completed/live element — the light picks up the
-signal): `--shadow-bull` etc. = the standard lift shadow (§5) with the signal hue mixed into the
-key layer at 22%. Subtle; it tints the shadow, it does not glow.
+**Emission glows** (box-shadows for live/complete states — §5):
+`--glow-beam`, `--glow-bull`, `--glow-bear`, `--glow-hold` (definitions in §11).
 
-### 3.5 Judge colors (Eval) & 3.6 System-state — unchanged semantics
+### 3.5 Judge colors (Eval)
 
-Judge: ON-preferred = `--color-bull`; OFF-preferred = `--color-conservative` (ablation wins =
-informative, never bear); tie = `--color-ink-faint`; unjudged = hollow chip (1px
-`--color-line-strong`, no fill). Functional Signal Inversion on deltas survives exactly (sign
-colored by OUTCOME UTILITY, always with an arrow glyph). System state reuses signal hues +
-always a word (healthy/room = bull · degraded/exhausted = hold · down/error = bear · unmetered =
-ink-faint · admin/live = beam).
+Debate-ON preferred = `--color-bull` (the thesis earns its keep); debate-OFF preferred
+= `--color-conservative` (the ablation wins — informative, NOT negative; never bear);
+tie = `--color-fg-subtle`; unjudged = hollow point, 1px `--color-line-strong` stroke,
+no fill. Functional Signal Inversion for deltas survives exactly as shipped: sign
+colored by OUTCOME UTILITY (score↑ green / score↓ amber; cost·latency↑ amber / ↓
+green), always paired with a directional arrow glyph.
+
+### 3.6 System-state colors
+
+Health, quota, and run status reuse signal hues (rule 1 permits state semantics):
+healthy/room = bull · degraded/exhausted/replay = hold · down/error = bear ·
+unmetered/neutral = fg-subtle · admin/live = beam. Always with a word.
 
 ---
 
 ## 4. Typography
 
+### 4.1 Families
+
 | Role | Family | Package (self-hosted, pinned) |
 | --- | --- | --- |
-| UI + display | **Instrument Sans Variable** (opsz + wght) | `@fontsource-variable/instrument-sans` (verified v5.2.8) |
-| Data + code | **JetBrains Mono Variable** | `@fontsource-variable/jetbrains-mono` |
+| UI + display | **Instrument Sans Variable** (wght axis) | `@fontsource-variable/instrument-sans` (verified: v5.2.8 on npm) |
+| Data + code | **JetBrains Mono Variable** (kept from v2 — it is the best data mono; churn buys nothing) | `@fontsource-variable/jetbrains-mono` |
 
-Inter removed. Weights **tuned for light** (text looks *thinner* on bright, opposite of dark):
-body **460**, labels/nav 500, panel titles 560, display 620–680, mono data 450 / hero numerals
-600. `font-variation-settings: 'opsz' 16` on all UI text; never below 440.
+Inter is removed (`@fontsource-variable/inter` uninstalled). Instrument Sans is the
+single biggest visible change of v3: a grotesque with machined-but-human details, and
+the name is the identity. No serif anywhere — authority comes from restraint, not costume.
 
-**Scale** — the v2 1.25 ladder + two display steps for spatial hero moments:
-`--text-2xs` 11 · `--text-xs` 12 · `--text-sm` 14 · `--text-base` 16 · `--text-lg` 20 ·
-`--text-xl` 25 · `--text-2xl` 31 · `--text-3xl` 39 · `--text-4xl` 49 · **`--text-5xl` 61 (new)** ·
-**`--text-6xl` 76 (new — the decision score numeral ONLY)**. Line-heights per §11.
+### 4.2 Weights — tuned for dark
 
-Rules: display = Instrument Sans 640, `letter-spacing: -0.03em`; the ONE permitted text gradient
-is a subtle top-lit **luminance** mask (ink → ink-muted, "sun from above"), never a hue gradient.
-ALL numerics mono + `tabular-nums` + `"tnum","zero"` (globally on `.font-mono`), tracking 0.
-Kicker pattern: mono `--text-2xs` uppercase `tracking-[0.18em]` `--color-ink-faint` (→
-`--color-beam` when labelling a live region). Body floor 16px, prose line-height 1.65, max 65ch.
+| Context | Weight |
+| --- | --- |
+| Body / descriptions | **450** |
+| Labels, nav, buttons | 500 |
+| Panel titles | 550 |
+| Display / page titles / verdict word | 600–620 |
+| Mono data (all) | 440; giant score numerals 560 |
+
+Never 700+ on these surfaces (halation). Never below 400.
+
+### 4.3 Scale — 1.25 Major Third + display extension
+
+Existing ladder survives; two display steps are ADDED for the exaggerated-minimal
+hero moments:
+
+| Token | px / line-height | Use |
+| --- | --- | --- |
+| `--text-2xs` | 11 / 16 | Kickers, dense terminal labels (floor — never smaller) |
+| `--text-xs` | 12 / 17.6 | Metadata, captions, table cells |
+| `--text-sm` | 14 / 22.4 | UI default, nav |
+| `--text-base` | 16 / 24.8 | Body floor |
+| `--text-lg` | 20 / 27 | Panel titles |
+| `--text-xl` | 25 / 30.4 | Section titles |
+| `--text-2xl` | 31.25 / 36 | Sub-hero |
+| `--text-3xl` | 39 / 41.6 | Page titles |
+| `--text-4xl` | 48.8 / 49.6 | Large display |
+| `--text-5xl` **new** | 61 / 61 | Hero display, dossier price |
+| `--text-6xl` **new** | 76 / 76 | The decision score numeral. Nothing else. |
+
+### 4.4 Rules
+
+- **Display treatment:** Instrument Sans 600, `letter-spacing: -0.03em`, and the ONE
+  permitted gradient: a vertical *luminance* mask (`background: linear-gradient(180deg,
+  var(--color-fg), oklch(76% 0.014 90)); background-clip: text`) — "lit from above."
+  Hue gradients on text are banned.
+- **All numerics are mono + tabular** — `font-variant-numeric: tabular-nums`,
+  `font-feature-settings: "tnum","zero"` set globally on `.font-mono, code, kbd, samp`.
+  No exceptions, including inside prose.
+- **Mono tracking is always 0** (tracking breaks tabular alignment).
+- **Kicker pattern** (the recurring instrument label): mono, `--text-2xs`, uppercase,
+  `tracking-[0.18em]`, `--color-fg-subtle`; when it labels a LIVE region it may be
+  `--color-beam`. Kickers introduce every panel and page.
+- Body floor 16px; report-prose line-height 1.65 (as shipped).
 
 ---
 
-## 5. Spacing · Radius · Elevation · Depth · Z-index
+## 5. Spacing · Radius · Elevation · Z-index
 
-**Spacing:** Tailwind 4px scale. Card padding `p-5 sm:p-6`; bento gap `gap-3` (12px — cards are
-separate floating objects, they need air between planes); section rhythm `space-y-10`; gutter
-`px-6`; content `max-w-7xl`.
+**Spacing:** Tailwind 4px scale. Panel padding `p-5 sm:p-6`; bento gap `gap-2` (8px —
+tiles read as one milled block with routing channels between); section rhythm
+`space-y-10`; page gutter `px-6`; content `max-w-7xl`.
 
-**Radius — soft daylight objects (rounder than the dark draft):** `--radius-xs 4px` ·
-`--radius-sm 8px` · `--radius-md 12px` (buttons, inputs, chips) · `--radius-lg 18px` (cards) ·
-`--radius-xl 26px` (hero shelves, lifted pane) · pills `999px`.
+**Radius — machined, tighter than v2:** `--radius-xs: 2px` · `--radius-sm: 4px` ·
+`--radius-md: 8px` (buttons, inputs, dies, chips) · `--radius-lg: 12px` (panels) ·
+`--radius-xl: 16px` (page-level hero panels, lifted panes) · pills `999px` (LED
+lozenges only: QuotaPill, HealthDot housing). **`--radius-2xl` (1.75rem) is deleted**
+— the soft-glass silhouette is gone.
 
-**Depth scale (`--z`, the translateZ tokens from §2.2):** `--z-backdrop -240px` ·
-`--z-table -40px` · `--z-card 0` · `--z-hover 24px` · `--z-lifted 64px`. Hover is a mid-lift;
-Lifted is for the reveal/pane.
-
-**Elevation — daylight shadows scale with Z (light from upper-left; every shadow = ambient +
-key + contact, never a single flat line, never pure black):**
+**Elevation (light from above — every shadow is ambient + key + rim, never a single
+flat line, never pure black at high opacity):**
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--shadow-rest` | `inset 0 1px 0 0 var(--edge-light), 0 1px 2px oklch(28% 0.02 60 / 6%), 0 8px 20px -8px oklch(28% 0.02 60 / 12%)` | Resting cards (`--z-card`) |
-| `--shadow-hover` | `inset 0 1px 0 0 var(--edge-light), 0 2px 4px oklch(28% 0.02 60 / 8%), 0 20px 40px -12px oklch(28% 0.02 60 / 18%)` | Hover-lifted cards (`--z-hover`) |
-| `--shadow-lifted` | `inset 0 1px 0 0 var(--edge-light), 0 4px 8px oklch(28% 0.02 60 / 10%), 0 40px 80px -20px oklch(28% 0.02 60 / 26%)` | Lifted pane, decision reveal (`--z-lifted`) |
-| `--shadow-well` | `inset 0 2px 4px oklch(28% 0.02 60 / 12%), inset 0 0 0 1px var(--color-line)` | Sunken inputs/tracks (light from above → shadow at top-inside) |
-| `--shadow-beam` | `0 0 0 3px var(--color-beam-soft)` | Focus/live emphasis (a soft daylight halo, not a glow) |
+| `--shadow-panel` | `inset 0 1px 0 0 var(--edge-light), 0 1px 2px oklch(0% 0 0 / 28%), 0 10px 28px -14px oklch(0% 0 0 / 50%)` | Resting/raised panels, dies |
+| `--shadow-lifted` | `inset 0 1px 0 0 var(--edge-light), 0 2px 4px oklch(0% 0 0 / 32%), 0 24px 56px -20px oklch(0% 0 0 / 60%)` | Lifted panes, tooltips, popovers |
+| `--shadow-well` | `inset 0 1px 3px oklch(0% 0 0 / 40%), inset 0 0 0 1px var(--color-line)` | Sunken inputs, recessed tracks |
+| `--glow-beam` | `0 0 0 1px oklch(97% 0.01 90 / 30%), 0 0 20px -4px oklch(97% 0.01 90 / 30%)` | Focus, live emphasis, key-button hover |
+| `--glow-bull` / `--glow-bear` / `--glow-hold` | same recipe with the signal color at 35% / 35% / 30% | Completed dies, verdict bloom, error emphasis |
 
-The shadow GROWS and OFFSETS more as an element rises — that scaling IS the depth cue. Shadows
-are ink-tinted (hue 60), never neutral grey, never black.
-
-**Z-index (paint order, distinct from `--z` depth):** content `0` · sticky rail `40` ·
-lifted-pane scrim `50` · lifted pane `51` · toast/announcer `60` · grain `9999`.
+**Z-index scale (tokenized, no ad-hoc values):** content `0` · sticky rail `40` ·
+lifted pane scrim `50` · lifted pane `51` · toast/announcer visuals `60` · grain `9999`.
 
 ---
 
-## 6. Motion — one physics, spatial signatures
+## 6. Motion — one physics, literal and shared
 
-### 6.1 Springs (Motion v12, verified — literal CSS `linear()` generated from repo's motion@12)
+### 6.1 Springs (Motion v12, verified API)
 
-| Token | Physics (JS) | CSS `linear()` (generated) |
-| --- | --- | --- |
-| `--spring-press` | `{type:"spring",visualDuration:0.18,bounce:0}` | `400ms linear(0, 0.2531, 0.5773, 0.7868, 0.8991, 0.9541, 0.9797, 0.9912, 0.9963, 0.9984, 0.9993, 1, 1)` |
-| `--spring-settle` | `{type:"spring",visualDuration:0.45,bounce:0.15}` | `800ms linear(0, 0.0523, 0.1708, 0.314, 0.4571, 0.5866, 0.6963, 0.7848, 0.8534, 0.9047, 0.9416, 0.9673, 0.9843, 0.9951, 1.0014, 1.0047, 1.0061, 1.0062, 1.0057, 1.0049, 1.004, 1.0031, 1.0023, 1.0017, 1.0012, 1.0008, 1)` |
-| `--spring-reveal` | `{type:"spring",visualDuration:0.7,bounce:0.28}` | `1150ms linear(0, 0.0241, 0.086, 0.1721, 0.2716, 0.376, 0.4793, 0.577, 0.6662, 0.7454, 0.8136, 0.871, 0.9179, 0.9552, 0.984, 1.0053, 1.0203, 1.0301, 1.0358, 1.0382, 1.0381, 1.0364, 1.0334, 1.0298, 1.0259, 1.0219, 1.018, 1.0144, 1.0112, 1.0083, 1.0059, 1.004, 1.0024, 1.0011, 1.0001, 0.9995, 0.999, 1)` |
+One spring language shared by JS and CSS. In JS use the modern API
+`{ type: "spring", visualDuration, bounce }`; in CSS use the **literal `linear()`
+strings below, generated from the repo's own `motion@12` `spring()`** (regenerate with
+`String(spring(visualDuration, bounce))` if retuned — never hand-edit):
 
-Regenerate with `String(spring(visualDuration, bounce))` from `motion@12` if retuned — never
-hand-edit. **Orbit/parallax springs are heavier** (a table has mass): `--spring-orbit
-{stiffness:120, damping:18, mass:0.4}` (JS only). Springs animate transforms; plain eases animate
-opacity/color/filter: `--ease-out cubic-bezier(0.22,1,0.36,1)` ·
-`--ease-in-out cubic-bezier(0.65,0,0.35,1)`; durations `--duration-micro 100ms` ·
-`--duration-fast 180ms` · `--duration-base 280ms` · `--duration-slow 520ms`. Doherty holds
-(feedback <50ms, interaction anims <400ms perceived). Nav filament exception:
-`{stiffness:380, damping:32, mass:0.8}`.
+| Token | Physics | JS | CSS (generated) |
+| --- | --- | --- | --- |
+| `--spring-press` | visualDuration 0.18s, bounce 0 | `{type:"spring", visualDuration:0.18, bounce:0}` | `400ms linear(0, 0.2531, 0.5773, 0.7868, 0.8991, 0.9541, 0.9797, 0.9912, 0.9963, 0.9984, 0.9993, 1, 1)` |
+| `--spring-settle` | 0.45s, bounce 0.15 | `{type:"spring", visualDuration:0.45, bounce:0.15}` | `800ms linear(0, 0.0523, 0.1708, 0.314, 0.4571, 0.5866, 0.6963, 0.7848, 0.8534, 0.9047, 0.9416, 0.9673, 0.9843, 0.9951, 1.0014, 1.0047, 1.0061, 1.0062, 1.0057, 1.0049, 1.004, 1.0031, 1.0023, 1.0017, 1.0012, 1.0008, 1)` |
+| `--spring-reveal` | 0.7s, bounce 0.28 | `{type:"spring", visualDuration:0.7, bounce:0.28}` | `1150ms linear(0, 0.0241, 0.086, 0.1721, 0.2716, 0.376, 0.4793, 0.577, 0.6662, 0.7454, 0.8136, 0.871, 0.9179, 0.9552, 0.984, 1.0053, 1.0203, 1.0301, 1.0358, 1.0382, 1.0381, 1.0364, 1.0334, 1.0298, 1.0259, 1.0219, 1.018, 1.0144, 1.0112, 1.0083, 1.0059, 1.004, 1.0024, 1.0011, 1.0001, 0.9995, 0.999, 1)` |
 
-### 6.2 Stagger
+(The ms figure is the spring's total tail; the *perceived* duration is the
+visualDuration. Both are < Doherty for their class of interaction.)
 
-Panel children 40ms/child (max 6, batch rest). List rows 24ms/row (max 8). Plane entrances
-stagger back-to-front (Backdrop → Table → Cards → Lifted, 60ms between planes) so the room
-"assembles in depth." Entry only, never on data update/exit.
+Usage split: **springs animate transforms** (scale, translate, layout); plain eases
+animate opacity/color: `--ease-out: cubic-bezier(0.22, 1, 0.36, 1)` with
+`--duration-micro: 100ms` (hover/press feedback) · `--duration-fast: 180ms` (LED/
+filament changes) · `--duration-base: 280ms` (page/panel fades) · `--duration-slow:
+520ms` (emission ramps, trace cooling). **Never `linear` easing on organic motion**
+(the `linear()` spring strings are physics, not linear). Doherty holds: feedback
+<50ms, any interaction animation <400ms perceived.
+
+**Nav filament exception** (kept from v2 muscle memory): the shared-layout filament
+uses `{stiffness: 380, damping: 32, mass: 0.8}` — tuned for high-frequency tab flicks.
+
+### 6.2 Stagger rules
+
+Panel children: 40ms/child, max 6 then batch the rest as one. List rows (Library,
+tables): 24ms/row, max 8. Staggers only on ENTRY, never on exit or data update.
 
 ### 6.3 Signature interactions (named — implement exactly)
 
-1. **ROOM ASSEMBLE** (first paint / route enter): planes fade+dolly in from `translateZ -30px`
-   back-to-front (§6.2), 520ms `--spring-settle`; the sun-shafts fade in last. The page "builds
-   itself in space."
-2. **ORBIT & LIFT** (ambient interaction, §2.3): pointer orbits the Table; cards magnetically
-   lift to `--z-hover` + tilt ≤3° + a pointer-tracked specular highlight crosses the top. The
-   defining tactile signature — every card is touchable.
-3. **PHOSPHOR TRACE** (data arrival — the WP-7 traveling signal, re-lit for daylight; NLM timing
-   kept): T+0 upstream node completes; T+50 a **beam** dot travels the edge via `offset-path`
-   while the target chip anticipates by dropping `translateZ` slightly (pressed into the table);
-   T+250 arrival — chip springs UP to `--z-hover` (`--spring-settle`), its contact-shadow blooms
-   and picks up the phase tint (`--shadow-{phase}`); T+250→800 the trace cools from beam to the
-   phase tint at 45%. Cost ticker increments ONLY at collisions.
-4. **VERDICT RISE** (decision reveal — the Peak, <1.8s): the reveal card rises from the Table
-   plane up to `--z-lifted` on `--spring-reveal` as the room around it dims 5% (a
-   `[data-revealing]` `filter: brightness(.95)` on siblings) and a soft sun-spot brightens
-   beneath it. Then T+120 SignalBadge springs in, T+300 ConvictionGauge sweep, T+440 score
-   count-up (existing `useCountUp`), and on count-end the card settles from `--z-lifted` to
-   `--z-hover` with its signal-tinted contact-shadow resolving. The one moment the whole model
-   reorganizes around a single object. Nothing else animates during it.
-5. **DOLLY** (scroll, §2.5): Table translates in Z toward camera + active stage brightens as it
-   enters view. Native `animation-timeline` where possible; one pinned moment max/page.
-6. **BREATHING** (the live element): the running chip breathes scale 1→1.03 + a ±0.4° `rotateZ`
-   sway, 2600ms — exactly one per region. Hero tiles use scale-only 1→1.012.
-7. **PAGE TRANSITION:** View Transitions API where supported (outgoing page recedes in Z,
-   incoming rises) with a 240ms fade+lift fallback keyed on pathname; `--spring-press`.
-8. **SHIMMER** (skeletons): a soft daylight sweep across the paper (`fin-shimmer`), never
-   opacity-pulse.
+1. **POWER-UP** (run ignition — the page has light behavior). On `start`:
+   T+0 the form acknowledges (<50ms: input rim → beam, submit key presses);
+   T+80 the live emission field (§2.3-L2) ramps opacity 0→1 over 600ms `--ease-out`;
+   simultaneously nav LEDs brighten (`--duration-fast`), the Wordmark cursor (§8.1)
+   begins blinking, and the first die starts breathing. The instrument audibly-in-
+   pixels "turns on."
+2. **PHOSPHOR TRACE** (data arrival — v2's traveling signal, re-skinned; NLM timing
+   kept): T+0 upstream die completes; T+50 a white-hot beam dot travels the edge via
+   `offset-path` while the target die anticipates with a dip to `scale(0.97)`
+   (`--spring-press`); T+250 collision — die pulses `scale(1.06)` (`--spring-settle`)
+   and its signal-tinted underglow ignites; T+250→850 the trace itself **cools**:
+   edge stroke fades from beam to the phase tint at 35% over `--duration-slow`.
+   Fire on every `node_complete`; the cost ticker increments ONLY at collisions
+   (causality, never a timer).
+3. **FIRST LIGHT** (decision reveal — the Peak; total < 1.6s):
+   T+0 every non-cockpit surface dims 6% luminance for the duration (the lamp
+   concentrates — apply via a `[data-revealing]` filter `brightness(.94)` on
+   sibling regions, transform/opacity/filter only);
+   T+120 SignalBadge springs in (`--spring-reveal`, scale 0.92→1);
+   T+280 ConvictionGauge sweep (stroke-dashoffset, 700ms, `--spring-settle`);
+   T+420 score count-up (rAF, 700ms, existing `useCountUp`);
+   at count-end the score's glow (`--glow-{signal}`) blooms 0→24px→settles at 8px
+   (`--spring-settle`) and the dimming releases. This is the app's largest chroma
+   moment; nothing else on screen may animate during it.
+4. **LAMP PASS** (page transition): 240ms fade + 6px lift on `--spring-press`, keyed
+   on pathname (existing `PageTransition`, retimed).
+5. **BREATHING** (the live element): scale 1→1.04, opacity 0.85→1, 2600ms
+   `--ease-in-out` infinite — exactly one breathing element per region (the running
+   die, the live LED). Hero tiles keep the shipped scale-only `fin-breathe-tile`
+   (1→1.012, 3200ms) so content stays legible.
+6. **SHIMMER** (skeletons): the shipped luminance sweep (`fin-shimmer`) at
+   `oklch(96% 0.02 90 / 6%)` — never opacity-pulse.
 
-### 6.4 Reduced-motion contract (CRITICAL for 3D — meaningful, not "off")
+### 6.4 Reduced-motion contract (meaningful degradation, not "off")
 
-The whole spatial layer must collapse safely. Global unwind PLUS:
+Global unwind (as shipped) PLUS per-signature intent:
 
 | Signature | Reduced variant |
 | --- | --- |
-| **All 3D** | **Flatten every `translateZ`/`rotateX`/`rotateY` to 0** (NLM) and set `.stage { perspective: none }`. The page becomes a clean, flat, bright daylight layout — fully designed, not broken. The single most important reduced-motion rule in Solarium. |
-| Room Assemble / Page transition | 200ms linear opacity crossfade, no dolly |
-| Orbit & Lift | No orbit, no tilt; hover = a flat `--shadow-hover` swap + 1px beam ring; specular off |
-| Verdict Rise | Final composed reveal rendered instantly at rest (no rise, no dim); badge+gauge+score at final values |
-| Phosphor Trace | No flight/rise; chip switches to complete state instantly; edge takes cooled tint instantly; ticker still updates on the same events |
-| Dolly / Breathing / Shimmer / caret | None — static state styling (running chip = beam ring at rest) |
+| Power-Up | Emission field appears instantly at 60% strength; LEDs switch states with no ramp |
+| Phosphor Trace | No flight, no pulse: die switches to complete state instantly; edge takes its cooled tint instantly; cost ticker still updates on the same events |
+| First Light | Final composed state rendered immediately (badge+gauge+score at rest, glow at settled 8px); no dimming pass |
+| Lamp Pass | Instant route swap, no fade |
+| Breathing / Shimmer / edge-flow / caret blink | None — replaced by static state styling (running die = beam rim at rest; skeleton = flat `surface-2`) |
 
-`useReducedMotion()` gates all JS springs AND the pointer-orbit listeners (don't even attach
-them). CSS `@media (prefers-reduced-motion: reduce)` force-finishes reveals to final state.
-**Verify the flattened layout is a first-class design in the rendered app** — a reduced-motion
-user must get a beautiful flat bright dashboard, not a pile of mis-stacked cards.
+`useReducedMotion()` gates all JS springs; the CSS `@media (prefers-reduced-motion:
+reduce)` block force-finishes reveals into final state (opacity 1, transform none).
+Verify BOTH paths in the rendered app, not just in source.
 
 ---
 
-## 7. Texture — daylight tooth
+## 7. Texture — the machined skin
 
-Replace the v2 grain filter in `index.html` with a **light-driven bump** (NLM) so paper has
-tactile tooth under the declared sun, not visible static:
+Replace the v2 `#fin-grain` filter in `index.html` with the **Diffuse Surface Map**
+(NLM): noise passed through a lighting pass so the grain reads as a milled bump map
+under the declared lamp, not as static:
 
 ```svg
 <filter id="fin-grain">
   <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" result="noise"/>
-  <feDiffuseLighting in="noise" lighting-color="#fff" surfaceScale="1.4" result="lit">
-    <feDistantLight azimuth="315" elevation="55"/>
+  <feDiffuseLighting in="noise" lighting-color="#fff" surfaceScale="1.6" result="lit">
+    <feDistantLight azimuth="250" elevation="62"/>
   </feDiffuseLighting>
   <feComposite in="lit" in2="SourceGraphic" operator="in"/>
 </filter>
 ```
 
-Applied as `.grain::after` (fixed, inset 0, pointer-events none, defined once, NEVER animated,
-NEVER in the React tree). On daylight use `mix-blend-mode: multiply` at **~2.5%** opacity (lower
-than dark — bright paper shows grain more readily). If it reads as noise on a retina screenshot,
-drop to 0.02; never raise `baseFrequency` above 1.
+Applied exactly as v2's `.grain::after` (fixed, inset 0, `opacity: 0.035`,
+`mix-blend-mode: overlay`, pointer-events none, defined once, never in the React
+tree, NEVER animated). At 3.5% it reads as matte tooth; if it reads as visible static
+on a retina screenshot, lower to 0.025 — do not raise `baseFrequency` above 1.
 
 ---
 
 ## 8. Component vocabulary (build-ready)
 
-Global: interactive targets ≥44×44px (expand hit-area via `::after` if visually smaller);
-meaningful state changes announced via existing aria-live patterns; lucide icons only, 16px,
-`stroke-width: 1.75`, always with text/aria-label; no emoji ever.
+Global: every interactive target ≥44×44px (visual size may be smaller with an
+expanded hit area via `::after`); every state change that carries meaning is
+announced via the existing aria-live patterns; icons are lucide only, 16px default,
+`stroke-width: 1.75`, always accompanied by text or an aria-label. No emoji, ever.
 
 ### 8.1 Shell — AppShell · TopNav · Footer · Wordmark
 
-- **AppShell:** `--color-room` + daylight backdrop (§2.6) + grain (§7); hosts the `.stage`
-  context for immersive routes; `data-live` drives the sun-spot brightening + Wordmark cursor.
-- **TopNav — "the rail":** opaque `--color-paper-1`, full width, single bottom hairline
-  `--color-line`, h-14, NOT floating/blurred/pill. On scroll >0: a `--shadow-rest` appears
-  beneath it (the rail lifts off the room). Left: Wordmark. Center: tabs. Right: LED cluster
-  (HealthDot, QuotaPill). Tabs: Instrument Sans 500 `--text-sm` `--color-ink-muted` → hover
-  `--color-ink`; active `--color-ink` + a 2px `--color-beam` **filament** underline sliding via
-  the existing Motion `layoutId` (rename `nav-filament`), filament spring.
-- **Wordmark:** "FinResearch" 640 tight + a trailing 2×14px beam block cursor — solid at rest,
-  blinking (1.1s steps(2)) only while `data-live`; static under reduced motion.
-- **Footer:** top hairline; mono `--text-2xs` `--color-ink-faint` colophon (version, source link
-  underlined, model tiers); right-aligned health LED mirror.
+- **AppShell:** base fill + bench light (L1) + grain (L4); `data-live` attribute
+  driven by the analysis stream phase (powers §2.3-L2 and the Wordmark cursor).
+- **TopNav — "the rail":** full-width, opaque `--color-base`, single bottom hairline
+  `--color-line`; h-14; NOT floating, NOT blurred, NOT pill-shaped. On scroll >0:
+  fill shifts to `--color-surface-1` and the hairline to `--color-line-strong`
+  (180ms). Left: Wordmark. Center-left: tabs. Right: LED cluster (HealthDot,
+  QuotaPill).
+  **Tabs:** Instrument Sans 500 `--text-sm`, `--color-fg-muted`; hover → `--color-fg`
+  (100ms); active → `--color-fg` + the **filament**: a 2px beam underline sliding
+  between tabs via the existing Motion `layoutId="nav-active-pill"` (rename to
+  `nav-filament`), spring per §6.1 exception. The v2 pill fill is gone.
+- **Wordmark:** "FinResearch" Instrument Sans 600 tight + a trailing 2×14px block
+  cursor in `--color-beam` — solid at rest, **blinking (1.1s steps(2)) only while
+  `data-live`** (brand ties to liveness; static under reduced motion).
+- **Footer:** top hairline; mono `--text-2xs` `--color-fg-subtle` colophon (version,
+  source link underlined, model tiers); right-aligned mirror of the health LED.
 
-### 8.2 Card (was GlassCard) — the floating daylight object
+### 8.2 Panel (was GlassCard)
 
-`--color-paper-1` fill, `--radius-lg`, `--shadow-rest`, NO border, sits at `--z-card` inside a
-stage. Hover (§6.3-2): lifts to `--z-hover` + `--shadow-hover` + ≤3° tilt + specular. Padding
-`p-5 sm:p-6`. Header slot = kicker + `--text-lg` 560 title. `variant="hero"`: `paper-2` +
-`--radius-xl` + rests at `--z-hover`. Cards never nest >2 deep (3rd level is a well or table).
-**Daylight-glass sub-variant** (`variant="glass"`, hero shelves only — the ONE blur budget,
-§9.3): `rgba(255,255,255,0.5)` + `backdrop-filter: blur(24px) saturate(1.2)` + `--edge-light`
-rim — a frosted glass shelf you see the backdrop light through.
+`--color-surface-1` fill (raised contexts: `surface-2`), `--radius-lg`,
+`--shadow-panel`, NO border. Padding `p-5 sm:p-6`. Header slot = kicker +
+`--text-lg` 550 title. Optional `variant="hero"`: `--radius-xl` + `surface-2` +
+`animate-breathe-tile` when live. Panels never nest more than 2 deep — the third
+level is a well or a table, not another panel.
 
-### 8.3 Buttons
+### 8.3 Buttons (variant map from v2)
 
-All: `--radius-md`, Instrument Sans 500 `--text-sm`, h-11 (44px) / h-9 dense, press =
-`scale(0.97)` + drop to `translateZ(-4px)` (pushed into the table) on `--spring-press`, focus §9.1.
+All: `--radius-md`, Instrument Sans 500 `--text-sm`, h-11 (44px) default / h-9 dense
+(with expanded hit area), press = `scale(0.97)` on `--spring-press`, focus = §9.1 ring.
 
 | v3 variant | was | Treatment |
 | --- | --- | --- |
-| **key** | primary | `--color-beam` fill, `--color-beam-fg` text, edge-light, rests at `--z-hover` with `--shadow-hover`; hover lifts to `--z-lifted` + `--shadow-lifted`. The one raised bright object — max one key per view |
-| **paper** | glass | `--color-paper-2` fill + `--shadow-rest`; hover → lifts + `--shadow-hover` |
-| **rail** | outline | transparent, 1px `--color-line-strong`; hover → `paper-1` fill + faint lift |
-| **ghost** | ghost | text-only `--color-ink-muted` → `--color-ink`; underline on hover if inline |
+| **key** | primary | `--color-beam` fill, `--color-key-fg` text, edge-light inset; hover: `filter: brightness(1.04)` + `--glow-beam` (150ms); the ONLY filled-bright element at rest — one key per view maximum |
+| **panel** | glass | `--color-surface-2` fill + `--shadow-panel`; hover → `surface-3` |
+| **rail** | outline | transparent, 1px `--color-line-strong`; hover → `surface-1` fill |
+| **ghost** | ghost | text-only `--color-fg-muted` → `--color-fg`, no fill; underline on hover if inline |
 
-Destructive = `paper` + `--color-bear` text + glyph (never a red fill — chroma stays semantic).
+Destructive confirmation actions use `panel` + `--color-bear` text + glyph (never a
+red fill — chroma stays rationed).
 
-### 8.4 Form inputs — "light-table wells"
+### 8.4 Form inputs — "milled wells"
 
-`--color-sink` fill, `--shadow-well` (recessed into the paper), 1px `--color-line`, `--radius-md`,
-h-11; text `--color-ink`, placeholder `--color-ink-faint`; kicker label above. Focus: border →
-`--color-beam` + `--shadow-beam` halo + beam caret (180ms). Ticker/command inputs (AnalyzeForm,
-ExplorerSearch): mono, uppercase display, h-14 hero. **Segmented controls**: a sink containing
-key-shaped segments; selected = `paper-2` fill + edge-light + lifts to `translateZ(2px)` (a
-pressed key popping up) + `--color-ink`; slides via shared-layout spring. Radios/selects follow
-the same well+key language.
+`--color-well` fill, `--shadow-well`, 1px `--color-line` border, `--radius-md`, h-11;
+text `--color-fg`, placeholder `--color-fg-subtle`; label = kicker above. Focus:
+border → `--color-beam` + `--glow-beam` at 60% (180ms), caret `--color-beam`.
+Ticker/command inputs (AnalyzeForm, ExplorerSearch) are mono, uppercase-transformed
+display, h-14 for heroes. **Segmented controls** (investor mode, Library status):
+a well containing key-shaped segments; selected segment = `surface-3` fill +
+edge-light + `--color-fg` (a pressed machined key); moves via shared-layout spring.
+Radios/selects follow the same well + key language.
 
-### 8.5 SignalBadge & chips — "enamel chips"
+### 8.5 SignalBadge & chips — "engraved chips"
 
-`--radius-sm`, signal tint fill (`--color-{signal}-tint`), signal-colored glyph + WORD
-(TrendingUp/Down/Minus), mono `--text-2xs` uppercase tracking 0.14em, NO border, a faint
-`--edge-light` top rim (enamel catching sun). Score suffix `--color-ink`. Status/debate/exchange
-chips: same anatomy in ink (`paper-2` fill, `ink-muted` text) unless state-bearing.
+`--radius-sm`, dim fill (`--color-{signal}-dim`), signal-colored glyph + WORD
+(TrendingUp/TrendingDown/Minus), mono `--text-2xs` uppercase tracking 0.14em,
+NO border. Score suffix in `--color-fg`. Status/debate/exchange chips: same anatomy
+in graphite (`surface-2` fill, `fg-muted` text) unless state-bearing.
 
 ### 8.6 QuotaPill & HealthDot — "LED lozenges"
 
-Pill 999px, `paper-1` fill, `--shadow-rest`, mono `--text-2xs`; leading 6px LED dot in its state
-color with a soft halo of that hue. States per the frozen API contract: admin→beam "admin ·
-unlimited"; metered+room→bull "N live runs left"; exhausted→hold "replay-only"; unmetered→
-ink-faint "unmetered demo". HealthDot: 8px LED, healthy bull + breathing, degraded hold, down
-bear; always an sr-only status word; static under reduced motion.
+Pill 999px, `surface-1` fill, mono `--text-2xs`; leading 6px LED dot with a 40%
+glow of its state color. States (semantics from the API contract, frozen):
+admin → beam LED "admin · unlimited"; metered+room → bull LED "N live runs left";
+exhausted → hold LED "replay-only"; unmetered → fg-subtle LED "unmetered demo".
+HealthDot: 8px LED — healthy bull + breathing; degraded hold; down bear; always
+paired with an sr-only status word. Reduced motion: static, no breathing.
 
-### 8.7 PageHeader — with the "sun-line"
+### 8.7 PageHeader — with the "bench rule"
 
-Kicker → display title (`--text-3xl` 640, -0.03em, luminance-mask permitted) → optional
-`--color-ink-muted` lede. Beneath: the **sun-line** — a full-width hairline carrying a 24px
-`--color-beam` lit segment at the content-left edge (the daylight signature detail; this page
-header and nowhere else). Header sits at `--z-card`; parallaxes at 1.0.
+Kicker (mono, per §4.4) → display title (`--text-3xl`, 600, -0.03em, luminance-mask
+permitted) → optional `--color-fg-muted` lede. Beneath: the **bench rule** — a
+full-width hairline carrying a 24px `--color-beam` lit segment aligned to the content
+left edge. This lit tick is the v3 signature detail; it appears on every page header
+and nowhere else.
 
-### 8.8 EmptyState — outcome-oriented, sunlit
+### 8.8 EmptyState — outcome-oriented, unlit
 
-Kicker + `--text-xl` 560 headline + `ink-muted` body + ONE `key` CTA. Decoration: three 4px unlit
-LEDs (`ink-faint` at 40%) above the kicker — the instrument at rest, waiting for sun. Copy
-outcome-oriented ("Analyze NVDA to backfill this chart"), never "No data."
+Kicker + `--text-xl` 550 headline + `fg-muted` body + ONE `key` CTA. Decoration: a
+single row of three 4px unlit LEDs (`fg-subtle` at 30%) above the kicker — the
+instrument waiting. Copy stays outcome-oriented ("Analyze NVDA to backfill this
+chart"), never "No data."
 
-### 8.9 Pipeline canvas — the model on the table (xyflow)
+### 8.9 Pipeline canvas — dies & traces (xyflow)
 
-The canvas is the **Table plane's primary object**: the xyflow viewport container is tilted into
-the stage (`rotateX(18deg)` at rest on desktop, reduced by orbit; a fixed recede on touch; 0
-under reduced motion), giving the pipeline the read of a physical circuit board you look down at.
-`aria-hidden` (announcer transcript is the semantic spine); pan/zoom/drag locked; nodes
-pre-positioned (zero CLS, sizes from `pipeline.ts` unchanged); a registration dot-grid
-(`oklch(28% 0.02 60 / 5%)`, 24px) on the board.
-**FinNode = "chip":** `paper-2` fill, `--radius-md`, `--shadow-rest`, mono `--text-2xs` label,
-6px status LED. States: idle → label `ink-faint`, LED unlit, flat on board; running → LED beam +
-breathing, lifts to `translateZ(10px)` casting a bigger shadow, label `ink`; complete → LED phase
-tint, 2px bottom filament in phase tint, check glyph, rests at `translateZ(6px)` with
-`--shadow-{phase}`; error → bear filament + LED + X; cached/skipped → 1px dashed
-`--color-line-strong`, sits pressed. Phase tints (state chroma): analysts `--color-conservative`
-· debate `--color-hold` · trade/risk `--color-aggressive` · reporter/verdict = final action's
-signal. **FinEdge:** dormant 1px `--color-line-strong`, `vector-effect: non-scaling-stroke`; live
-edge = beam dash-flow + the Phosphor Trace dot; done = solid phase tint at 45%. Edges are grooves
-in the board (a 1px `--edge-light` highlight beside them sells the channel).
+Canvas: transparent over the bench, dot grid per §2.6, `aria-hidden` (the announcer
+transcript remains the semantic spine), pan/zoom/drag locked, nodes pre-positioned
+(zero CLS — sizes from `pipeline.ts` unchanged).
+**FinNode = "die":** `surface-2` fill, `--radius-md`, `--shadow-panel`, mono
+`--text-2xs` label, 6px status LED left of the label. States:
+idle → label `fg-subtle`, LED unlit (`fg-subtle` 30%);
+running → LED beam + breathing (§6.3-5), edge-light doubles (`--edge-light` at 16%),
+label `fg`;
+complete → LED in phase tint, 2px bottom **filament** in phase tint, check glyph,
+underglow `--glow-{phase}` at rest 6px;
+error → bear filament + LED + X glyph;
+cached/skipped → 1px dashed `--color-line-strong` outline, no fill change.
+Phase tints: analysts `--color-conservative` (cool intake) · debate `--color-hold`
+(heat of argument) · trade/risk `--color-aggressive` · reporter/verdict = the final
+action's signal color. (Phase tint is state — allowed chroma.)
+**FinEdge:** dormant 1px `oklch(96% 0.02 90 / 8%)`, `vector-effect:
+non-scaling-stroke`; live edge (upstream complete ∧ downstream running) = beam
+dash-flow (`fin-edge-flow`) + the Phosphor Trace dot (§6.3-2); completed = solid at
+the phase tint 35%.
 
 ### 8.10 Debate stream panels (DebateTheater · AnalystTrio · TradeRisk)
 
-Cards with a 2px top **persona filament** (bull/bear/conservative/aggressive) + persona kicker.
-Streams: mono `--text-xs` `ink-muted`, top fade mask (`token-stream`, kept), auto-scroll. On a
-stage these sit at `--z-card` and lift on hover; the verdict-bridge column gains a beam edge-light
-+ a small Z-lift when the facilitator completes. Analyst tiles get their filament on completion
-(the trio visibly checks in). Keep running text axis-aligned (clause 4) — panels do NOT tilt with
-orbit; only the Table/pipeline tilts. Panels parallax at 1.0.
+Panel base + a 2px top **persona filament** (bull / bear / conservative /
+aggressive — semantic chroma) + persona-colored kicker. Streams: mono `--text-xs`
+`fg-muted`, the shipped top fade mask (`token-stream`), auto-scroll. The
+verdict-bridge column gains a beam edge-light when the facilitator completes.
+Analyst tiles get their filament only on completion (the trio visibly "checks in").
 
-### 8.11 DecisionReveal — Verdict Rise
+### 8.11 DecisionReveal — First Light
 
-Hero card (`variant="hero"`, full width), the Peak. Left: large SignalBadge (20px glyph) + action
-word Instrument Sans 680 uppercase `--text-2xl` tracking 0.08em in the signal color. Center:
-ConvictionGauge — 120px ring, track `--color-line`, stroke signal color 6px, butt caps. Right:
-**the score** — JetBrains Mono 600 `--text-6xl` tabular `--color-ink`, with a signal
-luminance-mask (top-lit); mono kicker "SCORE / 100" below. Rationale in `report-prose` under a
-hairline. Choreography = Verdict Rise (§6.3-4): the card physically rises out of the table to
-`--z-lifted` and settles. The only `--text-6xl` in the app and the largest chroma moment.
+Hero panel (`variant="hero"`, full-width). Left: SignalBadge (large: 20px glyph) +
+action word in Instrument Sans 620 uppercase `--text-2xl` tracking 0.08em in the
+signal color. Center: ConvictionGauge — 120px ring, track `--color-line`, stroke
+signal color 6px, butt caps. Right: **the score** — JetBrains Mono 560 `--text-6xl`
+tabular, `--color-fg`, with the signal-colored glow bloom per §6.3-3; below it a mono
+kicker "SCORE / 100". Rationale renders in `report-prose` beneath a hairline.
+Choreography exactly §6.3-3. This panel is the only place `--text-6xl` exists.
 
 ### 8.12 CostTicker — "meter strip"
 
-Mono strip in a `--color-sink` well: kicker-label + tabular value groups (tokens · cost · latency
-· nodes) separated by 1px vertical rules (not boxes). A 6px beam LED leads (breathing while
-streaming, unlit at done). Increments ONLY at trace collisions (§6.3-3); the changed group
-flashes to `--color-beam` for 150ms then settles to `ink`. Freezes with one final flash at done.
-Numbers never reflow (tabular + fixed-width groups).
+A horizontal mono strip in a well: groups of kicker-label + tabular value (tokens ·
+cost · latency · nodes), separated by hairline verticals (rules, not boxes). A 6px
+live LED leads the strip (beam, breathing while streaming; unlit at done). Value
+increments happen ONLY at trace collisions (§6.3-2) and flash the changed group's
+value to `--color-beam` for 150ms before settling to `fg`. At `done` the strip
+freezes with one final flash. Numbers never reflow (tabular + fixed-width groups).
 
 ### 8.13 Transport bar & scrubber — "tape transport"
 
-Card-footer strip. Keys: `paper`-variant icon buttons ≥44px (play/pause/restart) + a mono speed
-key cycling ×1/×2/×4/×8 (default ×4). Track: recessed `--color-sink` channel (h-2, radius 999,
-`--shadow-well`); elapsed fill = beam gradient (`--color-beam` → 60%); **node ticks** = 2px
-phase-tinted marks at each `node_complete` (the scrubber IS the timeline — kept); playhead = 12px
-beam caret with `--shadow-beam`, scale 1.15 + tiny Z-lift while scrubbing. Keyboard slider
-semantics unchanged (arrows/Home/End); mono tabular "mm:ss / mm:ss". Seek = pure re-reduce.
+Container: panel footer strip. Keys: `panel`-variant icon buttons ≥44px
+(play/pause/restart) + a mono speed key cycling ×1/×2/×4/×8 (default ×4, the
+recruiter cut). Track: recessed channel (well, h-2, radius 999, `--shadow-well`);
+elapsed fill = beam gradient (`oklch(97% 0.01 90 / 90%)` → 60%); **node ticks** = 2px
+phase-tinted marks at each `node_complete` (the scrubber IS the pipeline timeline —
+kept from WP-8); playhead = 12px beam caret with `--glow-beam`, scale 1.15 while
+scrubbing. Keyboard: existing slider semantics (arrows/Home/End) unchanged; time
+readout mono tabular "mm:ss / mm:ss". Seek remains pure re-reduce (never interpolate).
 
-### 8.14 Tables (PairTable, prose tables, metric tapes)
+### 8.14 Tables (PairTable, report-prose tables, metric tapes)
 
-Borderless: row hairlines only, NO vertical rules/cell boxes. `th` = kicker style (numeric cols
-right-aligned), h-9. Rows h-11; hover → `paper-1`→`paper-2` + faint lift (150ms); selected →
-`paper-2` + `--shadow-hover`. Numerics mono tabular right-aligned. Sortable headers = real
-buttons; sorted column carries a 2px beam filament + arrow glyph. Delta cells = Functional
-Inversion (§3.5) + arrow glyph. Tables live on Cards, axis-aligned, never tilted.
+Borderless: row hairlines only (`--color-line`), NO vertical rules, NO cell boxes.
+`th` = kicker style, left-aligned (numeric columns right-aligned), h-9. Rows h-11;
+hover → `surface-1`→`surface-2` lift (150ms); active/selected row → `surface-3`.
+Numerics: mono tabular right-aligned. Sortable headers are real buttons; the sorted
+column carries a 2px beam filament under its header + an arrow glyph. Delta cells
+follow Functional Signal Inversion (§3.5) with arrow glyphs.
 
 ### 8.15 Chart theming
 
-**Candlesticks (lightweight-charts v4)** — MUST route colors through the existing `cssVar()`
-rgb-probe (v4 can't parse OKLCH; passing tokens raw crashes it — learned live): up `--color-bull`
-/ down `--color-bear`; `borderVisible:false`; wicks same hues via `withAlpha(…,0.8)`; background
-transparent over the card; grid: horizontal lines only at ink 6%, vertical OFF; crosshair 1px
-beam dashed, labels on `paper-2`; volume histogram signal-tinted via `withAlpha(…,0.18)`, ~20%
-pane height, pinned to time axis; range pills = segmented keys (§8.4); floating OHLC legend = a
-`paper-2` chip (mono, top-left, `--shadow-rest`, no blur). The chart is the Dossier's Table-plane
-specimen — it may sit on a slightly-tilted glass shelf, but the plot area itself stays
-flat/axis-aligned (clause 4). Candles carry the page's chroma.
-**recharts (Eval)** — SVG, OKLCH vars work directly: axis ticks mono 11px `ink-faint`; grid ink
-6% `strokeDasharray="2 4"`; quadrant `ReferenceArea` fills = bull/bear at 6%; the (0,0) ablation
-crosshair = two `ReferenceLine`s at `--color-line-strong`; points = judge colors (§3.5), hollow
-for unjudged; `isAnimationActive={false}`; tooltip = `paper-2` + `--shadow-lifted`, no blur.
+**Candlesticks (lightweight-charts v4)** — MUST route colors through the existing
+`cssVar()` rgb-probe (v4 cannot parse OKLCH; passing tokens raw crashes the chart —
+learned live):
+up `--color-bull` / down `--color-bear`; `borderVisible: false`; wicks = same hues
+via `withAlpha(…, 0.8)`; background transparent over a panel; grid: horizontal lines
+only at ivory 4%, vertical OFF; crosshair: 1px beam dashed, labels on `surface-3`;
+volume histogram: signal-tinted via `withAlpha(…, 0.2)`, ~20% pane height, pinned to
+the time axis; range pills = segmented keys (§8.4); floating OHLC legend = a
+`surface-3` chip (mono, top-left, no blur). The candles are the Market page's chroma
+budget — nothing else on the page may be chromatic except signal chips.
+**recharts (Eval)** — SVG, so OKLCH vars work directly: axis ticks mono 11px
+`fg-subtle`; grid ivory 4% `strokeDasharray="2 4"`; quadrant `ReferenceArea` fills =
+bull/bear at 5%; the (0,0) ablation crosshair = two `ReferenceLine`s at
+`--color-line-strong`; points = judge colors (§3.5), hollow for unjudged;
+`isAnimationActive={false}`; tooltip = opaque `surface-3` panel + `--shadow-lifted`
+(no blur).
 
-### 8.16 Lifted Pane (drawers/modals — onion peel, rises in Z)
+### 8.16 Lifted Pane (drawers/modals — the onion peel)
 
-Scrim: `oklch(28% 0.02 60 / 28%)` (ink-tinted daylight dim) + the app's single permitted
-`backdrop-filter: blur(20px)`. Pane: `paper-2`, `--radius-xl`, `--shadow-lifted`, enters by
-rising from `translateZ(0)` + translateY(12px) to `--z-lifted` on `--spring-settle`. Focus
-trapped; Escape closes; focus returns to invoker. Raw-metadata reveals = mono `--text-xs` in a
-`--color-sink` well + copy `rail` button.
+Scrim: `oklch(0% 0 0 / 55%)` + the app's single permitted `backdrop-filter:
+blur(20px)`. Pane: `surface-2`, `--radius-xl`, `--shadow-lifted`, slides 12px +
+fades in on `--spring-settle`. Focus trapped; Escape closes; focus returns to the
+invoker. Raw-metadata reveals (deltas, event payloads) render as mono `--text-xs` in
+a well with a copy `rail` button.
 
-### 8.17 Search (ExplorerSearch + semantic) — "the loupe"
+### 8.17 Search (ExplorerSearch + semantic search)
 
-Hero `--color-sink` well h-14, mono, lucide Search icon `ink-faint`, blinking beam block caret.
-Semantic mode: an ink chip "semantic · pgvector"; keyword fallback: hold LED chip "keyword mode ·
-semantic search needs Postgres" (honesty pattern kept). Results in mirror lanes (§10-Market).
+"The lens": hero milled well h-14, mono, lucide Search icon `fg-subtle`, blinking
+beam block caret (steps(2), static under reduced motion). Semantic mode: a graphite
+chip "semantic · pgvector"; keyword fallback: hold LED chip "keyword mode · semantic
+search needs Postgres" (honesty pattern kept). Results in mirror lanes (§9-Market).
 
 ---
 
 ## 9. Accessibility & performance contracts
 
 ### 9.1 Focus
-`:focus-visible` = 2px solid `--color-beam`, offset 2px, `--radius-xs`, + `--shadow-beam` halo.
-Never removed, never color-shifted per component. Tab order: form → transcript → results →
-footer; canvas non-focusable. 3D tilt must NOT change tab/reading order (DOM order is truth).
+
+`:focus-visible` = 2px solid `--color-beam`, offset 2px, `--radius-xs`, plus
+`--glow-beam` — focus reads as illumination. Never remove; never color-shift it per
+component. Tab order: form → transcript → results → footer; canvas non-focusable.
 
 ### 9.2 Non-negotiables (verified in the RENDERED app)
-AA everywhere / AAA on primary data values (§3 ratios are the proof obligations); glyph + word +
-color on every signal; aria-live announcer + `<details>` transcript kept as the canvas spine;
-44px targets; tabular numerics; **reduced-motion flattens all 3D to a first-class flat layout
-(§6.4)**; `prefers-contrast: more` bumps `--color-line` to 18% and `ink-faint` to
-`oklch(40% 0.018 60)`; `hover:none`/coarse pointers disable orbit (§2.3). Motion sickness: max 5°
-orbit, heavy spring, idle-drift off under reduced motion.
+
+AA everywhere / AAA on primary data values (§3 ratios are the proof obligations);
+glyph+word+color on every signal; aria-live announcer + `<details>` transcript kept
+as the canvas's semantic spine; 44px targets; tabular numerics; reduced-motion per
+§6.4; `prefers-contrast: more` bumps `--color-line` to 13% and `fg-subtle` to
+`oklch(70% 0.012 90)`.
 
 ### 9.3 GPU / perf budget
-ONE `backdrop-filter` context: the Lifted Pane (while open) + the optional `variant="glass"` hero
-shelf — budget for at most **one glass shelf visible at a time per route** (never a grid of
-blurred cards). Backdrop = 3 static layers + grain. Animate transform/opacity/filter only;
-`will-change: transform` only on orbiting/lifting elements, removed at rest. `perspective` on one
-`.stage` per region (no nested perspective). Charts stay in their lazy route chunks (never
-`manualChunks` into vendor — existing grep guards). CLS: chips pre-positioned; panels reserve
-stream heights. Target 60fps on the orbit — if a mid-tier laptop drops frames, reduce Card count
-on the Table plane before reducing the spread.
+
+One backdrop-filter (lifted pane, while open). Two fixed gradient layers + one grain
+layer. Animations: transform/opacity/filter-brightness only; `will-change` only on
+dies and the playhead; static SVG filters only (grain never animates). Charts stay
+in their lazy route chunks (never `manualChunks` them into vendor — regression
+verified by the existing grep guards). CLS: dies pre-positioned; panels never resize
+on data arrival (reserve heights for streams).
 
 ---
 
 ## 10. Per-page art direction
 
-### Analyze — "the light-table" (the showpiece)
-Two states inside one `.stage`. **Armed:** a bright command bench — kicker ("EQUITY RESEARCH
-PIPELINE"), display headline, the hero loupe well (§8.17) with segmented mode keys + one `key`
-button ("Run analysis"); below, the full pipeline model tilted on the Table plane, UNLIT (idle
-chips flat, dormant grooves) — the recruiter sees the whole machine as a physical object before
-it wakes; the empty state IS the product diagram, in 3D. **Live:** ROOM stays; the Trading-Floor
-causality survives — the tilted pipeline board is the spine, organs on Cards beneath in the
-asymmetric bento (AnalystTrio 3×4col → DebateTheater 8col + TradeRisk 4col subgrid →
-DecisionReveal 12col → CostTicker strip under the board). Scroll dollies through the stages
-(§2.5). Hero moments: the room assembling in depth, traces lifting chips off the board, the
-Verdict rising out of the table. Quota-blocked: hold LED banner + replay `key` (never dead-ends).
+### Analyze — "the bench" (the showpiece)
 
-### Library — "the ledger table"
-PageHeader ("RESEARCH LIBRARY" / mono count). Controls: mono ticker well + segmented status keys.
-Rows (h-14, whole-row links) as cards laid on the table: verdict chip (96px col) | ticker mono 500
-| conviction meter (3px track, signal fill) | metrics tape (mono ink-faint) | relative time.
-Hover lifts the row card toward you (§6.3-2) with a bigger shadow; 24ms stagger on load. The
-verdict chips stacking down the page form a colored spine on a bright ledger. **RunDossier
-replay:** outcome-up-front header (badge + score + "Run ticker live" rail) + cockpit in replay +
-tape transport (§8.13). Memorable: scrubbing re-lights and re-lifts the pipeline chips.
+Two lighting states. **At rest (armed):** a centered command bench — kicker
+("EQUITY RESEARCH PIPELINE"), display headline, the hero ticker well (§8.17 lens
+pattern) with segmented mode keys and ONE key button ("Run analysis"); below it the
+full pipeline canvas rendered UNLIT (idle dies, dormant edges) — the recruiter sees
+the whole machine before it wakes, and the empty state IS the product diagram.
+**Live:** POWER-UP fires (§6.3-1); the Trading-Floor architecture survives — canvas
+as the causal spine (full-width, ~340px), organs beneath in the asymmetric bento:
+AnalystTrio (3×4col) → DebateTheater (8col) + TradeRisk (4col, subgrid rows) →
+DecisionReveal (12col) → CostTicker strip pinned under the canvas. Memorable moments:
+the machine waking, traces crawling the graph, First Light. Quota-blocked state:
+hold LED banner + the replay `key` CTA (the bench never dead-ends).
+
+### Library — "the ledger"
+
+PageHeader ("RESEARCH LIBRARY" / count in mono). Controls: mono ticker well +
+segmented status keys. Rows (h-14, whole-row links): verdict chip (fixed 96px col) |
+ticker mono 500 | conviction meter (3px track, signal fill — the row's only other
+chroma) | metrics tape (mono `fg-subtle`: nodes · cost · latency) | relative time
+right. Hover lift + 24ms stagger on load. The verdict chips stacking down the page
+form a colored spine on an otherwise graphite ledger — that IS the composition.
+**Replay theater (RunDossier):** outcome-up-front header (badge + score + "Run
+ticker live" rail button), cockpit in replay, tape transport (§8.13). Memorable:
+scrubbing re-lights the machine node by node.
 
 ### Market — "the observatory"
-Explorer: the loupe hero + mirror-binary lanes (coverage | research, 1fr 1fr, shared mono DNA) +
-keyword-fallback honesty chip + mono coverage strip. **Dossier:** asymmetric bento on a stage —
-the candlestick chart is the lit **specimen on a glass shelf** (8col×2rows, slightly tilted shelf,
-flat plot area), price in `--text-5xl` mono in the header with signed change in signal color;
-fundamentals tape 4col (Functional-Inversion tints), news feed 4col below. Range keys top-right;
-range switch 400ms `--ease-out`. Backfill empty state: §8.8 "Analyze {ticker} to backfill".
-Memorable: the chart floating on daylight glass, wicks catching the light.
 
-### Eval — "the lab bench"
-Reading axis kept: VERDICT → EVIDENCE → RECEIPTS. VerdictBand: asymmetric bento, hero delta as a
-giant mono figure (`--text-4xl`) tinted by Functional Inversion + arrow, breathing tile while
-fresh; judge tiles honest ("n/a" when unjudged, never fake 0%). MethodologyTape: a bright
-hairline-framed strip, mono kicker "JUDGE-PROXY · METHODOLOGY", `ink-muted` body, beam sun-line
-(confident paper, not a warning). Scatter (§8.15): quadrant tints + the (0,0) ablation crosshair
-are the argument; RunRail = segmented keys (?label= deep-links kept). PairTable §8.14. Memorable:
-a bright lab sheet where only the evidence is colored, points settling in from the origin.
+Explorer: the lens hero + mirror-binary lanes (coverage | research, split 1fr 1fr,
+shared mono DNA); keyword-fallback honesty chip; coverage strip in mono. **Dossier:**
+asymmetric bento — chart panel 8col×2rows (the lit specimen: candles carry the whole
+page's chroma; price in `--text-5xl` mono in the header with signed change in signal
+color), fundamentals tape 4col (Functional-Inversion-tinted growth/margins), news
+feed 4col below. Range keys top-right of the chart panel; range switch animates
+400ms `--ease-out`. Backfill empty state: §8.8 with "Analyze {ticker} to backfill".
+
+### Eval — "the lab report"
+
+One reading axis kept: VERDICT → EVIDENCE → RECEIPTS. VerdictBand: asymmetric bento
+with the hero delta as a giant mono figure (`--text-4xl`) tinted by Functional
+Inversion + arrow, breathing tile while fresh; judge tiles honest ("n/a" when
+unjudged — never fake 0%). MethodologyTape: re-toned from azure to graphite — a
+hairline-framed strip, mono kicker "JUDGE-PROXY · METHODOLOGY", `fg-muted` body,
+beam lit-tick left (confident paper, not warning). Scatter (§8.15): quadrant tints +
+the (0,0) ablation crosshair are the page's argument; RunRail = segmented keys
+(?label= deep-links kept). PairTable per §8.14. Memorable: a monochrome lab sheet
+where only the evidence is colored.
 
 ---
 
@@ -655,171 +690,166 @@ a bright lab sheet where only the evidence is colored, points settling in from t
 @import "@fontsource-variable/instrument-sans";
 @import "@fontsource-variable/jetbrains-mono";
 
-@custom-variant dark (&:where(.dark, .dark *)); /* forward-compat only; no dark tokens */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-sans: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", monospace;
 
-  /* type: 2xs..4xl as v2 + display steps §4 */
-  --text-5xl: 3.8125rem; --text-5xl--line-height: 4rem;
-  --text-6xl: 4.75rem;   --text-6xl--line-height: 4.75rem;
+  /* type scale: §4.3 (2xs..4xl as v2; NEW display steps) */
+  --text-5xl: 3.8125rem;  --text-5xl--line-height: 3.8125rem;
+  --text-6xl: 4.75rem;    --text-6xl--line-height: 4.75rem;
 
-  /* daylight surfaces §3.1 */
-  --color-room: oklch(95.5% 0.010 85);
-  --color-paper-1: oklch(98.5% 0.005 85);
-  --color-paper-2: oklch(99.8% 0.003 85);
-  --color-sink: oklch(93% 0.012 85);
-  --color-line: oklch(28% 0.02 60 / 10%);
-  --color-line-strong: oklch(28% 0.02 60 / 18%);
-  --edge-light: oklch(100% 0 0 / 85%);
+  /* graphite surfaces §3.1 */
+  --color-base: oklch(11% 0.006 75);
+  --color-surface-1: oklch(14.5% 0.007 75);
+  --color-surface-2: oklch(18% 0.008 75);
+  --color-surface-3: oklch(22.5% 0.009 75);
+  --color-well: oklch(9% 0.005 75);
+  --color-line: oklch(96% 0.02 90 / 7%);
+  --color-line-strong: oklch(96% 0.02 90 / 13%);
+  --edge-light: oklch(96% 0.02 90 / 8%);
 
-  /* ink §3.2 */
-  --color-ink: oklch(25.5% 0.02 60);
-  --color-ink-muted: oklch(43% 0.02 60);
-  --color-ink-faint: oklch(48% 0.018 60);
+  /* text §3.2 */
+  --color-fg: oklch(94.5% 0.012 90);
+  --color-fg-muted: oklch(76% 0.014 90);
+  --color-fg-subtle: oklch(62% 0.012 90);
 
-  /* beam §3.3 */
-  --color-beam: oklch(47% 0.185 255);
-  --color-beam-soft: oklch(47% 0.185 255 / 12%);
-  --color-beam-fg: oklch(99% 0.003 85);
+  /* the beam §3.3 */
+  --color-beam: oklch(97% 0.01 90);
+  --color-beam-dim: oklch(97% 0.01 90 / 20%);
+  --color-key-fg: oklch(14.5% 0.01 75);
 
-  /* signals §3.4 (+ -tint /14% fills) */
-  --color-bull: oklch(42% 0.155 150);        --color-bull-tint: oklch(42% 0.155 150 / 14%);
-  --color-bear: oklch(44.5% 0.205 25);       --color-bear-tint: oklch(44.5% 0.205 25 / 14%);
-  --color-hold: oklch(44.5% 0.125 66);       --color-hold-tint: oklch(44.5% 0.125 66 / 14%);
-  --color-conservative: oklch(44% 0.135 255);--color-conservative-tint: oklch(44% 0.135 255 / 14%);
-  --color-aggressive: oklch(45.5% 0.195 32); --color-aggressive-tint: oklch(45.5% 0.195 32 / 14%);
+  /* signals §3.4 (+ -dim alpha fills) */
+  --color-bull: oklch(74% 0.16 150);         --color-bull-dim: oklch(74% 0.16 150 / 12%);
+  --color-bear: oklch(72% 0.17 25);          --color-bear-dim: oklch(72% 0.17 25 / 13%);
+  --color-hold: oklch(80% 0.14 80);          --color-hold-dim: oklch(80% 0.14 80 / 12%);
+  --color-conservative: oklch(72% 0.09 235); --color-conservative-dim: oklch(72% 0.09 235 / 12%);
+  --color-aggressive: oklch(73% 0.14 55);    --color-aggressive-dim: oklch(73% 0.14 55 / 12%);
 
-  /* radius §5 */
-  --radius-xs: 4px; --radius-sm: 8px; --radius-md: 12px; --radius-lg: 18px; --radius-xl: 26px;
+  /* radius §5 (2xl deleted) */
+  --radius-xs: 2px; --radius-sm: 4px; --radius-md: 8px;
+  --radius-lg: 12px; --radius-xl: 16px;
 
-  /* depth (translateZ) §5 */
-  --z-backdrop: -240px; --z-table: -40px; --z-card: 0px; --z-hover: 24px; --z-lifted: 64px;
+  /* elevation §5 */
+  --shadow-panel: inset 0 1px 0 0 oklch(96% 0.02 90 / 8%),
+    0 1px 2px oklch(0% 0 0 / 28%), 0 10px 28px -14px oklch(0% 0 0 / 50%);
+  --shadow-lifted: inset 0 1px 0 0 oklch(96% 0.02 90 / 8%),
+    0 2px 4px oklch(0% 0 0 / 32%), 0 24px 56px -20px oklch(0% 0 0 / 60%);
+  --shadow-well: inset 0 1px 3px oklch(0% 0 0 / 40%),
+    inset 0 0 0 1px oklch(96% 0.02 90 / 7%);
+  --shadow-glow-beam: 0 0 0 1px oklch(97% 0.01 90 / 30%),
+    0 0 20px -4px oklch(97% 0.01 90 / 30%);
+  /* + --shadow-glow-bull / -bear / -hold: same recipe, signal hue at 35/35/30% */
 
-  /* daylight elevation §5 (shadows ink-tinted hue 60, scale with Z) */
-  --shadow-rest: inset 0 1px 0 0 oklch(100% 0 0 / 85%),
-    0 1px 2px oklch(28% 0.02 60 / 6%), 0 8px 20px -8px oklch(28% 0.02 60 / 12%);
-  --shadow-hover: inset 0 1px 0 0 oklch(100% 0 0 / 85%),
-    0 2px 4px oklch(28% 0.02 60 / 8%), 0 20px 40px -12px oklch(28% 0.02 60 / 18%);
-  --shadow-lifted: inset 0 1px 0 0 oklch(100% 0 0 / 85%),
-    0 4px 8px oklch(28% 0.02 60 / 10%), 0 40px 80px -20px oklch(28% 0.02 60 / 26%);
-  --shadow-well: inset 0 2px 4px oklch(28% 0.02 60 / 12%),
-    inset 0 0 0 1px oklch(28% 0.02 60 / 10%);
-  --shadow-beam: 0 0 0 3px oklch(47% 0.185 255 / 12%);
-  /* + --shadow-bull/-bear/-hold: --shadow-rest with the signal hue mixed into the key layer @22% */
-
-  /* motion §6 (springs are the literal linear() strings in §6.1) */
+  /* motion §6 (springs are the literal generated strings in §6.1) */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --duration-micro: 100ms; --duration-fast: 180ms; --duration-base: 280ms; --duration-slow: 520ms;
-}
-
-@layer base {
-  html { color-scheme: light; }
-  body { color: var(--color-ink); background: var(--color-room);
-    font-variation-settings: 'opsz' 16; }
+  --duration-micro: 100ms; --duration-fast: 180ms;
+  --duration-base: 280ms;  --duration-slow: 520ms;
 }
 ```
 
-Utilities to (re)define in `@layer components`: `.stage` (perspective + origin), `.plane-*` (the
-four depth planes), `.card` / `.card-glass`, `.well`, `.sun-line`, `.kicker`, `.token-stream`
-(kept), `.report-prose` (kept, re-tokened), `.grain` (new filter §7). Keyframes: `fin-breathe`
-(1→1.03 + ±0.4° rotateZ), `fin-breathe-tile`, `fin-collide` (was accent-flash: Z-dip→Z-lift),
-`fin-signal-travel`, `fin-edge-flow`, `fin-verdict-rise` (Z 0→64px), `fin-rise-in`, `fin-shimmer`,
-`fin-caret-blink`. The reduced-motion block is EXTENDED to flatten all Z/rotate transforms and set
-`.stage { perspective: none }` (§6.4).
+Component utilities to (re)define in `@layer components`: `.panel`, `.panel-raised`,
+`.well`, `.bench-rule`, `.kicker`, `.token-stream` (kept), `.report-prose` (kept,
+re-tokened), `.grain` (kept, new filter §7). Keyframes kept/retuned: `fin-breathe`
+(1→1.04), `fin-breathe-tile`, `fin-collide` (was accent-flash: 0.97→1.06→1),
+`fin-signal-travel`, `fin-edge-flow`, `fin-verdict-in`, `fin-rise-in`, `fin-shimmer`,
+new `fin-caret-blink`. The reduced-motion unwind block survives verbatim, extended
+with the new animation classes.
 
 ---
 
-## 12. Migration map (v2 / dark-draft → v3 Solarium)
+## 12. Migration map (v2 → v3)
 
-| From | To |
+| v2 | v3 |
 | --- | --- |
-| Dark asphalt surfaces (hue 260) / glass fills | daylight paper (hue 85), elevation = brighter+shadow+Z (§3.1, §5) |
-| `--color-accent` azure / dark "beam" | `--color-beam` daylight sky-azure (§3.3) |
-| `AuroraBackground` blobs | daylight backdrop: sky wash + sun-shafts + horizon (§2.6) |
-| `.glass`/`.glass-strong` (blur everywhere) | `.card`/`.card-glass`; blur ONLY on the lifted pane + one hero glass shelf (§9.3) |
-| Glow-on-dark elevation | daylight shadows that scale with translateZ (§5) |
-| Flat 2D layout | Stage Geometry: 4 depth planes, orbit, parallax, scroll-dolly (§2) |
-| Inter | Instrument Sans Variable (uninstall `@fontsource-variable/inter`) |
-| Signal colors (bright-on-dark) | darkened for AAA-on-daylight (§3.4) |
-| Button primary/glass/outline/ghost | key/paper/rail/ghost (§8.3) |
-| nav pill / dark filament | beam filament underline, same `layoutId` |
-| `--radius-2xl` | `--radius-xl` max (26px) |
+| `--color-accent` (azure) | **deleted.** Focus/caret/live → `--color-beam`; links → underline rule (§3.3); "confident info" chrome (MethodologyTape) → graphite + beam tick |
+| `--color-accent-strong` / `--color-accent-fg` | deleted / `--color-key-fg` |
+| `--color-glass*`, `--blur-glass*`, `.glass`, `.glass-strong` | deleted → `.panel` / `.panel-raised` (§8.2); the single blur lives only in the Lifted Pane |
+| `AuroraBackground` | deleted → bench light + live emission field (§2.3) |
+| `--shadow-glass` / `--shadow-raised` / `--shadow-glow-accent` | `--shadow-panel` / `--shadow-lifted` / `--shadow-glow-beam` |
+| `--radius-2xl` | deleted (max `--radius-xl`) |
+| Inter Variable | Instrument Sans Variable (uninstall `@fontsource-variable/inter`) |
+| Button `primary/glass/outline/ghost` | `key/panel/rail/ghost` (§8.3) |
+| nav active pill (fill) | nav filament (2px beam underline), same `layoutId` mechanism |
+| `fin-accent-flash` | `fin-collide` (0.97→1.06→1) |
+| Surfaces hue 260 / text 96%-blue | hue 75 graphite / warm ivory (§3.1–3.2) |
+| Signal values | retuned per §3.4 (bear brightened to AAA; aggressive re-hued 35→55) |
 
-Frozen through migration: all DTO/API semantics, `analysisReducer`/`eventPlayer` seams, node
-topology counts (12 on / 10 off), announcer patterns, chunking discipline, the `cssVar()`
-rgb-probe for lightweight-charts, the recharts `dedupe`/`optimizeDeps` fix.
+Frozen through the migration: all DTO/API semantics, `analysisReducer`/`eventPlayer`
+seams, node topology counts, the announcer patterns, chunking discipline, and the
+`cssVar()` rgb-probe for lightweight-charts.
 
 ---
 
 ## 13. Anti-patterns — implementers must NOT
 
-1. Ship a flat layout with no depth planes, OR conversely tilt/parallax **reading surfaces**
-   (running text, tables, chart plot areas) past comfort — immersion frames, data stays flat
-   (One Rule clause 4). Max 5° orbit.
-2. Use pure `#fff`/`#000`; cool the daylight hue toward blue-white; make a surface darker to show
-   elevation (elevation is brighter + higher + bigger shadow).
-3. Use borders for containment/elevation; use grey (non-ink-tinted) or black shadows.
-4. Add a chromatic accent beyond the ONE beam; use signal hues on non-state chrome; exceed the
-   <8% chroma budget at rest.
-5. Add `three`/`@react-three/fiber` (or any heavyweight dep) without the §2.8 sign-off; put the
-   optional WebGL scene in the entry graph or without a perf/reduced-motion gate.
-6. Nested `perspective`; blanket `will-change`; more than one glass-blur surface visible per
-   route; `manualChunks` the chart libs into vendor.
-7. Ship 3D without the reduced-motion flatten (§6.4) verified as a first-class flat layout, or
-   leave orbit attached on `hover:none`/coarse pointers — motion-sickness + touch hazards.
-8. `linear` easing on transforms; springs on opacity; animate anything during Verdict Rise but
-   the reveal.
-9. Serif or a third typeface; weights ≥720 or <440; tracking on mono; proportional numerals.
-10. Color-only signals (glyph + word always); raw oklch/hex in components; OKLCH into
+1. Reintroduce a chromatic interaction accent (azure, cyan, violet, gold). If it's
+   colored, it's state; if it's interactive, it's light.
+2. Use `backdrop-filter` anywhere but the Lifted Pane, or blur over data.
+3. Use borders for containment/elevation. Panels are luminance + edge-light + shadow.
+4. Use pure `#000`/`#fff`, or cool the surface hue back toward blue-black.
+5. Aurora blobs, mesh gradients, hue-gradient text, glow on static decoration.
+6. `linear` easing on transforms; springs on opacity; animation during First Light
+   other than the reveal itself.
+7. Opacity-pulse skeletons (shimmer only); breathing on more than one element per region.
+8. Serif or a third typeface; weights ≥700 or <400; tracking on mono; proportional numerals anywhere.
+9. Color-only signals (glyph + word always); persona hues on non-persona chrome.
+10. Raw oklch/hex in components (tokens only); passing OKLCH tokens into
     lightweight-charts without the `cssVar()` probe.
-11. Drop the aria-live transcript, focus ring, 44px targets, or reduced-motion variants —
-    a11y regressions are design regressions.
-12. Two `key` buttons in one view; kickers in signal colors; `--text-6xl` outside DecisionReveal.
-13. Ship any of this without looking at it rendered (Playwright at 1440/834/390, a forced
-    `prefers-reduced-motion` pass, a `hover:none` pass, and a keyboard-only pass).
+11. Dropping the aria-live transcript, focus ring, 44px targets, or the reduced-motion
+    variants — a11y regressions are design regressions.
+12. A light theme, "for completeness."
+13. Two `key` buttons in one view; kickers in signal colors; `--text-6xl` outside
+    DecisionReveal.
+14. Shipping any of this without looking at it rendered (Playwright at 1440/834/390,
+    plus a forced `prefers-reduced-motion` pass and a keyboard-only pass).
 
 ---
 
 ## 14. Sourcing kit — 21st.dev (accelerant, not authority)
 
-Approved component-reference library for the build phase. Access-path status, verified 2026-07-03:
+21st.dev is the approved component-reference library for the build phase. Status of
+the access paths, verified 2026-07-03:
 
-- **Configured MCP (`magic` in `~/.claude.json`, `@21st-dev/magic@0.0.46`):** server boots +
-  lists 4 tools, but the two data tools currently fail — `21st_magic_component_inspiration`
-  crashes server-side with MCP `-32602` ("Invalid tools/call result": upstream returns content
-  items missing `type`/`text`), and `21st_magic_component_builder` hangs >120s. Probe the MCP
-  once per session (it may be fixed upstream); don't burn more than one call. Reach it by reading
-  `mcpServers.magic` (command/args/env) from `~/.claude.json` at runtime — never hardcode the key
-  (the permission classifier denies credential-in-script).
-- **Web fallback (works, no auth):** each `21st.dev/@author/components/<name>` page exposes full
-  source in `Usage.tsx`/`Component.tsx` tabs (Playwright-capturable). "Copy prompt" is
-  Clerk-auth-gated.
+- **Configured MCP (`magic` in `~/.claude.json`, `@21st-dev/magic@0.0.46`):** the
+  server boots and lists 4 tools, but both data tools currently fail —
+  `21st_magic_component_inspiration` crashes server-side with MCP `-32602`
+  ("Invalid tools/call result": upstream API returns content items missing
+  `type`/`text`), and `21st_magic_component_builder` hangs >120s. **Try the MCP
+  first each session** (it may be fixed upstream; the failure signature above tells
+  you in one call whether it still is). Do not burn more than one probe call.
+- **Web fallback (works, no auth):** every component page exposes full source in the
+  `Usage.tsx` / `Component.tsx` tabs — capture via Playwright. The site's
+  "Copy prompt" button is auth-gated (Clerk sign-in) — if the user is signed in, use
+  it; otherwise the integration prompt template below replaces it.
 
-### Curated map (captured from the live site — start here)
+### Curated map (captured from the live site — start here, don't browse blind)
 
 | v3 component | 21st.dev reference(s) | Take / adapt |
 | --- | --- | --- |
-| Pipeline model + traces (§8.9) | `/@svg-ui/components/cpu-architecture` (animated SVG traces into a die — our exact metaphor); `/@aliimam/components/network-animation`; `/@xordev/components/nucleus` | Take the SVG trace technique; re-skin strokes to beam/phase tokens; keep xyflow as the layout engine |
-| The loupe / AI inputs (§8.17, §8.4) | `/@kokonutd/components/animated-ai-input`; `/@suraj-xd/components/claude-style-ai-input`; `/@kokonutd/components/v0-ai-chat` | Take focus/expansion ergonomics; strip gradients/dark; re-skin as sink well + beam caret |
-| CSS-3D depth / parallax cards (§2) | `/@aayush-duhan/components/card-fan-carousel`; `/@thanh/components/sticky-scroll-cards-section`; `/@ui-layouts/components/clip-path-image` | Reference for `preserve-3d` + scroll-scrub mechanics; re-time to §6 springs, flatten under reduced motion |
-| Daylight glass shelf (§8.2 glass) | `/@shatlyk1011/components/gradient-borders-button` (edge technique); visionOS refs | Frosted `paper-2` + blur only; obey the one-glass budget §9.3 |
-| Score count-up (§8.11) | `/@hextaui/components/animated-counter` | Reference only — keep `useCountUp` |
-| Backdrop light field (§2.6) | `/@kokonutd/components/beams-background`; `/@efferd/components/gradient-dots` | LOOK reference only — ours is a STATIC CSS gradient (perf §9.3), not an animated canvas |
-| Display text reveal (page titles) | `/@danielpetho/components/vertical-cut-reveal`; `/components/letter-swap` | Entry-only, ≤once/page, spring §6.1, never on data |
+| PipelineCanvas dies & traces (§8.9) | `/@svg-ui/components/cpu-architecture` (primary — animated SVG traces feeding a CPU die: our exact metaphor); `/@aliimam/components/network-animation`, `/@xordev/components/nucleus` | Take the SVG path + trace-animation technique; REPLACE its gradient strokes with beam/phase tokens; keep xyflow as the layout engine (theirs is decorative-only) |
+| The lens — AnalyzeForm / ExplorerSearch (§8.17) | `/@kokonutd/components/animated-ai-input`, `/@suraj-xd/components/claude-style-ai-input`, `/@kokonutd/components/v0-ai-chat` | Take focus/expansion ergonomics + textarea mechanics; strip their gradients/blur; re-skin as milled well + beam caret |
+| Score count-up / CostTicker digits (§8.11–12) | `/@hextaui/components/animated-counter` | Reference only — we keep `useCountUp`; steal digit-roll polish if it beats rAF count-up under reduced-motion rules |
+| Display text reveal (page titles) | `/@danielpetho/components/vertical-cut-reveal`, `/components/letter-swap` | Entry-only, ≤ once per page, spring tokens §6.1; never on data |
+| Canvas dot grid (§2.6) | `/@magicui/components/grid-pattern` | Take the SVG pattern technique; our tokens, 3% ivory |
+| Emission field look (§2.3-L2) | `/@kokonutd/components/beams-background` | LOOK reference only — theirs is an animated canvas; ours stays a static CSS radial (GPU budget §9.3) |
 
-### Integration prompt (replaces their "Copy prompt")
+### Integration prompt (pre-filled replacement for their "Copy prompt")
 
-> You are given a reference React component from 21st.dev. Integrate its TECHNIQUE — not its
-> skin — into FinResearchAI (`web/`, React 19 + Tailwind v4 + Motion v12, ZERO new deps).
-> Re-tokenize to `web/DESIGN.md` v3 "Solarium": tokens §3 only (no raw colors), type §4
-> (Instrument Sans / JetBrains Mono, opsz 16), motion §6 springs, the depth planes/stage §2,
-> One Rule §1 (depth = light+shadow+parallax; color = state; the frame is 3D, the data is flat).
-> Delete: dark surfaces, glow-on-dark, borders-as-elevation, backdrop-blur beyond the one budget,
-> any dependency not already in package.json. Add the reduced-motion flatten (§6.4) and the
-> `hover:none` fallback; pass anti-patterns §13. It must be indistinguishable from a native
-> Solarium component when done.
+When pulling any 21st.dev component, wrap its source in this prompt for the
+implementing agent:
 
-Nothing lands verbatim. 21st.dev is scaffolding for craft speed; the One Rule always wins.
+> You are given a reference React component from 21st.dev. Integrate its
+> TECHNIQUE — not its skin — into FinResearchAI (`web/`, React 19 + Tailwind v4 +
+> Motion v12). Re-tokenize completely to `web/DESIGN.md` v3 "Machined Light":
+> tokens §3 only (no raw colors), type §4 (Instrument Sans / JetBrains Mono), motion
+> §6 springs, One Rule §1 (chroma = state, glow = interaction, else graphite).
+> Delete: gradients on chrome, backdrop-blur, borders-as-elevation, any dependency
+> not already in package.json. Add reduced-motion variants per §6.4 and pass the
+> anti-pattern list §13. The component must be indistinguishable from a native v3
+> component when done.
+
+Hard rule: nothing from 21st.dev lands verbatim. It is scaffolding for craft speed;
+the One Rule always wins a conflict.

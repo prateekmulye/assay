@@ -126,6 +126,29 @@ describe("nodeStatuses", () => {
     expect(Object.values(st)).not.toContain("running");
   });
 
+  it("phase done: nodes never seen render as skipped (the verdict-cache hit)", () => {
+    // A cache-hit run serves router -> reporter only; the ten dies between
+    // them never fire. At `done` they are SKIPPED (§8.9 cached/skipped die),
+    // never eternally pending.
+    const { topology } = resolveTopology(state());
+    const s = withNodes(
+      {
+        router: node("router", { completedAt: 2000 }),
+        reporter: node("reporter", { startedAt: 2100, completedAt: 2500 }),
+      },
+      {
+        phase: "done",
+        done: { finalReport: "# r", finalDecision: null, runMetrics: [] },
+      },
+    );
+    const st = nodeStatuses(s, topology);
+    expect(st["router"]).toBe("complete");
+    expect(st["reporter"]).toBe("complete");
+    expect(st["bull"]).toBe("skipped");
+    expect(st["news_analyst"]).toBe("skipped");
+    expect(Object.values(st)).not.toContain("pending");
+  });
+
   it("phase done: a straggler that never completed halts rather than runs", () => {
     const { topology } = resolveTopology(state());
     const s = withNodes(
@@ -359,6 +382,25 @@ describe("costTotals — accumulation", () => {
     const totals = costTotals(s);
     expect(totals.totalTokens).toBe(219);
     expect(totals.latencyS).toBeCloseTo(0.214, 6);
+  });
+
+  it("counts DISTINCT reporting nodes, not metric lines (per-round repeats)", () => {
+    // A debate node emits one metric line per round; the NODES meter must
+    // still say the node reported once, or a 12-node run reads "16 nodes".
+    const s = withNodes({
+      bull: node("bull", {
+        completedAt: 2000,
+        delta: {
+          run_metrics: [
+            { node: "bull", total_tokens: 100, cost_usd: 0.001 },
+            { node: "bull", total_tokens: 120, cost_usd: 0.001 },
+          ],
+        },
+      }),
+    });
+    const totals = costTotals(s);
+    expect(totals.totalTokens).toBe(220); // both lines still SUM
+    expect(totals.nodesReporting).toBe(1); // but one node reported
   });
 
   it("returns zeroes (no NaN) when no metrics have landed", () => {

@@ -88,27 +88,24 @@ export const Cockpit = memo(function Cockpit({
   const risk = riskPanel(state, statuses);
 
   const showReveal = state.phase === "done" && state.done;
+  const verdict = state.done?.finalDecision?.action ?? null;
 
   return (
-    <div className="space-y-6">
-      {/* Pipeline canvas — the hero. Header carries the live cost ticker. */}
-      <section
-        aria-label="Agent pipeline"
-        className="panel space-y-4 rounded-xl p-4 sm:p-5"
-      >
+    <div className="space-y-8">
+      {/* The machine — the full-width causal spine (§10). The board sits
+          borderless and transparent on the bench itself; the meter strip is
+          pinned directly beneath it (§8.12). */}
+      <section aria-label="Agent pipeline" className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <span className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
-              Pipeline
-            </span>
-            <span className="font-mono text-2xs tabular-nums text-[var(--color-fg-subtle)]">
-              {topology.nodes.length} nodes · debate {mode}
-            </span>
-          </div>
-          <CostTicker state={state} replayElapsedMs={replayElapsedMs} />
+          <span className="kicker">Pipeline</span>
+          <span className="font-mono text-2xs tabular-nums text-[var(--color-fg-subtle)]">
+            {topology.nodes.length} nodes · debate {mode}
+          </span>
         </div>
 
-        <PipelineCanvas topology={topology} statuses={statuses} />
+        <PipelineCanvas topology={topology} statuses={statuses} verdict={verdict} />
+
+        <CostTicker state={state} replayElapsedMs={replayElapsedMs} />
 
         {/* The ONE polite live region. It must stay a direct child of the
             section — inside the collapsed <details> below it would be removed
@@ -120,8 +117,8 @@ export const Cockpit = memo(function Cockpit({
             complements (not competes with) the canvas. Tab order:
             Input -> Transcript -> Result. */}
         {state.order.length > 0 && (
-          <details className="group rounded-xl border border-[var(--color-line)] bg-[var(--color-surface-1)]/40">
-            <summary className="flex cursor-pointer select-none items-center gap-2 px-3.5 py-2.5 font-mono text-2xs uppercase tracking-[0.16em] text-[var(--color-fg-subtle)] marker:content-none">
+          <details className="group panel">
+            <summary className="flex cursor-pointer select-none items-center gap-2 rounded-lg px-3.5 py-2.5 font-mono text-2xs uppercase tracking-[0.16em] text-[var(--color-fg-subtle)] marker:content-none">
               <span className="transition-transform group-open:rotate-90">›</span>
               Status transcript · {state.order.length} nodes
             </summary>
@@ -132,17 +129,31 @@ export const Cockpit = memo(function Cockpit({
         )}
       </section>
 
-      {/* Intelligence panels — pure functions of the same state. */}
-      <AnalystTrio
-        news={news}
-        fundamentals={fundamentals}
-        technicals={technicals}
-      />
-      <DebateTheater panel={debate} />
-      <TradeRisk trade={trade} risk={risk} />
+      {/* The organs — the asymmetric bento (§10): trio 3×4col, then the
+          debate theater (8col) beside the trade/risk desk column (4col),
+          then First Light across all 12. */}
+      <div className="grid grid-cols-1 gap-x-2 gap-y-8 lg:grid-cols-12">
+        <div className="lg:col-span-12">
+          <AnalystTrio
+            news={news}
+            fundamentals={fundamentals}
+            technicals={technicals}
+          />
+        </div>
+        <div className="lg:col-span-8">
+          <DebateTheater panel={debate} />
+        </div>
+        <div className="lg:col-span-4">
+          <TradeRisk trade={trade} risk={risk} />
+        </div>
 
-      {/* Decision reveal — the Peak. Lands when `done` arrives. */}
-      {showReveal && <DecisionReveal done={state.done!} ticker={state.ticker} />}
+        {/* Decision reveal — the Peak. Lands when `done` arrives. */}
+        {showReveal && (
+          <div className="lg:col-span-12">
+            <DecisionReveal done={state.done!} ticker={state.ticker} />
+          </div>
+        )}
+      </div>
     </div>
   );
 });

@@ -5,9 +5,9 @@ import { type AnalysisStreamState } from "@/hooks/useAnalysisStream";
 import { cn, formatLatency } from "@/lib/utils";
 
 /**
- * LiveFeed — the VISUAL transcript only: one terminal-tile row per node as it
- * streams, completed rows fire the luminous-accent flash, the active row
- * breathes. The list is NOT a live region — token streaming mutates it many
+ * LiveFeed — the VISUAL transcript only: one hairline-separated row per node
+ * as it streams (§8.14: row rules, never boxes); completed rows fire the
+ * collision pulse. The list is NOT a live region — token streaming mutates it many
  * times per second, which would spam screen readers. Announcements live in the
  * always-mounted cockpit StatusAnnouncer instead: this transcript renders
  * inside a collapsed <details>, which removes it from the a11y tree.
@@ -34,7 +34,10 @@ export function LiveFeed({
   const alive = state.phase === "streaming" || state.phase === "connecting";
 
   return (
-    <ol aria-label="Pipeline progress" className="space-y-1.5">
+    <ol
+      aria-label="Pipeline progress"
+      className="divide-y divide-[var(--color-line)]"
+    >
       {state.order.map((nodeId) => {
         const node = state.nodes[nodeId]!;
         const done = node.completedAt != null;
@@ -48,7 +51,7 @@ export function LiveFeed({
           <li
             key={nodeId}
             className={cn(
-              "terminal-tile flex items-center gap-3 px-3.5 py-2.5",
+              "flex items-center gap-3 px-1 py-2.5",
               done && "animate-collide",
             )}
             style={{ transformOrigin: "left center" }}
@@ -91,7 +94,7 @@ export function LiveFeed({
       })}
 
       {state.phase === "connecting" && (
-        <li className="flex items-center gap-3 px-3.5 py-2.5 font-mono text-xs text-[var(--color-fg-subtle)]">
+        <li className="flex items-center gap-3 px-1 py-2.5 font-mono text-xs text-[var(--color-fg-subtle)]">
           <CircleDashed className="size-4 animate-spin" aria-hidden="true" />
           Opening stream…
         </li>

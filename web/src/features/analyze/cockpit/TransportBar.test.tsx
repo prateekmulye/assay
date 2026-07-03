@@ -1,8 +1,9 @@
 /**
- * TransportBar — the replay control surface. Asserts the scrubber is a real
- * ARIA slider with a meaningful valuetext, the speed segmented control reflects
- * + changes speed, play/pause toggles, and stage ticks render from the player.
- * The player is a hand-built stub (the real hook is covered in eventPlayer.test).
+ * TransportBar — the replay control surface (v3 tape transport, §8.13).
+ * Asserts the scrubber is a real ARIA slider with a meaningful valuetext, the
+ * single cycling speed key reflects + advances the speed (×1/×2/×4/×8),
+ * play/pause toggles, and stage ticks render from the player. The player is a
+ * hand-built stub (the real hook is covered in eventPlayer.test).
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -59,15 +60,20 @@ describe("TransportBar", () => {
     expect(screen.getByRole("button", { name: /pause replay/i })).toBeInTheDocument();
   });
 
-  it("marks the current speed as pressed and changes it on click", async () => {
+  it("shows the current speed on the cycling key and advances it on click", async () => {
     const setSpeed = vi.fn();
     render(<TransportBar player={makePlayer({ speed: 4, setSpeed })} />);
-    expect(screen.getByRole("button", { name: "4×" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await userEvent.click(screen.getByRole("button", { name: "8×" }));
-    expect(setSpeed).toHaveBeenCalledWith(8);
+    const key = screen.getByRole("button", { name: /playback speed 4/i });
+    expect(key).toHaveTextContent("4×");
+    await userEvent.click(key);
+    expect(setSpeed).toHaveBeenCalledWith(8); // ×4 -> ×8
+  });
+
+  it("cycles the speed key back to ×1 after ×8", async () => {
+    const setSpeed = vi.fn();
+    render(<TransportBar player={makePlayer({ speed: 8, setSpeed })} />);
+    await userEvent.click(screen.getByRole("button", { name: /playback speed 8/i }));
+    expect(setSpeed).toHaveBeenCalledWith(1);
   });
 
   it("steps one event on arrow keys from the slider", async () => {
@@ -98,10 +104,10 @@ describe("TransportBar", () => {
     render(
       <TransportBar player={makePlayer({ isActive: false, play, pause, setSpeed })} />,
     );
-    const speedBtn = screen.getByRole("button", { name: "8×" });
+    const speedBtn = screen.getByRole("button", { name: /playback speed 4/i });
     speedBtn.focus();
     await userEvent.keyboard(" ");
-    // Space must activate the focused button, not toggle playback.
+    // Space must activate the focused speed key, not toggle playback.
     expect(play).not.toHaveBeenCalled();
     expect(pause).not.toHaveBeenCalled();
     expect(setSpeed).toHaveBeenCalledWith(8);

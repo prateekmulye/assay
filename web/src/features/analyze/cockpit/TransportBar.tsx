@@ -1,13 +1,16 @@
 /**
- * TransportBar — the replay theater's playback control. The scrubber is not a
- * generic video bar: its track IS the pipeline timeline. Stage ticks sit at each
- * node's synthetic offset, so scrubbing reads as moving through named agent
- * stages (Gestalt continuity + the NotebookLM "visual spine" idea), and the
- * played region fills toward the verdict (Goal-Gradient).
+ * TransportBar — the TAPE TRANSPORT (DESIGN.md §8.13). Not a generic video
+ * bar: the track is a recessed channel milled into the panel (well + inverted
+ * shadow) and its ticks ARE the pipeline timeline — 2px phase-tinted marks at
+ * each node_complete, so scrubbing reads as moving through named agent stages
+ * (kept from WP-8). The played region fills toward the verdict in beam light
+ * (Goal-Gradient); the playhead is a 12px beam caret that lifts (scale 1.15)
+ * while scrubbing. Keys are machined `panel` icon buttons ≥44px; speed is ONE
+ * mono key cycling ×1/×2/×4/×8 (default ×4 — the recruiter cut).
  *
- * a11y: the track is a real ARIA slider (role=slider, valuemin/max/now, label),
- * keyboard-driven — Space toggles play, ←/→ step one event, Home/End jump to
- * ends. Speed is a segmented control (Hick's Law: 1/2/4/8, one tap each).
+ * a11y: the track is a real ARIA slider (role=slider, valuemin/max/now,
+ * label), keyboard-driven — Space toggles play, ←/→/↑/↓ step one event,
+ * Home/End jump to the ends. Seek stays a pure re-reduce.
  */
 import { Pause, Play, RotateCcw } from "lucide-react";
 import {
@@ -16,20 +19,22 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useState,
 } from "react";
 
+import { Button } from "@/components/ui/button";
 import { nodeLabel, nodePhase } from "@/features/analyze/nodeLabels";
 import { cn } from "@/lib/utils";
 
 import { REPLAY_SPEEDS, type EventPlayerControls } from "./eventPlayer";
 import { formatMs } from "./transportTime";
 
-/** Phase -> token color, so ticks are legible as the run's structure. */
+/** Phase -> tint (§8.9 phase tints), so ticks read as the run's structure. */
 const PHASE_TINT: Record<string, string> = {
   Resolve: "var(--color-beam)",
-  Analysts: "var(--color-fg-muted)",
+  Analysts: "var(--color-conservative)",
   Debate: "var(--color-hold)",
-  Trade: "var(--color-beam)",
+  Trade: "var(--color-aggressive)",
   Risk: "var(--color-aggressive)",
   Report: "var(--color-bull)",
 };
@@ -53,11 +58,17 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
 
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
+  const [scrubbing, setScrubbing] = useState(false);
 
   const toggle = useCallback(() => {
     if (isActive) pause();
     else play();
   }, [isActive, play, pause]);
+
+  const nextSpeed =
+    REPLAY_SPEEDS[
+      (REPLAY_SPEEDS.indexOf(speed) + 1) % REPLAY_SPEEDS.length
+    ]!;
 
   const seekFromClientX = useCallback(
     (clientX: number) => {
@@ -73,6 +84,7 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       draggingRef.current = true;
+      setScrubbing(true);
       e.currentTarget.setPointerCapture(e.pointerId);
       seekFromClientX(e.clientX);
     },
@@ -88,6 +100,7 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
 
   const onPointerUp = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     draggingRef.current = false;
+    setScrubbing(false);
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId);
     }
@@ -151,43 +164,34 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
 
   return (
     <div
-      className="panel flex flex-col gap-3 rounded-lg p-4 sm:flex-row sm:items-center sm:gap-4"
+      className="panel flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4"
       aria-label="Replay transport"
     >
-      {/* Play / restart cluster — the primary verbs (Fitts: big, leading). */}
+      {/* Transport keys — machined panel keys (Fitts: big, leading). */}
       <div className="flex shrink-0 items-center gap-2">
-        <button
+        <Button
+          variant="panel"
+          size="icon"
           type="button"
           onClick={toggle}
           aria-label={isActive ? "Pause replay" : "Play replay"}
           aria-pressed={isActive}
-          className={cn(
-            "flex size-11 items-center justify-center rounded-full",
-            "bg-[var(--color-beam)] text-[var(--color-key-fg)]",
-            "transition-[transform,box-shadow] duration-[120ms] ease-[var(--ease-out)]",
-            "hover:shadow-[var(--shadow-glow-beam)] active:scale-[0.94]",
-            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-beam)]",
-          )}
         >
           {isActive ? (
             <Pause className="size-5 fill-current" aria-hidden="true" />
           ) : (
             <Play className="size-5 translate-x-px fill-current" aria-hidden="true" />
           )}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="panel"
+          size="icon"
           type="button"
           onClick={restart}
           aria-label="Restart replay from the beginning"
-          className={cn(
-            "flex size-9 items-center justify-center rounded-full",
-            "text-[var(--color-fg-muted)] transition-colors duration-[120ms]",
-            "hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]",
-            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-beam)]",
-          )}
         >
           <RotateCcw className="size-4" aria-hidden="true" />
-        </button>
+        </Button>
       </div>
 
       {/* The pipeline-mapped scrubber. */}
@@ -210,20 +214,24 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
           onPointerUp={onPointerUp}
           onKeyDown={onKeyDown}
           className={cn(
-            "group relative h-9 flex-1 cursor-pointer select-none touch-none",
+            "group relative h-11 flex-1 cursor-pointer select-none touch-none",
             "focus-visible:outline-none",
           )}
         >
-          {/* Rail */}
-          <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 overflow-hidden rounded-full bg-[var(--color-surface-3)]">
-            {/* Played fill — races toward the verdict (Goal-Gradient). */}
+          {/* The recessed channel (§8.13): a well milled into the panel. */}
+          <div className="well absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 overflow-hidden rounded-full">
+            {/* Played fill — beam light racing the verdict (Goal-Gradient). */}
             <div
-              className="h-full rounded-full bg-[var(--color-beam)] transition-[width] duration-75 ease-linear group-focus-visible:bg-[var(--color-beam)]"
-              style={{ width: `${pct}%` }}
+              className="h-full rounded-full transition-[width] duration-75 ease-linear"
+              style={{
+                width: `${pct}%`,
+                background:
+                  "linear-gradient(90deg, color-mix(in oklch, var(--color-beam) 60%, transparent), var(--color-beam))",
+              }}
             />
           </div>
 
-          {/* Stage ticks — each node_complete, phase-tinted. */}
+          {/* Stage ticks — 2px phase-tinted marks at each node_complete. */}
           {durationMs > 0 &&
             stageTicks.map((t, i) => {
               const left = (t.offsetMs / durationMs) * 100;
@@ -231,22 +239,26 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
               return (
                 <span
                   key={`${t.node}-${i}`}
-                  className="pointer-events-none absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-[var(--color-base)] transition-transform"
+                  className="pointer-events-none absolute top-1/2 h-2 w-[2px] -translate-x-1/2 -translate-y-1/2 transition-colors duration-[180ms]"
                   style={{
                     left: `${left}%`,
                     background: reached
-                      ? PHASE_TINT[nodePhase(t.node)] ?? "var(--color-fg-muted)"
+                      ? (PHASE_TINT[nodePhase(t.node)] ?? "var(--color-fg-muted)")
                       : "var(--color-line-strong)",
-                    transform: `translate(-50%, -50%) scale(${reached ? 1 : 0.7})`,
                   }}
                   title={nodeLabel(t.node)}
                 />
               );
             })}
 
-          {/* Playhead thumb */}
+          {/* Playhead — the 12px beam caret; lifts while scrubbing. */}
           <span
-            className="pointer-events-none absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--color-fg)] shadow-[0_0_0_3px_var(--color-beam),0_2px_6px_oklch(0%_0_0/40%)] transition-[left] duration-75 ease-linear"
+            className={cn(
+              "pointer-events-none absolute top-1/2 h-3 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--color-beam)]",
+              "shadow-[var(--shadow-glow-beam)] transition-[left,scale] duration-75 ease-linear",
+              scrubbing && "scale-[1.15]",
+              "group-focus-visible:scale-[1.15]",
+            )}
             style={{ left: `${pct}%` }}
           />
         </div>
@@ -256,31 +268,21 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
         </span>
       </div>
 
-      {/* Speed — segmented control (Hick's Law). */}
-      <fieldset className="flex shrink-0 items-center gap-2">
-        <legend className="sr-only">Playback speed</legend>
-        <span className="font-mono text-2xs uppercase tracking-[0.16em] text-[var(--color-fg-subtle)]">
-          Speed
-        </span>
-        <div className="inline-flex items-center gap-0.5 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-1)] p-1">
-          {REPLAY_SPEEDS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              aria-pressed={speed === s}
-              onClick={() => setSpeed(s)}
-              className={cn(
-                "rounded-md px-2.5 py-1 font-mono text-2xs font-medium tabular-nums transition-colors",
-                speed === s
-                  ? "bg-[var(--color-beam)] text-[var(--color-key-fg)]"
-                  : "text-[var(--color-fg-subtle)] hover:text-[var(--color-fg-muted)]",
-              )}
-            >
-              {s}×
-            </button>
-          ))}
-        </div>
-      </fieldset>
+      {/* Speed — ONE mono key cycling ×1/×2/×4/×8 (§8.13, Hick's Law: one
+          affordance, one decision). */}
+      <div className="flex shrink-0 items-center gap-2">
+        <span className="kicker">Speed</span>
+        <Button
+          variant="panel"
+          size="sm"
+          type="button"
+          onClick={() => setSpeed(nextSpeed)}
+          aria-label={`Playback speed ${speed} times. Change to ${nextSpeed} times`}
+          className="min-w-12 font-mono tabular-nums"
+        >
+          {speed}×
+        </Button>
+      </div>
 
       {isEnded && (
         <span className="sr-only" role="status">

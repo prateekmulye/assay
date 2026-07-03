@@ -1,11 +1,10 @@
 /**
- * ConvictionGauge — a radial 0..1 gauge for the verdict reveal.
- *
- * An SVG arc whose stroke sweeps in via stroke-dashoffset (NLM: 350ms,
- * cubic-bezier(.16,1,.3,1)). The arc is tinted by the action (BUY/SELL/HOLD)
- * signal color, and the conviction percentage counts up in the center, sharing
- * the same rAF discipline as the score. Reduced-motion shows the final arc and
- * value with no sweep.
+ * ConvictionGauge — the 0..1 radial for First Light (DESIGN.md §8.11):
+ * a 120px ring, track --color-line, 6px signal-tinted stroke, BUTT caps —
+ * a machined dial, not a rounded progress toy. The sweep rides the settle
+ * spring (stroke-dashoffset); the §6.3-3 stage timing is driven by the
+ * parent flipping `active` at T+280. Reduced motion renders the final arc
+ * and value instantly.
  */
 import { useEffect, useRef } from "react";
 
@@ -20,9 +19,10 @@ const TINT: Record<Action, string> = {
   HOLD: "var(--color-hold)",
 };
 
-const R = 52;
+const SIZE = 120;
+const R = 50;
 const CIRC = 2 * Math.PI * R;
-// We draw a 270° gauge (¾ circle), leaving a gap at the bottom.
+// A 270° dial (¾ circle), gap at the bottom.
 const SWEEP = 0.75;
 const TRACK_LEN = CIRC * SWEEP;
 
@@ -33,13 +33,14 @@ export function ConvictionGauge({
 }: {
   conviction: number; // 0..1
   action: Action;
+  /** Flipped by the parent at its choreography stage (§6.3-3 T+280). */
   active: boolean;
 }) {
   const reduced = useReducedMotion();
   const arcRef = useRef<SVGCircleElement | null>(null);
   const clamped = Math.max(0, Math.min(1, conviction));
   const pct = Math.round(clamped * 100);
-  const valueRef = useCountUp(pct, { duration: 350, active });
+  const valueRef = useCountUp(pct, { duration: 700, active });
 
   useEffect(() => {
     const arc = arcRef.current;
@@ -54,45 +55,50 @@ export function ConvictionGauge({
       arc.style.strokeDashoffset = String(TRACK_LEN - filled);
       return;
     }
-    // Start empty, then sweep to filled on the next frame so the transition runs.
+    // Start empty, then sweep to filled on the next frame so the transition
+    // runs — on the settle spring (§6.1: springs animate transforms/lengths).
     arc.style.transition = "none";
     arc.style.strokeDashoffset = String(TRACK_LEN);
     const raf = requestAnimationFrame(() => {
-      arc.style.transition =
-        "stroke-dashoffset 350ms cubic-bezier(0.16, 1, 0.3, 1)";
+      arc.style.transition = "stroke-dashoffset var(--spring-settle)";
       arc.style.strokeDashoffset = String(TRACK_LEN - filled);
     });
     return () => cancelAnimationFrame(raf);
   }, [clamped, active, reduced]);
 
   return (
-    <div className="relative grid size-32 shrink-0 place-items-center">
+    <div
+      className="relative grid shrink-0 place-items-center"
+      style={{ width: SIZE, height: SIZE }}
+    >
       <svg
-        viewBox="0 0 128 128"
-        className="size-32 -rotate-[135deg]"
+        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        width={SIZE}
+        height={SIZE}
+        className="-rotate-[135deg]"
         aria-hidden="true"
       >
-        {/* track */}
+        {/* track — a hairline rule bent into a dial */}
         <circle
-          cx="64"
-          cy="64"
+          cx={SIZE / 2}
+          cy={SIZE / 2}
           r={R}
           fill="none"
-          stroke="var(--color-line-strong)"
-          strokeWidth="8"
-          strokeLinecap="round"
+          stroke="var(--color-line)"
+          strokeWidth="6"
+          strokeLinecap="butt"
           strokeDasharray={`${TRACK_LEN} ${CIRC}`}
         />
-        {/* filled arc */}
+        {/* filled arc — the verdict's signal, machined butt caps */}
         <circle
           ref={arcRef}
-          cx="64"
-          cy="64"
+          cx={SIZE / 2}
+          cy={SIZE / 2}
           r={R}
           fill="none"
           stroke={TINT[action]}
-          strokeWidth="8"
-          strokeLinecap="round"
+          strokeWidth="6"
+          strokeLinecap="butt"
           strokeDasharray={`${TRACK_LEN} ${CIRC}`}
           strokeDashoffset={TRACK_LEN}
           style={{ filter: `drop-shadow(0 0 6px ${TINT[action]})` }}
@@ -106,9 +112,7 @@ export function ConvictionGauge({
         >
           0
         </span>
-        <span className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
-          conviction
-        </span>
+        <span className="kicker">conviction</span>
       </div>
     </div>
   );

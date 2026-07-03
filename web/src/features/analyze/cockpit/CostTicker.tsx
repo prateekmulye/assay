@@ -1,41 +1,47 @@
 /**
- * CostTicker — the live cost/latency readout in the cockpit header. Cumulative
- * tokens · USD cost · elapsed, all mono + tabular so the digits never jitter as
- * they tick up. Token/cost increments are collision-driven: they advance only
- * when a node_complete metric lands (welding the number to a real event, NLM),
- * while elapsed ticks on a 1Hz clock while the run is active.
+ * CostTicker — the METER STRIP (DESIGN.md §8.12): a horizontal mono strip in
+ * a milled well, pinned under the pipeline board. A 6px beam LED leads it
+ * (breathing while streaming, unlit at done); value groups — tokens · cost ·
+ * elapsed · nodes — are separated by hairline verticals (rules, not boxes)
+ * and sit in fixed-width tabular slots so digits never reflow.
+ *
+ * Increments are COLLISION-DRIVEN (§6.3-2): a value advances only when a
+ * node_complete metric lands, and the changed group flashes to the beam for
+ * 150ms before settling to fg (fin-meter-flash, keyed remount). At `done`
+ * the strip freezes with one final flash.
  */
-import { Clock, Coins, Hash } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { AnalysisStreamState } from "@/hooks/useAnalysisStream";
-import { formatInt, formatUsd } from "@/lib/utils";
+import { cn, formatInt, formatUsd } from "@/lib/utils";
 
+import "./cockpit.css";
 import { costTotals, elapsedSeconds } from "./pipeline";
 
-function Stat({
-  icon: Icon,
+function Meter({
   label,
   value,
   flash,
+  width = "5.5ch",
 }: {
-  icon: typeof Hash;
   label: string;
   value: string;
   flash?: boolean;
+  /** Reserved value width (ch) — digits land in place, never reflow. */
+  width?: string;
 }) {
   return (
-    <div
-      className={flash ? "animate-collide" : undefined}
-      style={{ transformOrigin: "center" }}
-    >
-      <div className="flex items-center gap-1 font-mono text-2xs uppercase tracking-[0.14em] text-[var(--color-fg-subtle)]">
-        <Icon className="size-3" aria-hidden="true" />
-        {label}
-      </div>
-      <div className="font-mono text-sm font-semibold tabular-nums text-[var(--color-fg)]">
+    <div className="flex min-w-0 items-baseline gap-2 px-3 first:pl-0 sm:px-4">
+      <span className="kicker whitespace-nowrap !tracking-[0.14em]">{label}</span>
+      <span
+        className={cn(
+          "text-right font-mono text-sm font-semibold tabular-nums text-[var(--color-fg)]",
+          flash && "meter-flash",
+        )}
+        style={{ minWidth: width }}
+      >
         {value}
-      </div>
+      </span>
     </div>
   );
 }
@@ -55,6 +61,7 @@ export function CostTicker({
 }) {
   const totals = costTotals(state);
   const active = state.phase === "connecting" || state.phase === "streaming";
+  const isDone = state.phase === "done";
   const isReplay = replayElapsedMs != null;
 
   // 1Hz wall clock only while live + active, so elapsed advances without
@@ -73,35 +80,65 @@ export function CostTicker({
   // sum EXCEED the wall time, so it must never replace it.
   const wall = elapsedSeconds(state, now);
   const liveElapsed =
-    state.phase === "done" && wall < 2 && totals.latencyS > wall
-      ? totals.latencyS
-      : wall;
+    isDone && wall < 2 && totals.latencyS > wall ? totals.latencyS : wall;
   const elapsed = isReplay ? replayElapsedMs / 1000 : liveElapsed;
 
-  // Flash the token/cost stats whenever a new node reports (collision-driven).
-  // role="group", NOT a live region: the 1Hz clock would announce every second.
-  // The terminal cost summary is announced once by the StatusAnnouncer.
+  // Flash keying: a new reporting node = a collision; the phase flip to done
+  // = the final freeze flash. Remount-by-key restarts fin-meter-flash.
+  const collide = totals.nodesReporting > 0 && (active || isDone);
+  const flashKey = `${totals.nodesReporting}-${isDone}`;
+
+  // role="group", NOT a live region: the 1Hz clock would announce every
+  // second. The terminal cost summary is announced once by StatusAnnouncer.
   return (
-    <div className="flex items-center gap-5" role="group" aria-label="Run cost">
-      <Stat
-        icon={Hash}
-        label="tokens"
-        value={formatInt(totals.totalTokens)}
-        flash={active && totals.nodesReporting > 0}
-        key={`tok-${totals.nodesReporting}`}
+    <div
+      role="group"
+      aria-label="Run cost"
+      className="well flex items-center overflow-x-auto px-3.5 py-2.5 sm:px-4"
+    >
+      {/* The strip's LED (§8.12): beam + breathing while streaming; unlit at
+          done. Static beam at rest under reduced motion (index.css unwind). */}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "mr-1 size-1.5 shrink-0 rounded-full sm:mr-2",
+          active && "animate-breathe",
+        )}
+        style={{
+          background: active
+            ? "var(--color-beam)"
+            : "color-mix(in oklch, var(--color-fg-subtle) 30%, transparent)",
+          boxShadow: active ? "0 0 6px 0 var(--color-beam-dim)" : "none",
+        }}
       />
-      <Stat
-        icon={Coins}
-        label="cost"
-        value={formatUsd(totals.costUsd)}
-        flash={active && totals.nodesReporting > 0}
-        key={`cost-${totals.nodesReporting}`}
-      />
-      <Stat
-        icon={Clock}
-        label="elapsed"
-        value={`${elapsed.toFixed(elapsed < 10 ? 1 : 0)}s`}
-      />
+      <div className="flex divide-x divide-[var(--color-line)]">
+        <Meter
+          key={`tok-${flashKey}`}
+          label="tokens"
+          value={formatInt(totals.totalTokens)}
+          flash={collide}
+          width="6.5ch"
+        />
+        <Meter
+          key={`cost-${flashKey}`}
+          label="cost"
+          value={formatUsd(totals.costUsd)}
+          flash={collide}
+          width="7.5ch"
+        />
+        <Meter
+          label="elapsed"
+          value={`${elapsed.toFixed(elapsed < 10 ? 1 : 0)}s`}
+          width="5.5ch"
+        />
+        <Meter
+          key={`nodes-${flashKey}`}
+          label="nodes"
+          value={formatInt(totals.nodesReporting)}
+          flash={collide}
+          width="2.5ch"
+        />
+      </div>
     </div>
   );
 }

@@ -17,9 +17,13 @@ import {
 
 import { AnalyzePage } from "./AnalyzePage";
 
-// The cockpit pulls in xyflow/markdown — irrelevant here, stub it out.
+// The cockpit + the armed (idle) canvas pull in xyflow/markdown — irrelevant
+// here, stub them out.
 vi.mock("@/features/analyze/cockpit/Cockpit", () => ({
   Cockpit: () => <div data-testid="cockpit" />,
+}));
+vi.mock("@/features/analyze/cockpit/ArmedCanvas", () => ({
+  ArmedCanvas: () => <div data-testid="armed-canvas" />,
 }));
 
 const streamState = vi.fn<() => AnalysisStreamState>(() => initialState);
@@ -44,6 +48,29 @@ function renderPage(client: QueryClient) {
 }
 
 beforeEach(() => streamState.mockReturnValue(initialState));
+
+describe("AnalyzePage — the armed bench (§10)", () => {
+  it("renders the UNLIT pipeline as the idle empty state, swapped for the cockpit once a run exists", () => {
+    const client = new QueryClient();
+    const { rerender, getByTestId, queryByTestId } = renderPage(client);
+
+    // At rest the machine itself is the empty state — no cockpit yet.
+    expect(getByTestId("armed-canvas")).toBeInTheDocument();
+    expect(queryByTestId("cockpit")).toBeNull();
+
+    // A run begins: the cockpit takes over, the armed diagram retires.
+    streamState.mockReturnValue({ ...initialState, phase: "connecting" });
+    rerender(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <AnalyzePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(queryByTestId("armed-canvas")).toBeNull();
+    expect(getByTestId("cockpit")).toBeInTheDocument();
+  });
+});
 
 describe("AnalyzePage — quota invalidation", () => {
   it("invalidates ['quota'] when a run starts and again when it completes", () => {

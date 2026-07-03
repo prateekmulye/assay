@@ -1,9 +1,10 @@
 /**
- * TradeRisk — the trade proposal + the risk debate, the run's final
- * deliberation before the verdict. The trader's TradeProposal lands as a card;
- * the conservative and aggressive desks state opposing stances that the arbiter
- * resolves into the bridge card on the right (mirrors the debate theater's
- * opposition->synthesis shape).
+ * TradeRisk — the trade proposal + the risk debate, stacked as the bento's
+ * 4-col desk column beside the DebateTheater (DESIGN.md §10-Analyze). The
+ * causal read runs top-to-bottom: the trader sizes the call, the conservative
+ * and aggressive desks (persona filaments, §8.10) state opposing stances, and
+ * the arbiter resolves them — its bridge earning the beam edge-light on
+ * completion, mirroring the debate theater's synthesis language.
  */
 import { Flame, Scale, ShieldHalf } from "lucide-react";
 
@@ -36,6 +37,7 @@ function StanceTile({
       phase="Risk desk"
       status={status}
       accent={tint}
+      filament="always"
       flash
     >
       <div className="mb-1.5 flex items-center gap-1">
@@ -73,7 +75,7 @@ function TradeCard({ trade }: { trade: TradePanel }) {
       title="Trade proposal"
       phase="Trader"
       status={trade.status}
-      accent="var(--color-beam)"
+      accent="var(--color-aggressive)"
       flash
     >
       {settled ? (
@@ -107,37 +109,26 @@ function TradeCard({ trade }: { trade: TradePanel }) {
   );
 }
 
-function ArbiterBridge({
-  status,
-  text,
-}: {
-  status: NodeStatus;
-  text: string;
-}) {
+function ArbiterBridge({ status, text }: { status: NodeStatus; text: string }) {
   const settled = status === "complete" && text;
   return (
     <div
       className={cn(
-        "grain relative flex flex-col justify-center rounded-xl border px-4 py-3.5",
-        settled && "animate-verdict-in",
+        "panel-raised relative flex flex-col justify-center overflow-hidden px-4 py-3.5",
+        settled && "animate-rise-in",
       )}
       style={{
-        borderColor:
-          status === "complete" || status === "running"
-            ? "var(--color-beam)"
-            : "var(--color-line)",
-        background: "var(--color-surface-2)",
         boxShadow:
           status === "complete"
-            ? "0 0 0 1px var(--color-beam), 0 0 28px -10px var(--color-beam)"
-            : "none",
+            ? "inset 0 1px 0 0 var(--fin-edge-light-2), var(--shadow-panel), var(--shadow-glow-beam)"
+            : status === "running"
+              ? "inset 0 1px 0 0 var(--fin-edge-light-2), var(--shadow-panel)"
+              : undefined,
       }}
     >
       <div className="mb-1.5 flex items-center gap-1.5">
         <Scale className="size-3.5 text-[var(--color-beam)]" aria-hidden="true" />
-        <span className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
-          Arbiter resolution
-        </span>
+        <span className="kicker">Arbiter resolution</span>
       </div>
       {settled ? (
         <p className="text-xs leading-relaxed text-[var(--color-fg)]">{text}</p>
@@ -162,24 +153,30 @@ export function TradeRisk({
   risk: RiskPanel;
 }) {
   return (
-    <section aria-label="Trade and risk" className="space-y-2.5">
-      <h3 className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
-        Trade desk · risk arbitration
-      </h3>
-      <TradeCard trade={trade} />
-      <div className="grid items-stretch gap-3 lg:grid-cols-[1fr_1.1fr_1fr]">
-        <StanceTile
-          side="conservative"
-          status={risk.conservative.status}
-          text={risk.conservative.text}
-          stance={risk.conservative.stance}
-        />
-        <ArbiterBridge status={risk.arbiter.status} text={risk.arbiter.resolution ?? ""} />
-        <StanceTile
-          side="aggressive"
-          status={risk.aggressive.status}
-          text={risk.aggressive.text}
-          stance={risk.aggressive.stance}
+    <section
+      aria-label="Trade and risk"
+      className="flex h-full flex-col space-y-2.5"
+    >
+      <h3 className="kicker">Trade desk · risk arbitration</h3>
+      <div className="flex flex-1 flex-col gap-2">
+        <TradeCard trade={trade} />
+        <div className="grid flex-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+          <StanceTile
+            side="conservative"
+            status={risk.conservative.status}
+            text={risk.conservative.text}
+            stance={risk.conservative.stance}
+          />
+          <StanceTile
+            side="aggressive"
+            status={risk.aggressive.status}
+            text={risk.aggressive.text}
+            stance={risk.aggressive.stance}
+          />
+        </div>
+        <ArbiterBridge
+          status={risk.arbiter.status}
+          text={risk.arbiter.resolution ?? ""}
         />
       </div>
     </section>

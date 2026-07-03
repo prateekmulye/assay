@@ -1,0 +1,95 @@
+/*
+ * cockpit.css — Batch-2 (Analyze bench) utilities and keyframes.
+ *
+ * src/styles/index.css is the frozen foundation; everything the bench needs
+ * beyond it is defined HERE so it ships inside the lazy Analyze chunk.
+ * All values are DESIGN.md v3 "Machined Light" contract values (§2.6, §6.3,
+ * §8.9, §8.11, §8.12) — components reference tokens/classes only.
+ */
+
+:root {
+  /* §8.9: the running die's doubled milled edge (--edge-light is 8%). */
+  --fin-edge-light-2: oklch(96% 0.02 90 / 16%);
+}
+
+/* §2.6 — the milled registration dot-grid. Pipeline canvas ONLY.
+   1px dots, 24px gap, ivory at 3% (--color-line is the same ivory at 7%;
+   43% of it ≈ the contracted 3%). */
+.pipe-board {
+  background-image: radial-gradient(
+    color-mix(in oklch, var(--color-line) 43%, transparent) 1px,
+    transparent 1.5px
+  );
+  background-size: 24px 24px;
+  background-position: 12px 12px;
+}
+
+/* §8.9 — trace cooling: when a live edge settles, its stroke fades from beam
+   to the phase tint over --duration-slow (T+250 -> 850 of the Phosphor Trace). */
+.pipe-edge-cool {
+  transition:
+    stroke var(--duration-slow) var(--ease-out),
+    opacity var(--duration-slow) var(--ease-out);
+}
+
+/* §8.12 — meter strip: an increment flashes the changed value to the beam for
+   150ms, then settles back to fg. Fired ONLY at trace collisions (keyed
+   remount on nodesReporting), plus one final flash at done. */
+@keyframes fin-meter-flash {
+  from {
+    color: var(--color-beam);
+  }
+  to {
+    color: var(--color-fg);
+  }
+}
+.meter-flash {
+  animation: fin-meter-flash 150ms var(--ease-out) both;
+}
+
+/* §6.3-3 — First Light, the score bloom: at count-end the score's signal glow
+   blooms 0 -> 24px -> settles at 8px on the settle spring. --fl-tint is set
+   inline to the verdict's signal token. */
+@keyframes fin-score-bloom {
+  0% {
+    filter: drop-shadow(0 0 0 var(--fl-tint));
+  }
+  55% {
+    filter: drop-shadow(0 0 24px var(--fl-tint));
+  }
+  100% {
+    filter: drop-shadow(0 0 8px var(--fl-tint));
+  }
+}
+.fl-score-glow {
+  filter: drop-shadow(0 0 8px var(--fl-tint));
+}
+.fl-score-bloom {
+  animation: fin-score-bloom var(--spring-settle) both;
+}
+
+/* §6.3-3 — the lamp concentrates: while the page carries [data-revealing],
+   every non-cockpit surface (the command bench) dims 6% luminance. Gated to
+   no-preference: the reduced variant renders the final state with NO dimming
+   pass (§6.4). */
+.bench-dim {
+  transition: filter var(--duration-base) var(--ease-out);
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-revealing="true"] .bench-dim {
+    filter: brightness(0.94);
+  }
+}
+
+/* Reduced motion (§6.4) — the global unwind in index.css already forces every
+   animation here to its final frame instantly ('both' fill). Explicit intent
+   for the batch-2 classes: */
+@media (prefers-reduced-motion: reduce) {
+  .meter-flash,
+  .fl-score-bloom {
+    animation: none !important;
+  }
+  .pipe-edge-cool {
+    transition: none !important;
+  }
+}

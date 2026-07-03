@@ -1,11 +1,12 @@
 /**
- * DebateTheater — the centerpiece. Bull (green, left) vs Bear (red, right)
- * stream their theses; when the facilitator completes, the verdict lands as a
- * center bridge card that reads as a *synthesis* of the two columns — the
- * Climax/Resolution of the run (NLM: opposition -> convergence). The two side
- * columns are visually isolated by their signal-coloured borders (Von Restorff).
+ * DebateTheater — the centerpiece organ (DESIGN.md §8.10). Bull (left) and
+ * Bear (right) wear their persona filaments ALWAYS — the identity is the 2px
+ * top thread of signal light — and stream their theses in mono; the verdict
+ * bridge between them is graphite until the facilitator completes, when it
+ * gains the beam edge-light (interaction light, not hue). Opposition ->
+ * convergence, isolated by chroma rationing (Von Restorff).
  *
- * Debate-off collapses to a single Research Synthesis tile (same verdict slot).
+ * Debate-off collapses to a single Research Synthesis bridge (same slot).
  */
 import { ArrowDownRight, ArrowUpRight, Scale } from "lucide-react";
 
@@ -37,6 +38,7 @@ function ThesisColumn({
       phase="Researcher"
       status={status}
       accent={tint}
+      filament="always"
       flash
       className="min-h-[7.5rem]"
     >
@@ -81,28 +83,23 @@ function VerdictBridge({
   return (
     <div
       className={cn(
-        "grain relative flex flex-col justify-center rounded-xl border px-4 py-3.5",
-        settled && "animate-verdict-in",
+        "panel-raised relative flex flex-col justify-center overflow-hidden px-4 py-3.5",
+        settled && "animate-rise-in",
       )}
       style={{
-        borderColor:
-          status === "complete"
-            ? "var(--color-beam)"
-            : status === "running"
-              ? "var(--color-beam)"
-              : "var(--color-line)",
-        background: "var(--color-surface-2)",
+        // §8.10: the bridge gains a beam edge-light when the facilitator
+        // completes — emission marks the live/finished synthesis, never a hue.
         boxShadow:
           status === "complete"
-            ? "0 0 0 1px var(--color-beam), 0 0 28px -10px var(--color-beam)"
-            : "none",
+            ? "inset 0 1px 0 0 var(--fin-edge-light-2), var(--shadow-panel), var(--shadow-glow-beam)"
+            : status === "running"
+              ? "inset 0 1px 0 0 var(--fin-edge-light-2), var(--shadow-panel)"
+              : undefined,
       }}
     >
       <div className="mb-1.5 flex items-center gap-1.5">
         <Scale className="size-3.5 text-[var(--color-beam)]" aria-hidden="true" />
-        <span className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
-          {label}
-        </span>
+        <span className="kicker">{label}</span>
       </div>
       {settled ? (
         <p className="text-xs leading-relaxed text-[var(--color-fg)]">{text}</p>
@@ -123,9 +120,7 @@ export function DebateTheater({ panel }: { panel: DebatePanel }) {
   if (panel.mode === "off") {
     return (
       <section aria-label="Research synthesis" className="space-y-2.5">
-        <h3 className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
-          Research · synthesis (debate off)
-        </h3>
+        <h3 className="kicker">Research · synthesis (debate off)</h3>
         <VerdictBridge
           status={panel.verdict.status}
           text={panel.verdict.text}
@@ -137,10 +132,8 @@ export function DebateTheater({ panel }: { panel: DebatePanel }) {
 
   return (
     <section aria-label="Bull versus bear debate" className="space-y-2.5">
-      <h3 className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
-        Debate theater · bull vs bear
-      </h3>
-      <div className="grid items-stretch gap-3 lg:grid-cols-[1fr_1.1fr_1fr]">
+      <h3 className="kicker">Debate theater · bull vs bear</h3>
+      <div className="grid items-stretch gap-2 md:grid-cols-[1fr_1.1fr_1fr]">
         <ThesisColumn
           side="bull"
           status={panel.bull.status}

@@ -55,10 +55,8 @@ export function AnalystTrio({
 }) {
   return (
     <section aria-label="Analysts" className="space-y-2.5">
-      <h3 className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
-        Analysts
-      </h3>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <h3 className="kicker">Analysts · parallel intake</h3>
+      <div className="grid gap-2 sm:grid-cols-3">
         <AnalystCard panel={news} title="News" />
         <AnalystCard panel={fundamentals} title="Fundamentals" />
         <AnalystCard panel={technicals} title="Technicals" />

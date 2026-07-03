@@ -28,8 +28,10 @@ function done(overrides: Partial<AnalysisDone> = {}): AnalysisDone {
 describe("DecisionReveal", () => {
   it("renders the verdict action, rationale, and report from a done payload", () => {
     render(<DecisionReveal done={done()} ticker="AAPL" />);
-    // SignalBadge prints the action word (color is never the only signal).
-    expect(screen.getByText("BUY")).toBeInTheDocument();
+    // The action word appears at least twice (§8.11): the SignalBadge chip
+    // (glyph + word — color is never the only signal) plus the aria-hidden
+    // display word. Screen readers hear it exactly once (the badge).
+    expect(screen.getAllByText("BUY").length).toBeGreaterThanOrEqual(2);
     expect(
       screen.getByText(/Arbiter: BUY AAPL at conviction 0\.74/),
     ).toBeInTheDocument();
@@ -84,10 +86,11 @@ describe("DecisionReveal", () => {
   it("keeps aria-live off the rAF count-up span; announces only the final score", () => {
     const { container } = render(<DecisionReveal done={done()} ticker="AAPL" />);
 
-    // The rAF-mutated score span (textContent rewritten ~60fps; the text-4xl
-    // one — the gauge has its own smaller counter) must be hidden from
-    // assistive tech — a live region there announces every intermediate number.
-    const counting = container.querySelector("span.text-4xl")!;
+    // The rAF-mutated score span (textContent rewritten ~60fps; the text-6xl
+    // one — §8.11: the ONLY text-6xl in the app; the gauge has its own smaller
+    // counter) must be hidden from assistive tech — a live region there would
+    // announce every intermediate number.
+    const counting = container.querySelector("span.text-6xl")!;
     expect(counting).not.toBeNull();
     expect(counting).not.toHaveAttribute("aria-live");
     expect(counting.closest('[aria-hidden="true"]')).not.toBeNull();

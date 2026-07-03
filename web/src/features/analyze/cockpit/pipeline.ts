@@ -23,8 +23,17 @@ export type DebateTopology = "on" | "off";
 
 /** Visual lifecycle of a single pipeline node. `halted` = the run stopped
  *  (user abort / terminal phase) while this node had started but never
- *  completed — it must stop claiming "running". */
-export type NodeStatus = "pending" | "running" | "complete" | "error" | "halted";
+ *  completed — it must stop claiming "running". `skipped` = the run finished
+ *  without this node ever firing (the verdict-cache hit serves router →
+ *  reporter directly) — rendered as the §8.9 cached/skipped die (dashed
+ *  outline), never as an eternally-pending one. */
+export type NodeStatus =
+  | "pending"
+  | "running"
+  | "complete"
+  | "error"
+  | "halted"
+  | "skipped";
 
 /** A stage column in the left->right pipeline (drives the canvas grid). */
 export interface StageNode {
@@ -179,7 +188,9 @@ export function nodeStatuses(
   for (const { id } of topology.nodes) {
     const run = state.nodes[id];
     if (!run) {
-      out[id] = "pending";
+      // A clean `done` with nodes never seen = the verdict-cache hit served
+      // router -> reporter directly; those dies were SKIPPED, not pending.
+      out[id] = state.phase === "done" ? "skipped" : "pending";
     } else if (run.completedAt != null) {
       out[id] = "complete";
     } else if (errored) {
@@ -412,8 +423,13 @@ export function costTotals(state: AnalysisStreamState): CostTotals {
 function sumMetrics(metrics: ReadonlyArray<Record<string, unknown>>): CostTotals {
   let totalTokens = 0;
   let costUsd = 0;
-  let nodesReporting = 0;
   let latencyS = 0;
+  // The meter strip's NODES group must count DISTINCT nodes, not metric
+  // lines: a debate node can emit one line per round, and the terminal
+  // run_metrics repeats per-round lines — counting lines read "16 nodes" on
+  // a 12-node run. Lines without a node name fall back to line-counting.
+  const reporting = new Set<string>();
+  let anonymous = 0;
   for (const m of metrics) {
     // Prefer an explicit total_tokens; otherwise derive it from the
     // prompt/completion split (the backend's metric records carry the split,
@@ -429,12 +445,21 @@ function sumMetrics(metrics: ReadonlyArray<Record<string, unknown>>): CostTotals
           : null;
     const c = num(m?.["cost_usd"]);
     const l = num(m?.["latency_s"]);
-    if (t != null || c != null) nodesReporting += 1;
+    if (t != null || c != null) {
+      const name = m?.["node"];
+      if (typeof name === "string" && name !== "") reporting.add(name);
+      else anonymous += 1;
+    }
     if (t != null) totalTokens += t;
     if (c != null) costUsd += c;
     if (l != null) latencyS += l;
   }
-  return { totalTokens, costUsd, nodesReporting, latencyS };
+  return {
+    totalTokens,
+    costUsd,
+    nodesReporting: reporting.size + anonymous,
+    latencyS,
+  };
 }
 
 /* ------------------------------------------------------- elapsed wall time */
