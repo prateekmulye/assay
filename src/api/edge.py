@@ -81,7 +81,9 @@ def mount_spa(app: FastAPI, dist: Path) -> None:
     root = dist.resolve()
     index = root / "index.html"
 
-    @app.get("/{path:path}", include_in_schema=False)
+    # methods must include HEAD explicitly: FastAPI's @get answers HEAD with
+    # 405, and health probes / curl -I hit the SPA root with HEAD.
+    @app.api_route("/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
     async def spa(path: str) -> FileResponse:
         if path == "healthz" or path == "api" or path.startswith("api/"):
             raise HTTPException(status_code=404)

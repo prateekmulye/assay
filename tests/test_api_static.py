@@ -60,6 +60,13 @@ class TestSpaServing:
         # asset manifest.
         assert resp.headers["cache-control"] == "no-cache"
 
+    def test_head_requests_are_served(self, dist: Path) -> None:
+        # curl -I (the CI smoke) and load-balancer probes send HEAD.
+        with TestClient(create_app(web_dist=str(dist))) as client:
+            resp = client.head("/")
+        assert resp.status_code == 200
+        assert resp.headers["cache-control"] == "no-cache"
+
     def test_client_route_falls_back_to_index(self, dist: Path) -> None:
         with TestClient(create_app(web_dist=str(dist))) as client:
             resp = client.get("/library/some-run-id")
