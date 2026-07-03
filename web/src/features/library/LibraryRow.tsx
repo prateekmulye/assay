@@ -1,5 +1,5 @@
 /**
- * LibraryRow — one past run as a glass-framed terminal tile (not a table cell).
+ * LibraryRow — one past run as a panel-framed terminal tile (not a table cell).
  *
  * Reading order is deliberate (Von Restorff + Serial Position): a left verdict
  * CAP isolates the BUY/SELL/HOLD signal as the row's hero, the mono ticker is
@@ -34,7 +34,7 @@ export function LibraryRow({ run }: { run: RunSummary }) {
       aria-label={`Replay ${run.ticker} — ${fd?.action ?? "no verdict"}, ${run.status}`}
       className="group block focus-visible:outline-none"
     >
-      <div className="glass relative flex items-stretch gap-0 overflow-hidden rounded-2xl transition-[transform,box-shadow,border-color] duration-[200ms] ease-[var(--ease-spring)] group-hover:-translate-y-0.5 group-hover:shadow-[var(--shadow-raised)] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-[var(--color-accent)]">
+      <div className="panel relative flex items-stretch gap-0 overflow-hidden rounded-lg transition-[transform,box-shadow,border-color] duration-[200ms] ease-[var(--ease-out)] group-hover:-translate-y-0.5 group-hover:shadow-[var(--shadow-lifted)] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-[var(--color-beam)]">
         {/* Verdict cap — the isolated signal rail. */}
         <span
           aria-hidden="true"
@@ -79,7 +79,7 @@ export function LibraryRow({ run }: { run: RunSummary }) {
               {formatRelativeTime(run.started_at)}
             </span>
             <ChevronRight
-              className="size-4 text-[var(--color-fg-subtle)] transition-[transform,color] duration-[200ms] group-hover:translate-x-0.5 group-hover:text-[var(--color-accent)]"
+              className="size-4 text-[var(--color-fg-subtle)] transition-[transform,color] duration-[200ms] group-hover:translate-x-0.5 group-hover:text-[var(--color-fg)]"
               aria-hidden="true"
             />
           </div>

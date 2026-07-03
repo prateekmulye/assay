@@ -42,7 +42,7 @@ export function VerdictBand({ summary }: { summary: EvalSummary }) {
           2×2 and six supporting tiles, lg's 5-col bento fills exactly. */}
       <div
         className={cn(
-          "glass-strong relative col-span-2 flex flex-col justify-between overflow-hidden rounded-2xl p-5 sm:row-span-1 lg:col-span-2 lg:row-span-2",
+          "panel-raised relative col-span-2 flex flex-col justify-between overflow-hidden rounded-xl p-5 sm:row-span-1 lg:col-span-2 lg:row-span-2",
           !reduced && "animate-breathe-tile",
         )}
       >
@@ -143,7 +143,7 @@ function RateTile({
   hint: string;
 }) {
   return (
-    <div className="glass flex flex-col justify-between rounded-xl p-4">
+    <div className="panel flex flex-col justify-between rounded-xl p-4">
       <p className="font-mono text-2xs uppercase tracking-[0.16em] text-[var(--color-fg-subtle)]">
         {label}
       </p>
@@ -178,7 +178,7 @@ function DeltaTile({
   const Arrow = dir === "up" ? ArrowUpRight : dir === "down" ? ArrowDownRight : Minus;
 
   return (
-    <div className="glass flex flex-col justify-between rounded-xl p-4">
+    <div className="panel flex flex-col justify-between rounded-xl p-4">
       <p className="font-mono text-2xs uppercase tracking-[0.16em] text-[var(--color-fg-subtle)]">
         {label}
       </p>

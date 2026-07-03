@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "FinResearchAI — Glass-SaaS shell x Terminal data surfaces. Live multi-agent equity research.",
+  "description": "FinResearchAI — Machined Light: a tungsten-lit graphite instrument. Live multi-agent equity research.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -16,7 +16,7 @@
     "test:run": "vitest run"
   },
   "dependencies": {
-    "@fontsource-variable/inter": "^5.2.5",
+    "@fontsource-variable/instrument-sans": "^5.2.8",
     "@fontsource-variable/jetbrains-mono": "^5.2.5",
     "@tanstack/react-query": "^5.62.7",
     "@xyflow/react": "^12.4.4",

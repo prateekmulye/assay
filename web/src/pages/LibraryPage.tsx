@@ -154,7 +154,7 @@ export function LibraryPage() {
             <button
               type="button"
               onClick={() => void refetch()}
-              className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-accent-fg)] transition-colors hover:bg-[var(--color-accent-strong)]"
+              className="rounded-md bg-[var(--color-beam)] px-4 py-2 text-sm font-medium text-[var(--color-key-fg)] transition-[filter,box-shadow] hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]"
             >
               Retry
             </button>
@@ -171,7 +171,7 @@ export function LibraryPage() {
           >
             <Link
               to={hasFilters ? "/library" : "/"}
-              className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-accent-fg)] transition-colors hover:bg-[var(--color-accent-strong)]"
+              className="rounded-md bg-[var(--color-beam)] px-4 py-2 text-sm font-medium text-[var(--color-key-fg)] transition-[filter,box-shadow] hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]"
             >
               {hasFilters ? "Clear filters" : "Run your first analysis"}
             </Link>

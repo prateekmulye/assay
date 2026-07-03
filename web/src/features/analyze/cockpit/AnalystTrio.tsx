@@ -7,7 +7,7 @@
 import { ConfidenceChip, KeyPoints, Tile, TokenStream } from "./panelKit";
 import type { AnalystPanel } from "./pipeline";
 
-const ACCENT = "var(--color-accent)";
+const ACCENT = "var(--color-conservative)"; // analyst phase tint (§8.9): cool intake
 
 function AnalystCard({ panel, title }: { panel: AnalystPanel; title: string }) {
   const showStructured = panel.status === "complete" && panel.summary;

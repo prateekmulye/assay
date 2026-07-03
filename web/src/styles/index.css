@@ -1,117 +1,224 @@
 @import "tailwindcss";
 
-/* Self-hosted variable fonts — no CDN. Inter = UI/display, JetBrains Mono = data. */
-@import "@fontsource-variable/inter";
+/* Self-hosted variable fonts — no CDN.
+   Instrument Sans = UI/display (the v3 face), JetBrains Mono = data. */
+@import "@fontsource-variable/instrument-sans";
 @import "@fontsource-variable/jetbrains-mono";
 
-/* Dark is the only theme; we still scope under .dark for forward-compat. */
+/* Dark is the only theme (DESIGN.md §2.7); scoped under .dark for forward-compat. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* =========================================================================
-   DESIGN TOKENS — "Glass-SaaS shell x Terminal data surfaces"
-   Every token here is documented in web/DESIGN.md with usage rules.
-   Palette is OKLCH so the luminous signal glow stays perceptually uniform
-   across the blurred glass layers (NotebookLM, AAA on data strings).
+   DESIGN TOKENS — v3 "MACHINED LIGHT" (web/DESIGN.md is the contract)
+   The One Rule: color is state, light is interaction, everything else is
+   graphite. All OKLCH values below are computed-contrast facts from §3 —
+   never eyeball-adjust them in place.
    ========================================================================= */
 @theme {
-  /* ---- Type families ---- */
+  /* ---- Type families (§4.1) ---- */
   --font-sans:
-    "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    "Instrument Sans Variable", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
   --font-mono:
     "JetBrains Mono Variable", ui-monospace, "SF Mono", "Cascadia Code", monospace;
 
-  /* ---- Type scale: 1.25 Major Third, 16px base ---- */
-  --text-2xs: 0.6875rem; /* 11px — dense terminal labels */
+  /* ---- Type scale: 1.25 Major Third + display extension (§4.3) ---- */
+  --text-2xs: 0.6875rem; /* 11px — kickers, dense terminal labels (floor) */
   --text-2xs--line-height: 1rem;
-  --text-xs: 0.75rem; /* 12px — metadata, captions */
+  --text-xs: 0.75rem; /* 12px — metadata, captions, table cells */
   --text-xs--line-height: 1.1rem;
   --text-sm: 0.875rem; /* 14px — UI default / nav */
   --text-sm--line-height: 1.4rem;
   --text-base: 1rem; /* 16px — body floor */
   --text-base--line-height: 1.55rem;
-  --text-lg: 1.25rem;
-  --text-lg--line-height: 1.7rem;
-  --text-xl: 1.5625rem;
+  --text-lg: 1.25rem; /* panel titles */
+  --text-lg--line-height: 1.6875rem;
+  --text-xl: 1.5625rem; /* section titles */
   --text-xl--line-height: 1.9rem;
-  --text-2xl: 1.953rem;
+  --text-2xl: 1.953rem; /* sub-hero */
   --text-2xl--line-height: 2.25rem;
-  --text-3xl: 2.441rem;
+  --text-3xl: 2.441rem; /* page titles */
   --text-3xl--line-height: 2.6rem;
-  --text-4xl: 3.052rem;
+  --text-4xl: 3.052rem; /* large display */
   --text-4xl--line-height: 3.1rem;
+  --text-5xl: 3.8125rem; /* hero display, dossier price */
+  --text-5xl--line-height: 3.8125rem;
+  --text-6xl: 4.75rem; /* the decision score numeral. Nothing else. (§13.13) */
+  --text-6xl--line-height: 4.75rem;
 
-  /* ---- Base surfaces (asphalt blue-black, 4-step elevation) ---- */
-  --color-base: oklch(12% 0.015 260); /* page background */
-  --color-surface-1: oklch(15.5% 0.016 260); /* resting card */
-  --color-surface-2: oklch(19% 0.018 260); /* raised card / input */
-  --color-surface-3: oklch(24% 0.02 260); /* popover / active row */
-  --color-line: oklch(100% 0 0 / 8%); /* hairline divider */
-  --color-line-strong: oklch(100% 0 0 / 14%);
+  /* ---- Graphite surfaces (§3.1) — warm cast hue 75; do not drift cooler ---- */
+  --color-base: oklch(11% 0.006 75); /* the bench */
+  --color-surface-1: oklch(14.5% 0.007 75); /* resting panel */
+  --color-surface-2: oklch(18% 0.008 75); /* raised panel, hover rows, dies */
+  --color-surface-3: oklch(22.5% 0.009 75); /* overlay panes, tooltips, active rows */
+  --color-well: oklch(9% 0.005 75); /* sunken inputs, recessed tracks */
+  --color-line: oklch(96% 0.02 90 / 7%); /* hairline rules — never boxes */
+  --color-line-strong: oklch(96% 0.02 90 / 13%);
 
-  /* ---- Glass (the SaaS shell) ---- */
-  --color-glass: oklch(100% 0 0 / 5%); /* glass fill */
-  --color-glass-strong: oklch(100% 0 0 / 8%); /* nav / floating glass */
-  --color-glass-border: oklch(100% 0 0 / 12%);
+  /* ---- Text (§3.2) — warm ivory, tuned for dark ---- */
+  --color-fg: oklch(94.5% 0.012 90); /* AAA — primary text, ALL data values */
+  --color-fg-muted: oklch(76% 0.014 90); /* AAA — secondary, prose, streams */
+  --color-fg-subtle: oklch(62% 0.012 90); /* AA — kickers, metadata; never data */
 
-  /* ---- Text ---- */
-  --color-fg: oklch(96% 0.008 260); /* primary, >12:1 on base */
-  --color-fg-muted: oklch(74% 0.012 260); /* secondary */
-  --color-fg-subtle: oklch(58% 0.012 260); /* tertiary / disabled */
+  /* ---- The Beam (§3.3) — achromatic interaction light. No chromatic accent. */
+  --color-beam: oklch(97% 0.01 90);
+  --color-beam-dim: oklch(97% 0.01 90 / 20%);
+  --color-key-fg: oklch(14.5% 0.01 75); /* text/icons on beam fills */
 
-  /* ---- Functional accent (azure): links, focus ring, caret, active signal ---- */
-  --color-accent: oklch(70% 0.13 245);
-  --color-accent-strong: oklch(78% 0.14 245);
-  --color-accent-fg: oklch(16% 0.03 260); /* text on accent fills */
+  /* ---- Signal colors (§3.4) — the ONLY chroma; all AAA as text ---- */
+  --color-bull: oklch(74% 0.16 150); /* BUY · bull · positive · healthy · done */
+  --color-bull-dim: oklch(74% 0.16 150 / 12%);
+  --color-bear: oklch(72% 0.17 25); /* SELL · bear · negative · error */
+  --color-bear-dim: oklch(72% 0.17 25 / 13%);
+  --color-hold: oklch(80% 0.14 80); /* HOLD · warn · degraded · replay-only */
+  --color-hold-dim: oklch(80% 0.14 80 / 12%);
+  --color-conservative: oklch(72% 0.09 235); /* the only cool hue on screen */
+  --color-conservative-dim: oklch(72% 0.09 235 / 12%);
+  --color-aggressive: oklch(73% 0.14 55); /* hot, risk-on */
+  --color-aggressive-dim: oklch(73% 0.14 55 / 12%);
 
-  /* ---- Signal colors (Bloomberg energy) — meaning-bearing, AAA on base ----
-     Reused across both the decision verdict and the live debate personas. */
-  --color-bull: oklch(72% 0.15 152); /* BUY / bull / positive / healthy */
-  --color-bull-dim: oklch(72% 0.15 152 / 14%);
-  --color-bear: oklch(64% 0.19 22); /* SELL / bear / negative */
-  --color-bear-dim: oklch(64% 0.19 22 / 16%);
-  --color-hold: oklch(80% 0.15 78); /* HOLD / amber / warn / degraded */
-  --color-hold-dim: oklch(80% 0.15 78 / 14%);
+  /* ---- Radius (§5) — machined; 2xl is deleted, the soft-glass silhouette is gone */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px; /* buttons, inputs, dies, chips */
+  --radius-lg: 12px; /* panels */
+  --radius-xl: 16px; /* hero panels, lifted panes */
+  --radius-2xl: initial;
+  --radius-3xl: initial;
+  --radius-4xl: initial;
 
-  /* Persona tints for the risk debate */
-  --color-conservative: oklch(70% 0.1 230); /* cool, measured */
-  --color-aggressive: oklch(74% 0.16 35); /* hot, risk-on */
+  /* ---- Elevation (§5) — light from above: edge-light rim + ambient + key ---- */
+  --shadow-panel:
+    inset 0 1px 0 0 oklch(96% 0.02 90 / 8%), 0 1px 2px oklch(0% 0 0 / 28%),
+    0 10px 28px -14px oklch(0% 0 0 / 50%);
+  --shadow-lifted:
+    inset 0 1px 0 0 oklch(96% 0.02 90 / 8%), 0 2px 4px oklch(0% 0 0 / 32%),
+    0 24px 56px -20px oklch(0% 0 0 / 60%);
+  --shadow-well:
+    inset 0 1px 3px oklch(0% 0 0 / 40%), inset 0 0 0 1px oklch(96% 0.02 90 / 7%);
+  --shadow-glow-beam:
+    0 0 0 1px oklch(97% 0.01 90 / 30%), 0 0 20px -4px oklch(97% 0.01 90 / 30%);
+  --shadow-glow-bull:
+    0 0 0 1px oklch(74% 0.16 150 / 35%), 0 0 20px -4px oklch(74% 0.16 150 / 35%);
+  --shadow-glow-bear:
+    0 0 0 1px oklch(72% 0.17 25 / 35%), 0 0 20px -4px oklch(72% 0.17 25 / 35%);
+  --shadow-glow-hold:
+    0 0 0 1px oklch(80% 0.14 80 / 30%), 0 0 20px -4px oklch(80% 0.14 80 / 30%);
 
-  /* ---- Radius scale ---- */
-  --radius-xs: 0.25rem;
-  --radius-sm: 0.375rem;
-  --radius-md: 0.625rem;
-  --radius-lg: 0.875rem;
-  --radius-xl: 1.25rem;
-  --radius-2xl: 1.75rem;
-
-  /* ---- Blur scale (glass depth) ---- */
-  --blur-glass: 16px; /* standard shell glass */
-  --blur-glass-strong: 28px; /* floating nav / modal */
-
-  /* ---- Elevation (soft, colored-by-base, never pure black) ---- */
-  --shadow-glass:
-    0 1px 0 0 oklch(100% 0 0 / 6%) inset, 0 8px 24px -12px oklch(0% 0 0 / 55%);
-  --shadow-raised:
-    0 1px 0 0 oklch(100% 0 0 / 4%) inset, 0 16px 40px -20px oklch(0% 0 0 / 60%);
-  --shadow-glow-accent:
-    0 0 0 1px oklch(70% 0.13 245 / 40%), 0 0 24px -4px oklch(70% 0.13 245 / 35%);
-
-  /* ---- Motion: durations + easings (shared "physics" language) ---- */
-  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1); /* glass settle / drawer */
+  /* ---- Motion (§6.1) — springs animate transforms; eases animate opacity/color */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --duration-micro: 120ms; /* hover / press (< Doherty 50ms perception start) */
-  --duration-fast: 200ms; /* the SSE "luminous accent" flash */
-  --duration-base: 320ms; /* page + card transitions (< 400ms Doherty) */
-  --duration-slow: 600ms; /* onion-peel drawer reveal */
+  --duration-micro: 100ms; /* hover / press feedback */
+  --duration-fast: 180ms; /* LED / filament changes */
+  --duration-base: 280ms; /* page / panel fades */
+  --duration-slow: 520ms; /* emission ramps, trace cooling */
 }
 
-/* Motion spring used by JS (Motion lib) mirrors the CSS easing language.
-   Exposed as plain CSS vars so JS can read them for a single source of truth. */
+/* Non-Tailwind-namespace tokens: declared on :root so they are guaranteed
+   to exist at runtime for var() references in components and utilities. */
 :root {
-  --spring-stiffness: 150;
-  --spring-damping: 15;
-  --spring-mass: 0.1;
+  /* The milled edge — the lamp catching the top rim of raised surfaces (§2.1). */
+  --edge-light: oklch(96% 0.02 90 / 8%);
+
+  /* Spring tokens (§6.1) — LITERAL strings generated from this repo's motion@12
+     `String(spring(visualDuration, bounce))`. Regenerate, never hand-edit.
+     Each value is "<duration> <linear-easing>" — usable directly in
+     transition/animation shorthands. */
+  --spring-press: 400ms
+    linear(
+      0,
+      0.2531,
+      0.5773,
+      0.7868,
+      0.8991,
+      0.9541,
+      0.9797,
+      0.9912,
+      0.9963,
+      0.9984,
+      0.9993,
+      1,
+      1
+    );
+  --spring-settle: 800ms
+    linear(
+      0,
+      0.0523,
+      0.1708,
+      0.314,
+      0.4571,
+      0.5866,
+      0.6963,
+      0.7848,
+      0.8534,
+      0.9047,
+      0.9416,
+      0.9673,
+      0.9843,
+      0.9951,
+      1.0014,
+      1.0047,
+      1.0061,
+      1.0062,
+      1.0057,
+      1.0049,
+      1.004,
+      1.0031,
+      1.0023,
+      1.0017,
+      1.0012,
+      1.0008,
+      1
+    );
+  --spring-reveal: 1150ms
+    linear(
+      0,
+      0.0241,
+      0.086,
+      0.1721,
+      0.2716,
+      0.376,
+      0.4793,
+      0.577,
+      0.6662,
+      0.7454,
+      0.8136,
+      0.871,
+      0.9179,
+      0.9552,
+      0.984,
+      1.0053,
+      1.0203,
+      1.0301,
+      1.0358,
+      1.0382,
+      1.0381,
+      1.0364,
+      1.0334,
+      1.0298,
+      1.0259,
+      1.0219,
+      1.018,
+      1.0144,
+      1.0112,
+      1.0083,
+      1.0059,
+      1.004,
+      1.0024,
+      1.0011,
+      1.0001,
+      0.9995,
+      0.999,
+      1
+    );
+
+  /* Z-index scale (§5) — tokenized, no ad-hoc values. */
+  --z-content: 0;
+  --z-rail: 40;
+  --z-pane-scrim: 50;
+  --z-pane: 51;
+  --z-toast: 60;
+  --z-grain: 9999;
 }
 
 /* =========================================================================
@@ -135,33 +242,37 @@
     font-family: var(--font-sans);
     font-size: var(--text-base);
     line-height: var(--text-base--line-height);
-    font-feature-settings: "cv11", "ss01";
+    /* Type tuned for dark (§4.2): body 450 — text blooms on these surfaces. */
+    font-weight: 450;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
 
-  /* All numerics line up: tabular figures kill horizontal jitter on SSE feeds. */
+  /* All numerics line up: tabular figures kill horizontal jitter on SSE feeds.
+     Mono tracking is ALWAYS 0 (§4.4). */
   .font-mono,
   code,
   kbd,
   samp {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum", "zero";
+    letter-spacing: 0;
   }
 
-  /* Visible, on-brand focus ring everywhere (WCAG 2.4.7) */
+  /* Focus reads as illumination (§9.1): beam ring + glow, never removed. */
   :focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-beam);
     outline-offset: 2px;
     border-radius: var(--radius-xs);
+    box-shadow: var(--shadow-glow-beam);
   }
 
   ::selection {
-    background: oklch(70% 0.13 245 / 35%);
+    background: var(--color-beam-dim);
     color: var(--color-fg);
   }
 
-  /* Thin, glassy scrollbars to match the shell */
+  /* Thin machined scrollbars */
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--color-line-strong) transparent;
@@ -179,57 +290,137 @@
 }
 
 /* =========================================================================
-   COMPONENT UTILITIES (the glass + terminal primitives)
+   COMPONENT UTILITIES — the machined-graphite primitives
    ========================================================================= */
 @layer components {
-  /* Glass panel — the SaaS shell surface. Onion-peel containers compose on top. */
-  .glass {
-    background: var(--color-glass);
-    backdrop-filter: blur(var(--blur-glass)) saturate(1.4);
-    -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(1.4);
-    border: 1px solid var(--color-glass-border);
-    box-shadow: var(--shadow-glass);
+  /* Panel (§8.2): elevation = luminance + milled edge + layered shadow.
+     NO border — borders-as-containment are abolished (§13.3). */
+  .panel {
+    background: var(--color-surface-1);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-panel);
   }
-  .glass-strong {
-    background: var(--color-glass-strong);
-    backdrop-filter: blur(var(--blur-glass-strong)) saturate(1.5);
-    -webkit-backdrop-filter: blur(var(--blur-glass-strong)) saturate(1.5);
-    border: 1px solid var(--color-glass-border);
+  .panel-raised {
+    background: var(--color-surface-2);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-panel);
   }
 
-  /* Terminal tile — the dense data surface that lives INSIDE a glass frame.
-     Subtle inner rule + mono context. Restrict backdrop-filter to the shell;
-     tiles stay flat for GPU budget. */
+  /* Well (§2.1/§8.4): sunken below its panel — the shadow inverts because
+     the light comes from above. */
+  .well {
+    background: var(--color-well);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-well);
+  }
+
+  /* Bench rule (§8.7): a full-width hairline carrying a 24px beam lit tick at
+     the content left edge. The v3 signature detail — PageHeader only. */
+  .bench-rule {
+    position: relative;
+    height: 1px;
+    background: var(--color-line);
+  }
+  .bench-rule::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 24px;
+    height: 1px;
+    background: var(--color-beam);
+    box-shadow: 0 0 8px 0 var(--color-beam-dim);
+  }
+
+  /* Kicker (§4.4): the recurring instrument label. May take --color-beam
+     ONLY when labeling a live region. Never a signal color (§13.13). */
+  .kicker {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    line-height: var(--text-2xs--line-height);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--color-fg-subtle);
+  }
+
+  /* Display luminance mask (§4.4) — "lit from above". The ONE permitted
+     gradient on text; hue gradients are banned. */
+  .display-lit {
+    background: linear-gradient(180deg, var(--color-fg), oklch(76% 0.014 90));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Atmosphere L1 (§2.3): the bench light — one fixed, static radial field.
+     Replaces the v2 aurora. */
+  .bench-light {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-color: var(--color-base);
+    background-image: radial-gradient(
+      120% 90% at 50% -10%,
+      oklch(96% 0.02 90 / 5%),
+      transparent 55%
+    );
+  }
+
+  /* Atmosphere L2 (§2.3): the live emission field — exists visually only while
+     a run is live ([data-live="true"] on the shell). Ramps 600ms on ignition. */
+  .emission-field {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 600ms var(--ease-out);
+    background-image: radial-gradient(
+      80% 60% at 50% 30%,
+      oklch(97% 0.01 90 / 4%),
+      transparent 60%
+    );
+  }
+  [data-live="true"] .emission-field {
+    opacity: 1;
+  }
+
+  /* Wordmark cursor (§8.1): solid at rest, blinking only while data-live —
+     brand ties to liveness. Static under reduced motion. */
+  [data-live="true"] .wm-cursor {
+    animation: fin-caret-blink 1.1s steps(2, jump-none) infinite;
+  }
+
+  /* Terminal tile — dense mono data surface used inside panels (kept from v2,
+     re-tokened: milled edge + shadow instead of a border box). */
   .terminal-tile {
     background: var(--color-surface-1);
-    border: 1px solid var(--color-line);
     border-radius: var(--radius-md);
+    box-shadow: var(--shadow-panel);
     font-family: var(--font-mono);
   }
 
   /* --------------------------------------------------------------------- */
-  /* COCKPIT (WP-7) — pipeline canvas, panels, reveal                       */
+  /* COCKPIT — pipeline canvas, panels, reveal                              */
   /* --------------------------------------------------------------------- */
 
-  /* A pipeline node on the xyflow canvas. Pre-sized so the graph never
-     reflows mid-run (no CLS — NLM). Only transform/opacity animate. */
+  /* A pipeline die on the xyflow canvas. Pre-sized so the graph never
+     reflows mid-run (no CLS). Only transform/opacity/shadow animate. */
   .pipe-node {
     contain: layout style;
     will-change: transform, opacity;
     transition:
-      border-color var(--duration-base) var(--ease-spring),
-      box-shadow var(--duration-base) var(--ease-spring),
-      opacity var(--duration-base) var(--ease-spring);
+      border-color var(--duration-base) var(--ease-out),
+      box-shadow var(--duration-base) var(--ease-out),
+      opacity var(--duration-base) var(--ease-out);
   }
 
-  /* The luminous-edge SVG paths between nodes keep a crisp 1px stroke at any
-     zoom and never repaint on layout. */
+  /* Edge paths keep a crisp 1px stroke at any zoom, never repaint on layout. */
   .pipe-edge {
     vector-effect: non-scaling-stroke;
   }
 
-  /* Auto-scrolling token stream: older lines fade out at the top via a mask,
-     so the eye stays on the freshest text without a hard cutoff. */
+  /* Auto-scrolling token stream: older lines fade at the top via a mask. */
   .token-stream {
     -webkit-mask-image: linear-gradient(
       to bottom,
@@ -245,7 +436,8 @@
     );
   }
 
-  /* Editorial typography for the rendered markdown report (DESIGN.md §3). */
+  /* Editorial typography for the rendered markdown report. Links follow §3.3:
+     ivory text, hairline underline that turns to beam on hover — never hue. */
   .report-prose {
     color: var(--color-fg-muted);
     font-size: var(--text-base);
@@ -280,8 +472,14 @@
     font-weight: 600;
   }
   .report-prose a {
-    color: var(--color-accent);
+    color: var(--color-fg);
+    text-decoration: underline;
+    text-decoration-color: var(--color-line-strong);
     text-underline-offset: 2px;
+    transition: text-decoration-color var(--duration-micro) var(--ease-out);
+  }
+  .report-prose a:hover {
+    text-decoration-color: var(--color-beam);
   }
   .report-prose ul,
   .report-prose ol {
@@ -302,6 +500,7 @@
     border-top: 1px solid var(--color-line);
     margin: 1.6em 0;
   }
+  /* Tables are borderless (§8.14): row hairlines only, no cell boxes. */
   .report-prose table {
     width: 100%;
     border-collapse: collapse;
@@ -311,63 +510,52 @@
   }
   .report-prose th,
   .report-prose td {
-    border: 1px solid var(--color-line);
-    padding: 0.4em 0.6em;
+    border: 0;
+    border-bottom: 1px solid var(--color-line);
+    padding: 0.5em 0.75em 0.5em 0;
     text-align: left;
   }
   .report-prose th {
-    color: var(--color-fg);
-    background: var(--color-surface-1);
+    color: var(--color-fg-subtle);
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
   }
 
-  /* The texture glue: one fixed fractal-noise overlay over the whole app.
-     ~3.5% opacity reads as CRT phosphor + paper, never as visible static. */
+  /* The machined skin: one fixed Diffuse-Surface-Map overlay (§7) — the grain
+     reads as a milled bump map under the declared lamp. STATIC, never animated. */
   .grain::after {
     content: "";
     position: fixed;
     inset: 0;
-    z-index: 9999;
+    z-index: var(--z-grain);
     pointer-events: none;
     opacity: 0.035;
     filter: url(#fin-grain);
-    /* feTurbulence fills via the filter; a transparent box is enough to sample. */
     background: transparent;
     mix-blend-mode: overlay;
   }
 }
 
 /* =========================================================================
-   KEYFRAMES — referenced by the shell + future cockpit
+   KEYFRAMES (§6.3 / §11)
    ========================================================================= */
+
+/* Breathing (§6.3-5): the live element. Exactly one per region. */
 @keyframes fin-breathe {
   0%,
   100% {
-    opacity: 0.8;
+    opacity: 0.85;
     transform: scale(1);
   }
   50% {
     opacity: 1;
-    transform: scale(1.05);
+    transform: scale(1.04);
   }
 }
 
-/* The SSE "Luminous Accent": load-before-release dip then snappy pulse.
-   Used when a node_complete lands on its pipeline node. */
-@keyframes fin-accent-flash {
-  0% {
-    transform: scale(0.95);
-  }
-  60% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-/* Hero-tile breathing (WP-10 verdict band): a very gentle scale-only oscillation
-   that signals "this is the live feed" WITHOUT the opacity dip of fin-breathe
-   (content must stay fully legible). Von Restorff isolation by motion. */
+/* Hero-tile breathing: scale-only so content stays fully legible. */
 @keyframes fin-breathe-tile {
   0%,
   100% {
@@ -378,24 +566,32 @@
   }
 }
 
-@keyframes fin-aurora {
+/* Collision (§6.3-2, was fin-accent-flash): anticipation dip → pulse → settle.
+   Fired when a Phosphor Trace lands on its die. */
+@keyframes fin-collide {
   0% {
-    transform: translate3d(0, 0, 0) rotate(0deg);
+    transform: scale(0.97);
+  }
+  60% {
+    transform: scale(1.06);
   }
   100% {
-    transform: translate3d(0, 0, 0) rotate(360deg);
+    transform: scale(1);
   }
 }
 
-@keyframes fin-marching-ants {
+/* Block-caret blink (§8.1): hard on/off via steps(2, jump-none) — a machine
+   cursor, not a fade. */
+@keyframes fin-caret-blink {
+  from {
+    opacity: 1;
+  }
   to {
-    stroke-dashoffset: -16;
+    opacity: 0;
   }
 }
 
-/* Traveling signal: a luminous dot crawling an edge from source to target
-   while data flows (NLM — welds motion to causality). Driven via offset-path
-   on the edge geometry; here we animate the 0->1 offset-distance. */
+/* Phosphor Trace flight: a white-hot beam dot crawling an edge (offset-path). */
 @keyframes fin-signal-travel {
   from {
     offset-distance: 0%;
@@ -413,41 +609,51 @@
   }
 }
 
-/* Live edge "marching ants": continuous dash crawl indicating an open SSE
-   flow across that edge. */
+/* Live edge dash-flow: an open SSE stream across that edge. */
 @keyframes fin-edge-flow {
   to {
     stroke-dashoffset: -24;
   }
 }
 
-/* The verdict reveal: a restrained materialization (Peak-End). Scale up from
-   0.92 with a brief settle — no bounce kitsch. */
-@keyframes fin-verdict-in {
+/* Decision reveal — transform and opacity ride SEPARATE tracks so the spring
+   never animates opacity (§13.6). */
+@keyframes fin-verdict-in-transform {
   from {
-    opacity: 0;
     transform: scale(0.92) translateY(8px);
   }
   to {
-    opacity: 1;
     transform: scale(1) translateY(0);
   }
 }
-
-/* Word-stream materialization: evidence lines rise into place (NLM). */
-@keyframes fin-rise-in {
+@keyframes fin-verdict-in-fade {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
-/* Glass shimmer for loading skeletons: a soft highlight sweeps the surface,
-   reading as "data inbound" without the harsh blink of opacity-pulse. */
+/* Evidence lines rise into place. */
+@keyframes fin-rise-in-transform {
+  from {
+    transform: translateY(8px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes fin-rise-in-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Skeleton shimmer (§6.3-6): a luminance sweep — never opacity-pulse (§13.7). */
 @keyframes fin-shimmer {
   from {
     background-position: 200% 0;
@@ -464,14 +670,21 @@
   animation: fin-breathe-tile 3200ms var(--ease-in-out) infinite;
   will-change: transform;
 }
-.animate-accent-flash {
-  animation: fin-accent-flash var(--duration-fast) var(--ease-spring);
+.animate-collide {
+  animation: fin-collide var(--spring-settle) both;
+}
+.animate-caret-blink {
+  animation: fin-caret-blink 1.1s steps(2, jump-none) infinite;
 }
 .animate-verdict-in {
-  animation: fin-verdict-in 360ms var(--ease-spring) both;
+  animation:
+    fin-verdict-in-transform var(--spring-reveal) both,
+    fin-verdict-in-fade var(--duration-base) var(--ease-out) both;
 }
 .animate-rise-in {
-  animation: fin-rise-in 320ms var(--ease-spring) both;
+  animation:
+    fin-rise-in-transform var(--spring-settle) both,
+    fin-rise-in-fade var(--duration-base) var(--ease-out) both;
 }
 .animate-signal-travel {
   animation: fin-signal-travel 900ms linear infinite;
@@ -484,7 +697,7 @@
   background-image: linear-gradient(
     100deg,
     transparent 30%,
-    oklch(100% 0 0 / 7%) 50%,
+    oklch(96% 0.02 90 / 6%) 50%,
     transparent 70%
   );
   background-size: 200% 100%;
@@ -492,7 +705,7 @@
 }
 
 /* =========================================================================
-   REDUCED MOTION — global unwind (WCAG 2.3.3 / vestibular safety)
+   REDUCED MOTION (§6.4) — meaningful degradation, not "off"
    ========================================================================= */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -505,17 +718,40 @@
   }
   .animate-breathe,
   .animate-breathe-tile,
-  .animate-accent-flash,
+  .animate-collide,
+  .animate-caret-blink,
   .animate-signal-travel,
   .animate-shimmer,
-  .edge-flow {
+  .edge-flow,
+  [data-live="true"] .wm-cursor {
     animation: none !important;
   }
-  /* Reveals must still END in their final state, just instantly — no motion. */
+  /* Skeletons degrade to a flat surface — no sweep (§6.4). */
+  .animate-shimmer {
+    background-image: none !important;
+  }
+  /* Reveals still END in their final state, just instantly. */
   .animate-verdict-in,
   .animate-rise-in {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+  }
+  /* Power-Up: the emission field appears instantly at 60% strength (§6.4). */
+  .emission-field {
+    transition: none !important;
+  }
+  [data-live="true"] .emission-field {
+    opacity: 0.6;
+  }
+}
+
+/* =========================================================================
+   HIGH CONTRAST (§9.2)
+   ========================================================================= */
+@media (prefers-contrast: more) {
+  :root {
+    --color-line: oklch(96% 0.02 90 / 13%);
+    --color-fg-subtle: oklch(70% 0.012 90);
   }
 }

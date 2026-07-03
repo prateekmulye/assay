@@ -3,7 +3,8 @@ import { AlertTriangle, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router";
 
-import { GlassCard } from "@/components/ui/glass-card";
+import { useReportShellLive } from "@/components/shell/live";
+import { Panel } from "@/components/ui/panel";
 import { PageHeader } from "@/components/ui/page-header";
 import { AnalyzeForm } from "@/features/analyze/AnalyzeForm";
 import { Cockpit } from "@/features/analyze/cockpit/Cockpit";
@@ -20,6 +21,9 @@ import type { DebateMode } from "@/lib/api";
  */
 export function AnalyzePage() {
   const { state, isActive, start, stop } = useAnalysisStream();
+  // The shell's data-live seam (§2.3/§8.1): the emission field ramps and the
+  // Wordmark cursor blinks exactly while a run is live.
+  useReportShellLive(isActive);
   // The debate mode the user explicitly requested for the CURRENT run — lets
   // the cockpit lay out the right topology from t=0 (null = server default).
   const [modeHint, setModeHint] = useState<DebateMode | null>(null);
@@ -52,16 +56,11 @@ export function AnalyzePage() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Live multi-agent research"
-        title={
-          <>
-            Run a verdict in{" "}
-            <span className="text-[var(--color-accent)]">real time</span>.
-          </>
-        }
+        title="Run a verdict in real time."
         description="Enter a ticker and watch a 12-node agent graph resolve it into a BUY / SELL / HOLD call — streaming each analyst, the bull-bear debate, the trader, and the risk arbiter as they decide, with live cost and latency."
       />
 
-      <GlassCard>
+      <Panel>
         <AnalyzeForm
           initialTicker={prefillTicker}
           onSubmit={(v) => {
@@ -76,7 +75,7 @@ export function AnalyzePage() {
           isActive={isActive}
           disabled={state.phase === "connecting"}
         />
-      </GlassCard>
+      </Panel>
 
       {/* Quota refusal — a designed steer to replays, never a dead wall. */}
       {quotaBlocked && <QuotaBlocked />}
@@ -85,7 +84,7 @@ export function AnalyzePage() {
       {hardError && state.error && (
         <div
           role="alert"
-          className="flex items-start gap-3 rounded-2xl border px-5 py-4"
+          className="flex items-start gap-3 rounded-lg border px-5 py-4"
           style={{
             borderColor: "var(--color-bear)",
             background: "var(--color-bear-dim)",
@@ -114,7 +113,7 @@ export function AnalyzePage() {
         !quotaBlocked && (
           <div className="flex items-center gap-2 px-1 text-sm text-[var(--color-fg-subtle)]">
             <Sparkles
-              className="size-4 text-[var(--color-accent)]"
+              className="size-4 text-[var(--color-fg-subtle)]"
               aria-hidden="true"
             />
             The agent graph streams here the moment you run an analysis.

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#0a0c12" />
+    <meta name="theme-color" content="#050403" />
     <meta
       name="description"
       content="FinResearchAI — live multi-agent equity research. A 12-node LangGraph pipeline streams a BUY/SELL/HOLD verdict with conviction, cost, and latency in real time."
@@ -13,9 +13,10 @@
   </head>
   <body>
     <!--
-      Programmatic Organic Imperfection ("texture glue"): a single fixed
-      fractal-noise filter is referenced by the app surface in CSS. Defining it
-      once here keeps it out of the React tree and lets the GPU cache it.
+      Diffuse Surface Map (DESIGN.md §7): fractal noise passed through a
+      lighting pass so the grain reads as a milled bump map under the app's
+      single declared lamp (azimuth 250, elevation 62 — above, 10° left).
+      Defined once here, outside the React tree, GPU-cached, never animated.
     -->
     <svg
       width="0"
@@ -26,11 +27,20 @@
       <filter id="fin-grain">
         <feTurbulence
           type="fractalNoise"
-          baseFrequency="0.65"
+          baseFrequency="0.9"
           numOctaves="3"
           stitchTiles="stitch"
+          result="noise"
         />
-        <feColorMatrix type="saturate" values="0" />
+        <feDiffuseLighting
+          in="noise"
+          lighting-color="#fff"
+          surfaceScale="1.6"
+          result="lit"
+        >
+          <feDistantLight azimuth="250" elevation="62" />
+        </feDiffuseLighting>
+        <feComposite in="lit" in2="SourceGraphic" operator="in" />
       </filter>
     </svg>
     <div id="root"></div>

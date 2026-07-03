@@ -39,12 +39,12 @@ export function ExplorerSearch({
         spellCheck={false}
         maxLength={256}
         className={cn(
-          "h-14 w-full rounded-2xl pl-12 pr-12",
+          "h-14 w-full rounded-lg pl-12 pr-12",
           "bg-[var(--color-surface-2)] font-mono text-base font-medium text-[var(--color-fg)]",
           "border border-[var(--color-line-strong)]",
           "placeholder:font-normal placeholder:text-[var(--color-fg-subtle)]",
           "shadow-[inset_0_1px_0_0_oklch(100%_0_0/4%)] transition-[border-color,box-shadow] duration-[120ms]",
-          "focus:border-[var(--color-accent)] focus:shadow-[var(--shadow-glow-accent)] focus:outline-none",
+          "focus:border-[var(--color-beam)] focus:shadow-[var(--shadow-glow-beam)] focus:outline-none",
         )}
       />
       {value && (
@@ -52,7 +52,7 @@ export function ExplorerSearch({
           type="button"
           onClick={() => onChange("")}
           aria-label="Clear search"
-          className="absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--color-fg-subtle)] transition-colors hover:bg-[var(--color-glass)] hover:text-[var(--color-fg)]"
+          className="absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--color-fg-subtle)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
         >
           <X className="size-4" aria-hidden="true" />
         </button>

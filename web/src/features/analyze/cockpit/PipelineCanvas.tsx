@@ -47,15 +47,15 @@ const PAD = 24;
 type FinNodeData = { status: NodeStatus; tint: string };
 type FinEdgeData = { flow: EdgeFlow; tint: string };
 
-/** Per-node accent: personas carry their own signal color, others use azure. */
+/** Per-node tint: personas carry their own signal color, others take the beam. */
 function tintFor(id: string): string {
   if (id === "bull") return "var(--color-bull)";
   if (id === "bear") return "var(--color-bear)";
   if (id === "risk_conservative") return "var(--color-conservative)";
   if (id === "risk_aggressive") return "var(--color-aggressive)";
   if (id === "reporter" || id === "risk_arbiter" || id === "facilitator")
-    return "var(--color-accent)";
-  return "var(--color-accent)";
+    return "var(--color-beam)";
+  return "var(--color-beam)";
 }
 
 /* ---------------------------------------------------------- custom node UI */
@@ -74,7 +74,7 @@ function FinNode({ data, id }: NodeProps & { data: FinNodeData }) {
       className={cn(
         "pipe-node relative flex flex-col justify-center gap-0.5 rounded-[10px] px-3 py-2",
         running && "animate-breathe",
-        complete && "animate-accent-flash",
+        complete && "animate-collide",
       )}
       style={{
         width: NODE_W,
@@ -118,8 +118,8 @@ function FinNode({ data, id }: NodeProps & { data: FinNodeData }) {
             }`,
           }}
         >
-          {complete && <Check className="size-2.5 text-[var(--color-accent-fg)]" strokeWidth={3} />}
-          {error && <X className="size-2.5 text-[var(--color-accent-fg)]" strokeWidth={3} />}
+          {complete && <Check className="size-2.5 text-[var(--color-key-fg)]" strokeWidth={3} />}
+          {error && <X className="size-2.5 text-[var(--color-key-fg)]" strokeWidth={3} />}
           {halted && <Minus className="size-2.5 text-[var(--color-fg-subtle)]" strokeWidth={3} />}
         </span>
         <span className="truncate text-xs font-medium leading-tight text-[var(--color-fg)]">
@@ -153,7 +153,7 @@ function FinEdge({
     targetPosition,
   });
   const flow = data?.flow ?? "idle";
-  const tint = data?.tint ?? "var(--color-accent)";
+  const tint = data?.tint ?? "var(--color-beam)";
   const active = flow === "live";
   const settled = flow === "settled";
 

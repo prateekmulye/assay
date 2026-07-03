@@ -26,7 +26,7 @@ function Stat({
 }) {
   return (
     <div
-      className={flash ? "animate-accent-flash" : undefined}
+      className={flash ? "animate-collide" : undefined}
       style={{ transformOrigin: "center" }}
     >
       <div className="flex items-center gap-1 font-mono text-2xs uppercase tracking-[0.14em] text-[var(--color-fg-subtle)]">

@@ -1,15 +1,18 @@
 import { type LucideIcon } from "lucide-react";
 import { type ReactNode } from "react";
 
-import { GlassCard } from "@/components/ui/glass-card";
+import { Panel } from "@/components/ui/panel";
 
 /**
- * EmptyState — the "designed placeholder" for pages WP-7..10 will fill. It
- * describes what lands here (never lorem) so navigation feels real and the
- * roadmap is legible to a recruiter clicking around.
+ * EmptyState (DESIGN.md §8.8) — outcome-oriented and unlit. Decoration is a
+ * single row of three 4px unlit LEDs above the kicker: the instrument waiting.
+ * Copy stays outcome-oriented ("Analyze NVDA to backfill this chart"), never
+ * "No data." Exactly ONE key CTA belongs in the children slot.
+ *
+ * `icon` is accepted for call-site compatibility but intentionally not
+ * rendered — the LEDs are the only decoration the contract permits here.
  */
 export function EmptyState({
-  icon: Icon,
   title,
   description,
   children,
@@ -22,22 +25,25 @@ export function EmptyState({
   badge?: string;
 }) {
   return (
-    <GlassCard className="flex flex-col items-center gap-5 py-14 text-center">
-      <span className="relative flex size-14 items-center justify-center rounded-2xl bg-[var(--color-glass-strong)] ring-1 ring-[var(--color-glass-border)]">
-        <Icon className="size-6 text-[var(--color-accent)]" aria-hidden="true" />
+    <Panel className="flex flex-col items-center gap-5 py-14 text-center">
+      <span className="flex items-center gap-2" aria-hidden="true">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="size-1 rounded-full bg-[var(--color-fg-subtle)] opacity-30"
+          />
+        ))}
       </span>
       <div className="max-w-md space-y-2">
-        {badge && (
-          <p className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
-            {badge}
-          </p>
-        )}
-        <h2 className="text-lg font-semibold text-[var(--color-fg)]">{title}</h2>
+        {badge && <p className="kicker">{badge}</p>}
+        <h2 className="text-xl font-medium text-[var(--color-fg)] [font-weight:550]">
+          {title}
+        </h2>
         <p className="text-sm leading-relaxed text-[var(--color-fg-muted)]">
           {description}
         </p>
       </div>
       {children}
-    </GlassCard>
+    </Panel>
   );
 }

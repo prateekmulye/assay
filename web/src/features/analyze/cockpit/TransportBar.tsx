@@ -26,10 +26,10 @@ import { formatMs } from "./transportTime";
 
 /** Phase -> token color, so ticks are legible as the run's structure. */
 const PHASE_TINT: Record<string, string> = {
-  Resolve: "var(--color-accent)",
+  Resolve: "var(--color-beam)",
   Analysts: "var(--color-fg-muted)",
   Debate: "var(--color-hold)",
-  Trade: "var(--color-accent)",
+  Trade: "var(--color-beam)",
   Risk: "var(--color-aggressive)",
   Report: "var(--color-bull)",
 };
@@ -151,7 +151,7 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
 
   return (
     <div
-      className="glass flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center sm:gap-4"
+      className="panel flex flex-col gap-3 rounded-lg p-4 sm:flex-row sm:items-center sm:gap-4"
       aria-label="Replay transport"
     >
       {/* Play / restart cluster — the primary verbs (Fitts: big, leading). */}
@@ -163,10 +163,10 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
           aria-pressed={isActive}
           className={cn(
             "flex size-11 items-center justify-center rounded-full",
-            "bg-[var(--color-accent)] text-[var(--color-accent-fg)]",
-            "transition-[transform,box-shadow] duration-[120ms] ease-[var(--ease-spring)]",
-            "hover:shadow-[var(--shadow-glow-accent)] active:scale-[0.94]",
-            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]",
+            "bg-[var(--color-beam)] text-[var(--color-key-fg)]",
+            "transition-[transform,box-shadow] duration-[120ms] ease-[var(--ease-out)]",
+            "hover:shadow-[var(--shadow-glow-beam)] active:scale-[0.94]",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-beam)]",
           )}
         >
           {isActive ? (
@@ -182,8 +182,8 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
           className={cn(
             "flex size-9 items-center justify-center rounded-full",
             "text-[var(--color-fg-muted)] transition-colors duration-[120ms]",
-            "hover:bg-[var(--color-glass)] hover:text-[var(--color-fg)]",
-            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]",
+            "hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-beam)]",
           )}
         >
           <RotateCcw className="size-4" aria-hidden="true" />
@@ -218,7 +218,7 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
           <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 overflow-hidden rounded-full bg-[var(--color-surface-3)]">
             {/* Played fill — races toward the verdict (Goal-Gradient). */}
             <div
-              className="h-full rounded-full bg-[var(--color-accent)] transition-[width] duration-75 ease-linear group-focus-visible:bg-[var(--color-accent-strong)]"
+              className="h-full rounded-full bg-[var(--color-beam)] transition-[width] duration-75 ease-linear group-focus-visible:bg-[var(--color-beam)]"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -246,7 +246,7 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
 
           {/* Playhead thumb */}
           <span
-            className="pointer-events-none absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--color-fg)] shadow-[0_0_0_3px_var(--color-accent),0_2px_6px_oklch(0%_0_0/40%)] transition-[left] duration-75 ease-linear"
+            className="pointer-events-none absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--color-fg)] shadow-[0_0_0_3px_var(--color-beam),0_2px_6px_oklch(0%_0_0/40%)] transition-[left] duration-75 ease-linear"
             style={{ left: `${pct}%` }}
           />
         </div>
@@ -272,7 +272,7 @@ export function TransportBar({ player }: { player: EventPlayerControls }) {
               className={cn(
                 "rounded-md px-2.5 py-1 font-mono text-2xs font-medium tabular-nums transition-colors",
                 speed === s
-                  ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)]"
+                  ? "bg-[var(--color-beam)] text-[var(--color-key-fg)]"
                   : "text-[var(--color-fg-subtle)] hover:text-[var(--color-fg-muted)]",
               )}
             >

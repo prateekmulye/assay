@@ -54,7 +54,7 @@ export function JudgePrefChip({
       className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-2xs tracking-wide"
       style={{
         color: pref ? color : "var(--color-fg-subtle)",
-        background: pref ? "var(--color-glass)" : "transparent",
+        background: pref ? "var(--color-surface-2)" : "transparent",
         border: `1px solid ${pref ? color : "var(--color-line)"}`,
       }}
       aria-label={judgeLabel(pref)}

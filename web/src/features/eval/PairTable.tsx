@@ -76,7 +76,7 @@ function SortButton({
       aria-label={`Sort by ${label}${active ? `, ${sort.dir}ending` : ""}`}
       className={cn(
         "inline-flex items-center gap-1 uppercase tracking-wider transition-colors hover:text-[var(--color-fg)]",
-        active ? "text-[var(--color-accent)]" : "text-[var(--color-fg-subtle)]",
+        active ? "text-[var(--color-fg)]" : "text-[var(--color-fg-subtle)]",
       )}
     >
       {label}
@@ -87,7 +87,7 @@ function SortButton({
 
 function Row({ pair }: { pair: EvalPair }) {
   return (
-    <div className="glass grid grid-cols-1 gap-3 rounded-xl p-4 lg:grid-cols-[7rem_minmax(9rem,1fr)_8rem_1fr_8rem] lg:items-center lg:gap-4 lg:py-3">
+    <div className="panel grid grid-cols-1 gap-3 rounded-xl p-4 lg:grid-cols-[7rem_minmax(9rem,1fr)_8rem_1fr_8rem] lg:items-center lg:gap-4 lg:py-3">
       {/* Ticker */}
       <span className="font-mono text-base font-semibold tracking-tight text-[var(--color-fg)]">
         {pair.ticker}

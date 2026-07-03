@@ -19,7 +19,7 @@ export function LaneHeader({
 }) {
   return (
     <div className="mb-3 flex items-baseline justify-between px-1">
-      <h2 className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-accent)]">
+      <h2 className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
         {kicker}
       </h2>
       {count != null && (
@@ -38,7 +38,7 @@ export function LaneSkeleton({ rows = 4 }: { rows?: number }) {
       {Array.from({ length: rows }).map((_, i) => (
         <li
           key={i}
-          className="glass animate-shimmer flex items-center gap-3 overflow-hidden rounded-xl px-4 py-3.5"
+          className="panel animate-shimmer flex items-center gap-3 overflow-hidden rounded-xl px-4 py-3.5"
         >
           <span className="size-2.5 shrink-0 rounded-full bg-[var(--color-surface-3)]" />
           <span className="h-4 w-20 rounded bg-[var(--color-surface-3)]" />
@@ -62,7 +62,7 @@ export function LaneNotice({
   children?: ReactNode;
 }) {
   return (
-    <div className="glass flex flex-col items-center gap-2 rounded-xl px-5 py-8 text-center">
+    <div className="panel flex flex-col items-center gap-2 rounded-xl px-5 py-8 text-center">
       <Icon className="size-5 text-[var(--color-fg-subtle)]" aria-hidden="true" />
       <p className="text-sm font-medium text-[var(--color-fg)]">{title}</p>
       <p className="max-w-xs text-xs leading-relaxed text-[var(--color-fg-muted)]">
@@ -165,7 +165,7 @@ function CoverageStat({
   accent?: boolean;
 }) {
   return (
-    <div className="glass rounded-xl px-4 py-3">
+    <div className="panel rounded-xl px-4 py-3">
       <dt className="font-mono text-2xs uppercase tracking-[0.16em] text-[var(--color-fg-subtle)]">
         {label}
       </dt>

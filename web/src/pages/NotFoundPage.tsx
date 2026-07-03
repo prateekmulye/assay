@@ -13,7 +13,7 @@ export function NotFoundPage() {
         title="Off the graph"
         description="That route doesn't exist. Head back to the cockpit and run an analysis."
       >
-        <Link to="/" className={buttonVariants({ variant: "primary" })}>
+        <Link to="/" className={buttonVariants({ variant: "key" })}>
           Back to Analyze
         </Link>
       </EmptyState>

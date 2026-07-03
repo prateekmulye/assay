@@ -14,7 +14,7 @@ export function LibrarySkeleton({ rows = 5 }: { rows?: number }) {
       {Array.from({ length: rows }).map((_, i) => (
         <li
           key={i}
-          className="glass animate-shimmer flex items-center gap-5 overflow-hidden rounded-2xl py-4 pl-5 pr-4"
+          className="panel animate-shimmer flex items-center gap-5 overflow-hidden rounded-lg py-4 pl-5 pr-4"
         >
           <span className="h-6 w-20 shrink-0 rounded-full bg-[var(--color-surface-3)]" />
           <span className="h-5 w-16 rounded bg-[var(--color-surface-3)]" />
@@ -59,12 +59,12 @@ export function LibraryPager({
         <span className="px-1 text-[var(--color-fg-subtle)]">of</span>
         {total}
         {isFetching && (
-          <span className="ml-2 text-[var(--color-accent)]">· updating</span>
+          <span className="ml-2 text-[var(--color-beam)]">· updating</span>
         )}
       </p>
       <div className="flex items-center gap-2">
         <Button
-          variant="outline"
+          variant="rail"
           size="sm"
           onClick={onPrev}
           disabled={!hasPrev || isFetching}
@@ -73,7 +73,7 @@ export function LibraryPager({
           Prev
         </Button>
         <Button
-          variant="outline"
+          variant="rail"
           size="sm"
           onClick={onNext}
           disabled={!hasNext || isFetching}
@@ -94,7 +94,7 @@ export function QuotaExhaustedBanner({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex items-start gap-3 rounded-2xl border px-5 py-4",
+        "flex items-start gap-3 rounded-lg border px-5 py-4",
         className,
       )}
       style={{

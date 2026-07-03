@@ -92,7 +92,7 @@ export function DecisionReveal({
   if (!decision) {
     // A done with no decision (degraded arbiter) — still show the report.
     return (
-      <article className="glass animate-verdict-in rounded-2xl p-5 sm:p-6">
+      <article className="panel animate-verdict-in rounded-xl p-5 sm:p-6">
         <ReportBlock markdown={done.finalReport} />
       </article>
     );
@@ -100,7 +100,7 @@ export function DecisionReveal({
 
   return (
     <article
-      className="glass animate-verdict-in rounded-2xl p-5 sm:p-7"
+      className="panel animate-verdict-in rounded-xl p-5 sm:p-7"
       aria-label="Final verdict"
     >
       <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
@@ -134,7 +134,7 @@ function ReportBlock({ markdown }: { markdown: string }) {
   return (
     <div>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-accent)]">
+        <h3 className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
           Investment report
         </h3>
         <CopyMarkdownButton markdown={markdown} />

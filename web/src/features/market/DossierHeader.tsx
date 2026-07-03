@@ -39,7 +39,7 @@ export function DossierHeader({
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
-          <p className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-accent)]">
+          <p className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
             Instrument dossier
           </p>
           <div className="flex flex-wrap items-center gap-3">
@@ -64,7 +64,7 @@ export function DossierHeader({
         <Link
           to="/"
           state={{ ticker }}
-          className={`${buttonVariants({ variant: "primary", size: "md" })} shrink-0`}
+          className={`${buttonVariants({ variant: "key", size: "md" })} shrink-0`}
         >
           <Radio className="size-4" aria-hidden="true" />
           Analyze {ticker} live

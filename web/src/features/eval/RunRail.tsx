@@ -1,5 +1,5 @@
 /**
- * RunRail — the eval-run selector. A horizontal rail of glass run cards
+ * RunRail — the eval-run selector. A horizontal rail of panel run cards
  * (newest-first), each a label + relative timestamp + an n_tickers chip. The
  * active run lifts and gets an accent rail; selecting one writes ?label= to the
  * URL so a run is deep-linkable (the same URL-as-source-of-truth idiom the
@@ -22,7 +22,7 @@ export function RunRail({
 }) {
   return (
     <div>
-      <p className="mb-2 px-1 font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-accent)]">
+      <p className="mb-2 px-1 font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
         Eval runs
         <span className="ml-2 tabular-nums text-[var(--color-fg-subtle)]">
           {runs.length}
@@ -47,14 +47,14 @@ export function RunRail({
                   // The card IS the focus target, so the ring lives right here
                   // (house pattern: LibraryRow restores it via group-* on the
                   // inner card; there is no inner card to delegate to).
-                  "group flex min-w-[10.5rem] flex-col gap-1.5 rounded-xl border p-3 transition-[transform,border-color,box-shadow] duration-[200ms] ease-[var(--ease-spring)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]",
+                  "group flex min-w-[10.5rem] flex-col gap-1.5 rounded-xl border p-3 transition-[transform,border-color,box-shadow] duration-[200ms] ease-[var(--ease-out)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-beam)]",
                   active
-                    ? "glass-strong -translate-y-0.5 shadow-[var(--shadow-raised)]"
-                    : "glass hover:-translate-y-0.5 hover:shadow-[var(--shadow-glass)]",
+                    ? "panel-raised -translate-y-0.5 shadow-[var(--shadow-lifted)]"
+                    : "panel hover:-translate-y-0.5 hover:shadow-[var(--shadow-panel)]",
                 )}
                 style={
                   active
-                    ? { borderColor: "var(--color-accent)" }
+                    ? { borderColor: "var(--color-beam)" }
                     : undefined
                 }
               >

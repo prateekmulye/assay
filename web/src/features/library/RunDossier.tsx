@@ -32,10 +32,10 @@ export const RunDossier = memo(function RunDossier({
   const ticker = run.ticker ?? "—";
 
   return (
-    <div className="glass space-y-4 rounded-2xl p-5 sm:p-6">
+    <div className="panel space-y-4 rounded-xl p-5 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
-          <p className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-accent)]">
+          <p className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
             Run replay
           </p>
           <div className="flex flex-wrap items-center gap-3">
@@ -57,7 +57,7 @@ export const RunDossier = memo(function RunDossier({
           <Link
             to="/"
             state={{ ticker }}
-            className={`${buttonVariants({ variant: "primary", size: "md" })} shrink-0`}
+            className={`${buttonVariants({ variant: "key", size: "md" })} shrink-0`}
           >
             <Radio className="size-4" aria-hidden="true" />
             Run {ticker} live

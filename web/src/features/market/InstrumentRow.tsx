@@ -1,5 +1,5 @@
 /**
- * InstrumentRow — one covered instrument as a glass-framed terminal tile. The
+ * InstrumentRow — one covered instrument as a panel-framed terminal tile. The
  * mono ticker is the hero identity (Von Restorff isolation via the watched
  * dot), the name reads as the human label, and the exchange / sector / country
  * trail as metadata. The whole row is the click target (Fitts) and deep-links
@@ -29,7 +29,7 @@ export function InstrumentRow({ instrument }: { instrument: Instrument }) {
       }`}
       className="group block focus-visible:outline-none"
     >
-      <div className="glass flex items-center gap-3 overflow-hidden rounded-xl px-4 py-3 transition-[transform,box-shadow,border-color] duration-[200ms] ease-[var(--ease-spring)] group-hover:-translate-y-0.5 group-hover:shadow-[var(--shadow-raised)] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-[var(--color-accent)]">
+      <div className="panel flex items-center gap-3 overflow-hidden rounded-xl px-4 py-3 transition-[transform,box-shadow,border-color] duration-[200ms] ease-[var(--ease-out)] group-hover:-translate-y-0.5 group-hover:shadow-[var(--shadow-lifted)] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-[var(--color-beam)]">
         <WatchedDot watched={instrument.watched} />
 
         <div className="min-w-0 flex-1">
@@ -48,7 +48,7 @@ export function InstrumentRow({ instrument }: { instrument: Instrument }) {
         </div>
 
         <ChevronRight
-          className="size-4 shrink-0 text-[var(--color-fg-subtle)] transition-[transform,color] duration-[200ms] group-hover:translate-x-0.5 group-hover:text-[var(--color-accent)]"
+          className="size-4 shrink-0 text-[var(--color-fg-subtle)] transition-[transform,color] duration-[200ms] group-hover:translate-x-0.5 group-hover:text-[var(--color-fg)]"
           aria-hidden="true"
         />
       </div>

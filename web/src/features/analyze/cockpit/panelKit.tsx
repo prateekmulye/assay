@@ -1,7 +1,7 @@
 /**
  * panelKit — shared primitives for the cockpit intelligence panels.
  *
- * A terminal tile (the dense data surface that lives INSIDE the glass cockpit),
+ * A terminal tile (the dense data surface that lives INSIDE the panel cockpit),
  * a node status dot, a confidence chip, and an auto-scrolling token stream.
  * Every numeric stays mono + tabular; status colour is always backed by a glyph
  * (DESIGN.md §7).
@@ -22,7 +22,7 @@ export function StatusDot({ status }: { status: NodeStatus }) {
   if (status === "running")
     return (
       <Loader2
-        className="size-3.5 animate-spin text-[var(--color-accent)]"
+        className="size-3.5 animate-spin text-[var(--color-beam)]"
         aria-hidden="true"
       />
     );
@@ -52,7 +52,7 @@ export function Tile({
     <div
       className={cn(
         "terminal-tile flex flex-col p-3.5",
-        flash && status === "complete" && "animate-accent-flash",
+        flash && status === "complete" && "animate-collide",
         className,
       )}
       style={{
@@ -106,7 +106,7 @@ export function TokenStream({ text, lines = 4 }: { text: string; lines?: number 
       style={{ maxHeight: `${lines * 1.1}rem` }}
     >
       {text}
-      <span className="ml-0.5 inline-block w-1.5 animate-pulse text-[var(--color-accent)]">
+      <span className="ml-0.5 inline-block w-1.5 animate-pulse text-[var(--color-beam)]">
         ▍
       </span>
     </div>
@@ -124,7 +124,7 @@ export function KeyPoints({ points }: { points: string[] }) {
           className="animate-rise-in flex gap-1.5 text-xs text-[var(--color-fg-muted)]"
           style={{ animationDelay: `${i * 60}ms` }}
         >
-          <span className="mt-1.5 size-1 shrink-0 rounded-full bg-[var(--color-accent)]" />
+          <span className="mt-1.5 size-1 shrink-0 rounded-full bg-[var(--color-fg-subtle)]" />
           <span>{p}</span>
         </li>
       ))}

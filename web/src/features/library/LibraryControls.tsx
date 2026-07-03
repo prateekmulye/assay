@@ -59,7 +59,7 @@ export function LibraryControls({
               "bg-[var(--color-surface-2)] font-mono text-sm font-medium uppercase tracking-wide text-[var(--color-fg)]",
               "border border-[var(--color-line-strong)] placeholder:font-normal placeholder:normal-case placeholder:tracking-normal placeholder:text-[var(--color-fg-subtle)]",
               "transition-[border-color,box-shadow] duration-[120ms]",
-              "focus:border-[var(--color-accent)] focus:shadow-[var(--shadow-glow-accent)] focus:outline-none",
+              "focus:border-[var(--color-beam)] focus:shadow-[var(--shadow-glow-beam)] focus:outline-none",
             )}
           />
           {ticker && (
@@ -89,7 +89,7 @@ export function LibraryControls({
               className={cn(
                 "rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-[120ms]",
                 status === opt.value
-                  ? "bg-[var(--color-glass-strong)] text-[var(--color-fg)] ring-1 ring-[var(--color-glass-border)]"
+                  ? "bg-[var(--color-surface-3)] text-[var(--color-fg)] shadow-[inset_0_1px_0_0_var(--edge-light)]"
                   : "text-[var(--color-fg-subtle)] hover:text-[var(--color-fg-muted)]",
               )}
             >

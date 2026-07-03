@@ -53,7 +53,7 @@ function HitBody({ hit }: { hit: SearchHit }) {
 
 export function ResearchHitRow({ hit }: { hit: SearchHit }) {
   const tileCls =
-    "glass flex items-start gap-3 overflow-hidden rounded-xl px-4 py-3 transition-[transform,box-shadow,border-color] duration-[200ms] ease-[var(--ease-spring)] group-hover:-translate-y-0.5 group-hover:shadow-[var(--shadow-raised)] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-[var(--color-accent)]";
+    "panel flex items-start gap-3 overflow-hidden rounded-xl px-4 py-3 transition-[transform,box-shadow,border-color] duration-[200ms] ease-[var(--ease-out)] group-hover:-translate-y-0.5 group-hover:shadow-[var(--shadow-lifted)] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-[var(--color-beam)]";
 
   if (hit.kind === "news") {
     return (
@@ -67,7 +67,7 @@ export function ResearchHitRow({ hit }: { hit: SearchHit }) {
         <div className={tileCls}>
           <HitBody hit={hit} />
           <ArrowUpRight
-            className="mt-0.5 size-4 shrink-0 text-[var(--color-fg-subtle)] transition-[transform,color] duration-[200ms] group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[var(--color-accent)]"
+            className="mt-0.5 size-4 shrink-0 text-[var(--color-fg-subtle)] transition-[transform,color] duration-[200ms] group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[var(--color-fg)]"
             aria-hidden="true"
           />
         </div>
@@ -85,7 +85,7 @@ export function ResearchHitRow({ hit }: { hit: SearchHit }) {
       <div className={tileCls}>
         <HitBody hit={hit} />
         <ChevronRight
-          className="mt-0.5 size-4 shrink-0 text-[var(--color-fg-subtle)] transition-[transform,color] duration-[200ms] group-hover:translate-x-0.5 group-hover:text-[var(--color-accent)]"
+          className="mt-0.5 size-4 shrink-0 text-[var(--color-fg-subtle)] transition-[transform,color] duration-[200ms] group-hover:translate-x-0.5 group-hover:text-[var(--color-fg)]"
           aria-hidden="true"
         />
       </div>

@@ -49,7 +49,7 @@ export function LiveFeed({
             key={nodeId}
             className={cn(
               "terminal-tile flex items-center gap-3 px-3.5 py-2.5",
-              done && "animate-accent-flash",
+              done && "animate-collide",
             )}
             style={{ transformOrigin: "left center" }}
           >
@@ -58,7 +58,7 @@ export function LiveFeed({
                 <Check className="size-4 text-[var(--color-bull)]" aria-hidden="true" />
               ) : alive ? (
                 <Loader2
-                  className="size-4 animate-spin text-[var(--color-accent)]"
+                  className="size-4 animate-spin text-[var(--color-beam)]"
                   aria-hidden="true"
                 />
               ) : (

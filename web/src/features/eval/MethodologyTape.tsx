@@ -4,10 +4,10 @@
  * The brief mandates the PROXY honesty cue ride prominently. The trap is making
  * it read as an error/warning (amber alarm), which triggers anxiety instead of
  * trust (NotebookLM). So this is framed as a confident "methodology note": a
- * flask glyph, a neutral azure-tinted glass tape with the grain texture (the
- * "methodology paper" feel), a one-line headline, and the full caveat in a
- * collapsible — Onion-Peel disclosure so the detail is there for the skeptic
- * without taxing the casual reader.
+ * flask glyph, a graphite tape with a beam lit tick (confident paper, not a
+ * banner), a one-line headline, and the full caveat in a collapsible —
+ * Onion-Peel disclosure so the detail is there for the skeptic without taxing
+ * the casual reader.
  */
 import { FlaskConical } from "lucide-react";
 import { useId, useState } from "react";
@@ -20,30 +20,23 @@ export function MethodologyTape() {
 
   return (
     <div
-      className="grain relative overflow-hidden rounded-xl border px-4 py-3"
-      style={{
-        borderColor: "var(--color-accent)",
-        // A faint azure wash — informational, not alarming. Distinct from the
-        // amber keyword-fallback banner (which signals a real degradation).
-        background:
-          "linear-gradient(0deg, oklch(70% 0.13 245 / 7%), oklch(70% 0.13 245 / 7%))",
-      }}
+      className="grain panel relative overflow-hidden px-4 py-3"
       role="note"
       aria-label="Methodology and honesty disclaimer"
     >
+      {/* Confident paper, not warning (v3 §10): graphite tape + a beam lit
+          tick on the left edge — the same light language as the bench rule. */}
+      <span
+        aria-hidden="true"
+        className="absolute inset-y-3 left-0 w-[2px] bg-[var(--color-beam)] shadow-[0_0_8px_0_var(--color-beam-dim)]"
+      />
       <div className="flex items-start gap-3">
-        <span
-          className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg"
-          style={{
-            background: "oklch(70% 0.13 245 / 14%)",
-            color: "var(--color-accent-strong)",
-          }}
-        >
+        <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-[var(--color-surface-2)] text-[var(--color-fg-muted)]">
           <FlaskConical className="size-4" aria-hidden="true" />
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-2xs font-medium uppercase tracking-[0.16em] text-[var(--color-accent-strong)]">
+          <p className="font-mono text-2xs font-medium uppercase tracking-[0.16em] text-[var(--color-fg-subtle)]">
             Methodology
           </p>
           <p className="mt-1 text-sm font-medium leading-snug text-[var(--color-fg)]">

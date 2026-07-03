@@ -5,7 +5,7 @@
  * deliberately Bloomberg-restrained (NotebookLM: abolish "prison-cell" borders,
  * lean on negative space + tabular numerics): daily candles with a volume
  * sub-panel pinned to the bottom ~22% of the frame, a 1px dotted crosshair, and
- * a floating glass OHLC legend top-left that tracks the hovered bar (or the
+ * a floating panel OHLC legend top-left that tracks the hovered bar (or the
  * latest bar at rest). Colors come from the DESIGN bull/bear tokens, resolved
  * to hex at mount because the charting canvas can't read CSS custom properties.
  *
@@ -299,9 +299,9 @@ export function CandlestickChart({ bars }: { bars: PriceBar[] }) {
 
   return (
     <div className="relative h-[340px] w-full sm:h-[420px]">
-      {/* Floating glass OHLC legend — top-left, tracks the crosshair. */}
+      {/* Floating panel OHLC legend — top-left, tracks the crosshair. */}
       {legend && (
-        <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg border border-[var(--color-glass-border)] bg-[var(--color-glass-strong)] px-3 py-2 font-mono text-2xs backdrop-blur-[16px]">
+        <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-md bg-[var(--color-surface-3)] px-3 py-2 font-mono text-2xs shadow-[var(--shadow-lifted)]">
           <div className="mb-1 flex items-center gap-2 tabular-nums text-[var(--color-fg-subtle)]">
             <span>{legend.time.slice(0, 10)}</span>
             {legend.volume != null && (

@@ -3,9 +3,11 @@ import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * PageHeader — consistent route header. `eyebrow` is a mono kicker (terminal
- * energy); `title` is editorial Inter; `description` sets context. Optional
- * `actions` slot sits right on wide screens.
+ * PageHeader (DESIGN.md §8.7): kicker → display title (600, -0.03em, lit from
+ * above via the luminance mask) → muted lede. Beneath everything runs the
+ * BENCH RULE — a full-width hairline with a 24px beam lit tick at the content
+ * left edge. The lit tick is the v3 signature detail: every page header, and
+ * nowhere else.
  */
 export function PageHeader({
   eyebrow,
@@ -21,28 +23,22 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between",
-        className,
-      )}
-    >
-      <div className="max-w-2xl">
-        {eyebrow && (
-          <p className="mb-2 font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-accent)]">
-            {eyebrow}
-          </p>
-        )}
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-fg)] sm:text-3xl">
-          {title}
-        </h1>
-        {description && (
-          <p className="mt-2 text-sm leading-relaxed text-[var(--color-fg-muted)]">
-            {description}
-          </p>
-        )}
+    <div className={cn("flex flex-col gap-5", className)}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-2xl">
+          {eyebrow && <p className="kicker mb-2">{eyebrow}</p>}
+          <h1 className="display-lit text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
+            {title}
+          </h1>
+          {description && (
+            <p className="mt-2 text-sm leading-relaxed text-[var(--color-fg-muted)]">
+              {description}
+            </p>
+          )}
+        </div>
+        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      <div className="bench-rule" aria-hidden="true" />
     </div>
   );
 }

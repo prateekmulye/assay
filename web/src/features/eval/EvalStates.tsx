@@ -11,9 +11,9 @@ import { AlertTriangle, FlaskConical } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { GlassCard } from "@/components/ui/glass-card";
+import { Panel } from "@/components/ui/panel";
 
-/** Full-page glass-shimmer skeleton matching the verdict-band → scatter rhythm. */
+/** Full-page panel-shimmer skeleton matching the verdict-band → scatter rhythm. */
 export function EvalSkeleton() {
   return (
     <div className="space-y-6" aria-hidden="true">
@@ -22,22 +22,22 @@ export function EvalSkeleton() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="glass animate-shimmer h-16 w-40 overflow-hidden rounded-xl"
+            className="panel animate-shimmer h-16 w-40 overflow-hidden rounded-xl"
           />
         ))}
       </div>
       {/* Verdict band */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-        <div className="glass-strong animate-shimmer col-span-2 h-40 overflow-hidden rounded-2xl lg:row-span-2" />
+        <div className="panel-raised animate-shimmer col-span-2 h-40 overflow-hidden rounded-lg lg:row-span-2" />
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="glass animate-shimmer h-[4.75rem] overflow-hidden rounded-xl"
+            className="panel animate-shimmer h-[4.75rem] overflow-hidden rounded-xl"
           />
         ))}
       </div>
       {/* Scatter */}
-      <div className="glass animate-shimmer h-[24rem] overflow-hidden rounded-2xl" />
+      <div className="panel animate-shimmer h-[24rem] overflow-hidden rounded-lg" />
     </div>
   );
 }
@@ -51,7 +51,7 @@ export function EvalError({ onRetry }: { onRetry: () => void }) {
       title="The eval index didn’t respond"
       description="Usually a cold backend. The A/B results live in the warehouse — retry in a moment, or check that the API is up."
     >
-      <Button variant="primary" onClick={onRetry}>
+      <Button variant="key" onClick={onRetry}>
         Retry
       </Button>
     </EmptyState>
@@ -68,7 +68,7 @@ export function EvalEmpty() {
       title="Run the ablation to see it here"
       description="The debate-on vs debate-off A/B hasn’t been recorded yet. Run the harness against the curated ticker snapshot and its summary + per-ticker comparison land on this screen."
     >
-      <GlassCard className="terminal-tile mt-1 w-full max-w-lg !rounded-lg p-0 text-left">
+      <Panel className="terminal-tile mt-1 w-full max-w-lg !rounded-lg p-0 text-left">
         <div className="flex items-center justify-between border-b border-[var(--color-line)] px-4 py-2">
           <span className="font-mono text-2xs uppercase tracking-[0.16em] text-[var(--color-fg-subtle)]">
             run the eval
@@ -80,12 +80,12 @@ export function EvalEmpty() {
           </span>
         </div>
         <pre className="overflow-x-auto px-4 py-3 font-mono text-xs leading-relaxed text-[var(--color-fg)]">
-          <span className="select-none text-[var(--color-accent)]">$ </span>
+          <span className="select-none text-[var(--color-beam)]">$ </span>
           python -m src.eval.run \{"\n"}
           {"    "}--tickers evals/tickers.json \{"\n"}
           {"    "}--label demo
         </pre>
-      </GlassCard>
+      </Panel>
     </EmptyState>
   );
 }

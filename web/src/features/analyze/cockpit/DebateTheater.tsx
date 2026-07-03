@@ -87,20 +87,20 @@ function VerdictBridge({
       style={{
         borderColor:
           status === "complete"
-            ? "var(--color-accent)"
+            ? "var(--color-beam)"
             : status === "running"
-              ? "var(--color-accent)"
+              ? "var(--color-beam)"
               : "var(--color-line)",
         background: "var(--color-surface-2)",
         boxShadow:
           status === "complete"
-            ? "0 0 0 1px var(--color-accent), 0 0 28px -10px var(--color-accent)"
+            ? "0 0 0 1px var(--color-beam), 0 0 28px -10px var(--color-beam)"
             : "none",
       }}
     >
       <div className="mb-1.5 flex items-center gap-1.5">
-        <Scale className="size-3.5 text-[var(--color-accent)]" aria-hidden="true" />
-        <span className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-accent)]">
+        <Scale className="size-3.5 text-[var(--color-beam)]" aria-hidden="true" />
+        <span className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
           {label}
         </span>
       </div>

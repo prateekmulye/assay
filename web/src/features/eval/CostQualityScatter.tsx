@@ -6,7 +6,7 @@
  * literal verdict: top-right faint green = "debate earns its place" (better
  * score, and yes it cost more); bottom-left faint red = "ablate" (worse score
  * AND cheaper off). Points are colored by which pipeline the judge preferred so
- * the A/B semantic is readable at a glance. Hover = a glass Onion-Peel tooltip
+ * the A/B semantic is readable at a glance. Hover = a panel Onion-Peel tooltip
  * with the full per-ticker tape (mono).
  *
  * recharts is themed entirely to DESIGN tokens — no default recharts look.
@@ -159,7 +159,7 @@ export function CostQualityScatter({ pairs }: { pairs: EvalPair[] }) {
             />
 
             <Tooltip
-              cursor={{ stroke: "var(--color-accent)", strokeOpacity: 0.3 }}
+              cursor={{ stroke: "var(--color-beam)", strokeOpacity: 0.3 }}
               content={<ScatterTooltip />}
             />
 
@@ -211,7 +211,7 @@ export function CostQualityScatter({ pairs }: { pairs: EvalPair[] }) {
   );
 }
 
-/** A glass Onion-Peel tooltip: the full per-ticker tape in mono. */
+/** A panel Onion-Peel tooltip: the full per-ticker tape in mono. */
 function ScatterTooltip({
   active,
   payload,
@@ -223,7 +223,7 @@ function ScatterTooltip({
   if (!first) return null;
   const { pair } = first.payload;
   return (
-    <div className="glass-strong min-w-[12rem] rounded-lg p-3 font-mono text-2xs shadow-[var(--shadow-raised)]">
+    <div className="panel-raised min-w-[12rem] rounded-lg p-3 font-mono text-2xs shadow-[var(--shadow-lifted)]">
       <div className="mb-2 flex items-center justify-between gap-3">
         <span className="text-sm font-semibold tracking-tight text-[var(--color-fg)]">
           {pair.ticker}
@@ -287,7 +287,7 @@ function JudgePref({ pref }: { pref: EvalPair["judgePreferred"] }) {
       className="rounded-full px-1.5 py-0.5 text-[10px] uppercase tracking-wide"
       style={{
         color: judgeColor(pref),
-        background: "var(--color-glass)",
+        background: "var(--color-surface-2)",
         border: `1px solid ${judgeColor(pref)}`,
       }}
     >

@@ -3,7 +3,7 @@
  * contract worth pinning is WCAG 2.4.7: a keyboard user tabbing onto a card
  * must get a visible focus ring. The regression we guard against is
  * `focus-visible:outline-none` (which kills the ring) sneaking back in without
- * the explicit accent-ring restore classes.
+ * the explicit beam-ring restore classes.
  */
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -49,12 +49,12 @@ describe("RunRail", () => {
     expect(card).toHaveFocus();
 
     // The ring must be restored explicitly, never suppressed without a
-    // replacement: assert the accent outline classes are present and the
+    // replacement: assert the beam outline classes are present and the
     // ring-killer is absent.
     expect(card.className).toContain("focus-visible:outline-2");
     expect(card.className).toContain("focus-visible:outline-offset-2");
     expect(card.className).toContain(
-      "focus-visible:outline-[var(--color-accent)]",
+      "focus-visible:outline-[var(--color-beam)]",
     );
     expect(card.className).not.toContain("focus-visible:outline-none");
   });

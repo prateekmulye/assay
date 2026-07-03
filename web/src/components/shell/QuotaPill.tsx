@@ -1,63 +1,47 @@
-import { ShieldCheck, Zap, Archive, Infinity as InfinityIcon } from "lucide-react";
-
 import { useQuota } from "@/hooks/useQuota";
 import { type QuotaState } from "@/lib/api";
-import { cn } from "@/lib/utils";
 
-/** Map each quota state to an icon + accent. Replay-only uses amber (a soft
- *  "caution", not an error) to steer the user toward the Library replays. */
-function presentation(q: QuotaState): {
-  Icon: typeof Zap;
-  tint: string;
-  ring: string;
-} {
+/**
+ * LED hue per quota state (DESIGN.md §8.6, semantics frozen from the API
+ * contract): admin → beam (the operator's light), room → bull, exhausted →
+ * hold (a steer to replays, not an error), unmetered/degraded/unknown →
+ * unlit graphite. Never color alone — the label always carries the meaning.
+ */
+function ledColor(q: QuotaState): string {
   switch (q.kind) {
     case "admin":
-      return {
-        Icon: InfinityIcon,
-        tint: "var(--color-accent)",
-        ring: "var(--color-accent)",
-      };
+      return "var(--color-beam)";
     case "available":
-      return { Icon: Zap, tint: "var(--color-bull)", ring: "var(--color-bull)" };
+      return "var(--color-bull)";
     case "replay-only":
-      return { Icon: Archive, tint: "var(--color-hold)", ring: "var(--color-hold)" };
-    case "unmetered":
-      return {
-        Icon: ShieldCheck,
-        tint: "var(--color-fg-muted)",
-        ring: "var(--color-line-strong)",
-      };
-    // "degraded" (counters unreadable — an outage, not exhaustion) and
-    // "unknown" share the neutral treatment: never amber, never a dead wall.
+      return "var(--color-hold)";
     default:
-      return {
-        Icon: ShieldCheck,
-        tint: "var(--color-fg-subtle)",
-        ring: "var(--color-line)",
-      };
+      return "var(--color-fg-subtle)";
   }
 }
 
 /**
- * QuotaPill — terminal-styled status chip reading /api/quota. Mono numerals,
- * tabular so the count never jitters when it ticks down between runs.
+ * QuotaPill — an LED lozenge (DESIGN.md §8.6): 999px pill on surface-1, a
+ * leading 6px LED glowing at 40% of its state color, mono tabular label so
+ * the count never jitters as it ticks down.
  */
 export function QuotaPill() {
   const { quota } = useQuota();
-  const { Icon, tint, ring } = presentation(quota);
+  const color = ledColor(quota);
 
   return (
     <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1",
-        "font-mono text-2xs font-medium tracking-tight",
-        "bg-[var(--color-glass)] backdrop-blur-md",
-      )}
-      style={{ border: `1px solid ${ring}`, color: tint }}
+      className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface-1)] py-1 pl-2.5 pr-3 font-mono text-2xs font-medium text-[var(--color-fg-muted)] shadow-[inset_0_1px_0_0_var(--edge-light)]"
       title={`Live-run quota: ${quota.label}`}
     >
-      <Icon className="size-3" aria-hidden="true" />
+      <span
+        aria-hidden="true"
+        className="size-1.5 shrink-0 rounded-full"
+        style={{
+          background: color,
+          boxShadow: `0 0 6px 0 color-mix(in oklab, ${color} 40%, transparent)`,
+        }}
+      />
       <span className="text-[var(--color-fg)]">{quota.label}</span>
     </span>
   );

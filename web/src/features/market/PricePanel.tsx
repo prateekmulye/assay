@@ -2,7 +2,7 @@
  * PricePanel — the chart tile: a header (kicker + last-close delta + range
  * pills), the candlestick canvas, and the loading / empty / error states. The
  * range pills are ghost buttons (NotebookLM recipe) that re-key the prices query
- * by `days`; the active pill carries the glass-strong fill. When a ticker has no
+ * by `days`; the active pill carries the panel-raised fill. When a ticker has no
  * bars yet, the empty state is an outcome-oriented nudge (Peak-End): "analyze
  * TICKER to backfill", deep-linking to / with the ticker prefilled.
  */
@@ -55,16 +55,16 @@ export function PricePanel({
   onRetry: () => void;
 }) {
   return (
-    <section className="glass space-y-4 rounded-2xl p-5 sm:p-6">
+    <section className="panel space-y-4 rounded-lg p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <p className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-accent)]">
+          <p className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
             Daily price action
           </p>
           {bars.length >= 2 && <ChangeBadge bars={bars} />}
         </div>
 
-        {/* Range pills — ghost buttons, active = glass-strong. */}
+        {/* Range pills — ghost buttons, active = panel-raised. */}
         <div
           className="inline-flex items-center gap-0.5 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-1)] p-1"
           role="group"
@@ -79,7 +79,7 @@ export function PricePanel({
               className={cn(
                 "rounded-md px-3 py-1 font-mono text-2xs font-medium tracking-wide transition-colors duration-[120ms]",
                 range === opt.key
-                  ? "bg-[var(--color-glass-strong)] text-[var(--color-fg)] ring-1 ring-[var(--color-glass-border)]"
+                  ? "bg-[var(--color-surface-3)] text-[var(--color-fg)] shadow-[inset_0_1px_0_0_var(--edge-light)]"
                   : "text-[var(--color-fg-subtle)] hover:text-[var(--color-fg-muted)]",
               )}
             >
@@ -103,15 +103,15 @@ export function PricePanel({
           <button
             type="button"
             onClick={onRetry}
-            className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-fg)] transition-colors hover:bg-[var(--color-accent-strong)]"
+            className="rounded-md bg-[var(--color-beam)] px-3 py-1.5 text-xs font-medium text-[var(--color-key-fg)] transition-[filter,box-shadow] hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]"
           >
             Retry
           </button>
         </div>
       ) : bars.length === 0 ? (
         <div className="flex h-[340px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--color-line-strong)] px-6 text-center sm:h-[420px]">
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-[var(--color-glass-strong)] ring-1 ring-[var(--color-glass-border)]">
-            <ChartIcon className="size-5 text-[var(--color-accent)]" aria-hidden="true" />
+          <span className="flex size-12 items-center justify-center rounded-lg bg-[var(--color-surface-3)] shadow-[inset_0_1px_0_0_var(--edge-light)]">
+            <ChartIcon className="size-5 text-[var(--color-fg-subtle)]" aria-hidden="true" />
           </span>
           <div className="max-w-sm space-y-1">
             <p className="text-sm font-medium text-[var(--color-fg)]">
@@ -125,7 +125,7 @@ export function PricePanel({
           <Link
             to="/"
             state={{ ticker }}
-            className={cn(buttonVariants({ variant: "primary", size: "sm" }), "mt-1")}
+            className={cn(buttonVariants({ variant: "key", size: "sm" }), "mt-1")}
           >
             <Radio className="size-4" aria-hidden="true" />
             Analyze {ticker} to backfill

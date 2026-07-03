@@ -151,7 +151,7 @@ export function MarketPage() {
               <button
                 type="button"
                 onClick={() => void instrumentsQuery.refetch()}
-                className="mt-1 rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-fg)] transition-colors hover:bg-[var(--color-accent-strong)]"
+                className="mt-1 rounded-md bg-[var(--color-beam)] px-3 py-1.5 text-xs font-medium text-[var(--color-key-fg)] transition-[filter,box-shadow] hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]"
               >
                 Retry
               </button>
@@ -203,7 +203,7 @@ export function MarketPage() {
                 <button
                   type="button"
                   onClick={() => void searchQuery.refetch()}
-                  className="mt-1 rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-fg)] transition-colors hover:bg-[var(--color-accent-strong)]"
+                  className="mt-1 rounded-md bg-[var(--color-beam)] px-3 py-1.5 text-xs font-medium text-[var(--color-key-fg)] transition-[filter,box-shadow] hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]"
                 >
                   Retry
                 </button>

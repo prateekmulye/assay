@@ -33,8 +33,8 @@ const STATUS_CFG: Record<
     label: "aborted",
   },
   running: {
-    tint: "var(--color-accent)",
-    dim: "var(--color-glass)",
+    tint: "var(--color-beam)",
+    dim: "var(--color-surface-2)",
     Icon: CircleCheck,
     label: "running",
   },
@@ -43,7 +43,7 @@ const STATUS_CFG: Record<
 export function StatusChip({ status }: { status: string }) {
   const cfg = STATUS_CFG[status] ?? {
     tint: "var(--color-fg-subtle)",
-    dim: "var(--color-glass)",
+    dim: "var(--color-surface-2)",
     Icon: CircleSlash,
     label: status,
   };

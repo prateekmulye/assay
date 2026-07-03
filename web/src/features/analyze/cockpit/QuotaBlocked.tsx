@@ -20,12 +20,12 @@ export function QuotaBlocked({ onDismiss }: { onDismiss?: () => void }) {
       description="Live analyses are metered to keep the demo affordable. The full cockpit — every node, the debate, the verdict — replays from recorded runs in the Library, at speed and with zero quota."
     >
       <div className="flex flex-wrap items-center justify-center gap-3">
-        <Link to="/library" className={cn(buttonVariants({ variant: "primary" }))}>
+        <Link to="/library" className={cn(buttonVariants({ variant: "key" }))}>
           <Sparkles className="size-4" aria-hidden="true" />
           Watch a replay
         </Link>
         {onDismiss && (
-          <Button variant="outline" onClick={onDismiss}>
+          <Button variant="rail" onClick={onDismiss}>
             Dismiss
           </Button>
         )}

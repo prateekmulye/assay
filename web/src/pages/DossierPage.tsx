@@ -108,7 +108,7 @@ export function DossierPage() {
           <Link
             to="/"
             state={{ ticker: symbol }}
-            className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-accent-fg)] transition-colors hover:bg-[var(--color-accent-strong)]"
+            className="rounded-md bg-[var(--color-beam)] px-4 py-2 text-sm font-medium text-[var(--color-key-fg)] transition-[filter,box-shadow] hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]"
           >
             Analyze {symbol} live
           </Link>

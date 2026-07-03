@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 
 import { type Action } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -10,13 +10,13 @@ const CONFIG: Record<
   BUY: {
     tint: "var(--color-bull)",
     dim: "var(--color-bull-dim)",
-    Icon: ArrowUpRight,
+    Icon: TrendingUp,
     label: "BUY",
   },
   SELL: {
     tint: "var(--color-bear)",
     dim: "var(--color-bear-dim)",
-    Icon: ArrowDownRight,
+    Icon: TrendingDown,
     label: "SELL",
   },
   HOLD: {
@@ -28,9 +28,10 @@ const CONFIG: Record<
 };
 
 /**
- * SignalBadge — the verdict chip. Color carries meaning but never alone: an
- * arrow glyph + the literal word back it up (Von Restorff isolation + a11y).
- * Mono label, tabular score. `size="lg"` is the hero verdict on the cockpit.
+ * SignalBadge — the engraved chip (DESIGN.md §8.5). Signal chroma is earned
+ * here (verdict = state) but never alone: glyph + the literal WORD back it up.
+ * Dim fill, NO border — the chip reads as engraved into the graphite, tinted
+ * by its signal. Score suffix stays ivory (data values are always fg).
  */
 export function SignalBadge({
   action,
@@ -47,25 +48,21 @@ export function SignalBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full font-mono font-semibold tracking-tight",
-        size === "sm" && "px-2 py-0.5 text-2xs",
-        size === "md" && "px-3 py-1 text-xs",
-        size === "lg" && "px-4 py-1.5 text-sm",
+        "inline-flex items-center rounded-sm font-mono font-medium uppercase",
+        size === "sm" && "gap-1 px-1.5 py-0.5 text-2xs tracking-[0.14em]",
+        size === "md" && "gap-1.5 px-2.5 py-1 text-2xs tracking-[0.14em]",
+        size === "lg" && "gap-2 px-3.5 py-1.5 text-sm tracking-[0.1em]",
         className,
       )}
-      style={{
-        color: cfg.tint,
-        background: cfg.dim,
-        border: `1px solid ${cfg.tint}`,
-      }}
+      style={{ color: cfg.tint, background: cfg.dim }}
     >
       <cfg.Icon
-        className={cn(size === "lg" ? "size-4" : "size-3")}
+        className={cn(size === "lg" ? "size-5" : "size-3")}
         aria-hidden="true"
       />
       {cfg.label}
       {score != null && (
-        <span className="text-[var(--color-fg)] opacity-80">· {score}</span>
+        <span className="tracking-normal text-[var(--color-fg)]">· {score}</span>
       )}
     </span>
   );

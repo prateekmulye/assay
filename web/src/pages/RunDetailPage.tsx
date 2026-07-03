@@ -58,8 +58,8 @@ export function RunDetailPage() {
     return (
       <div className="space-y-8">
         <BackLink />
-        <div className="glass h-40 animate-shimmer rounded-2xl" aria-hidden="true" />
-        <div className="glass h-72 animate-shimmer rounded-2xl" aria-hidden="true" />
+        <div className="panel h-40 animate-shimmer rounded-lg" aria-hidden="true" />
+        <div className="panel h-72 animate-shimmer rounded-lg" aria-hidden="true" />
       </div>
     );
   }
@@ -80,7 +80,7 @@ export function RunDetailPage() {
         >
           <Link
             to="/library"
-            className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-accent-fg)] transition-colors hover:bg-[var(--color-accent-strong)]"
+            className="rounded-md bg-[var(--color-beam)] px-4 py-2 text-sm font-medium text-[var(--color-key-fg)] transition-[filter,box-shadow] hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]"
           >
             Browse the library
           </Link>
@@ -112,7 +112,7 @@ function ReplayTheater({ run }: { run: RunDetail }) {
       {failed && (
         <div
           role="note"
-          className="flex items-start gap-3 rounded-2xl border px-5 py-4"
+          className="flex items-start gap-3 rounded-lg border px-5 py-4"
           style={{
             borderColor:
               run.status === "error" ? "var(--color-bear)" : "var(--color-hold)",

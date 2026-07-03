@@ -94,11 +94,11 @@ export const Cockpit = memo(function Cockpit({
       {/* Pipeline canvas — the hero. Header carries the live cost ticker. */}
       <section
         aria-label="Agent pipeline"
-        className="glass space-y-4 rounded-2xl p-4 sm:p-5"
+        className="panel space-y-4 rounded-xl p-4 sm:p-5"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-accent)]">
+            <span className="font-mono text-2xs uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
               Pipeline
             </span>
             <span className="font-mono text-2xs tabular-nums text-[var(--color-fg-subtle)]">

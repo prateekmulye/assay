@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Suspense, lazy, useMemo } from "react";
 import { useSearchParams } from "react-router";
 
-import { GlassCard } from "@/components/ui/glass-card";
+import { Panel } from "@/components/ui/panel";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   EvalEmpty,
@@ -99,10 +99,10 @@ export function EvalPage() {
           <MethodologyTape />
 
           {/* The spatial proof. */}
-          <GlassCard className="space-y-4">
+          <Panel className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-accent)]">
+                <h2 className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
                   Cost vs. quality, per ticker
                 </h2>
                 <p className="mt-1 max-w-xl text-sm leading-relaxed text-[var(--color-fg-muted)]">
@@ -116,19 +116,19 @@ export function EvalPage() {
 
             <Suspense
               fallback={
-                <div className="glass animate-shimmer h-[24rem] overflow-hidden rounded-xl" />
+                <div className="panel animate-shimmer h-[24rem] overflow-hidden rounded-xl" />
               }
             >
               <CostQualityScatter pairs={pairs} />
             </Suspense>
-          </GlassCard>
+          </Panel>
 
           {/* The receipts. */}
           <section aria-labelledby="receipts-heading">
             <div className="mb-3 flex items-baseline justify-between px-1">
               <h2
                 id="receipts-heading"
-                className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-accent)]"
+                className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]"
               >
                 Per-ticker receipts
               </h2>
@@ -137,9 +137,9 @@ export function EvalPage() {
               </span>
             </div>
             {pairs.length === 0 ? (
-              <GlassCard className="text-center text-sm text-[var(--color-fg-muted)]">
+              <Panel className="text-center text-sm text-[var(--color-fg-muted)]">
                 This run recorded a summary but no per-ticker rows.
-              </GlassCard>
+              </Panel>
             ) : (
               <PairTable pairs={pairs} />
             )}

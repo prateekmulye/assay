@@ -83,8 +83,8 @@ export function AnalyzeForm({
                 "h-12 w-full rounded-lg pl-9 pr-3",
                 "bg-[var(--color-surface-2)] font-mono text-lg font-medium uppercase tracking-wide text-[var(--color-fg)]",
                 "border border-[var(--color-line-strong)] placeholder:text-base placeholder:font-normal placeholder:text-[var(--color-fg-subtle)] placeholder:normal-case placeholder:tracking-normal",
-                "shadow-[inset_0_1px_0_0_oklch(100%_0_0/4%)] transition-[border-color,box-shadow] duration-[120ms]",
-                "focus:border-[var(--color-accent)] focus:shadow-[var(--shadow-glow-accent)] focus:outline-none focus-visible:outline-none",
+                "shadow-[inset_0_1px_0_0_var(--edge-light)] transition-[border-color,box-shadow] duration-[120ms]",
+                "focus:border-[var(--color-beam)] focus:shadow-[var(--shadow-glow-beam)] focus:outline-none focus-visible:outline-none",
               )}
             />
           </div>
@@ -105,7 +105,7 @@ export function AnalyzeForm({
                 className={cn(
                   "rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-[120ms]",
                   investorMode === mode
-                    ? "bg-[var(--color-glass-strong)] text-[var(--color-fg)] ring-1 ring-[var(--color-glass-border)]"
+                    ? "bg-[var(--color-surface-3)] text-[var(--color-fg)] shadow-[inset_0_1px_0_0_var(--edge-light)]"
                     : "text-[var(--color-fg-subtle)] hover:text-[var(--color-fg-muted)]",
                 )}
               >
@@ -133,7 +133,7 @@ export function AnalyzeForm({
                 className={cn(
                   "rounded-md px-2.5 py-1 font-mono text-2xs font-medium uppercase tracking-wide transition-colors",
                   debate === opt
-                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)]"
+                    ? "bg-[var(--color-surface-3)] text-[var(--color-fg)] shadow-[inset_0_1px_0_0_var(--edge-light)]"
                     : "text-[var(--color-fg-subtle)] hover:text-[var(--color-fg-muted)]",
                 )}
               >
@@ -144,7 +144,7 @@ export function AnalyzeForm({
         </fieldset>
 
         {isActive ? (
-          <Button type="button" variant="outline" onClick={onStop}>
+          <Button type="button" variant="rail" onClick={onStop}>
             <Square className="fill-current" />
             Stop
           </Button>

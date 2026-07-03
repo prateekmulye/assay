@@ -4,37 +4,41 @@ import { type ButtonHTMLAttributes, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Button — the shell's primary affordance. The `primary` variant uses the azure
- * functional accent; `signal` variants exist for verdict-styled actions later.
- * Motion: 120ms press scale, spring easing — shared physics language.
+ * Button — machined keys (DESIGN.md §8.3). `key` is the single beam-filled
+ * bright element at rest (one per view, maximum); `panel` is a raised graphite
+ * key; `rail` is the hairline-outlined utility key; `ghost` is text-only.
+ * Press physics: scale(0.97) on --spring-press. Interaction speaks in light,
+ * never hue.
  */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium " +
-    "transition-[transform,background-color,box-shadow,border-color] duration-[120ms] ease-[var(--ease-spring)] " +
-    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] " +
+  "relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium " +
+    "[transition:transform_var(--spring-press),background-color_150ms_var(--ease-out),box-shadow_150ms_var(--ease-out),border-color_150ms_var(--ease-out),color_150ms_var(--ease-out),filter_150ms_var(--ease-out)] " +
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-beam)] " +
     "disabled:pointer-events-none disabled:opacity-50 active:scale-[0.97] " +
     "[&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        primary:
-          "bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold " +
-          "hover:bg-[var(--color-accent-strong)] hover:shadow-[var(--shadow-glow-accent)]",
-        glass: "glass text-[var(--color-fg)] hover:bg-[var(--color-glass-strong)]",
-        ghost:
-          "text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-glass)]",
-        outline:
+        key:
+          "bg-[var(--color-beam)] text-[var(--color-key-fg)] shadow-[inset_0_1px_0_0_var(--edge-light)] " +
+          "hover:brightness-[1.04] hover:shadow-[var(--shadow-glow-beam)]",
+        panel:
+          "bg-[var(--color-surface-2)] text-[var(--color-fg)] shadow-[var(--shadow-panel)] " +
+          "hover:bg-[var(--color-surface-3)]",
+        rail:
           "border border-[var(--color-line-strong)] bg-transparent text-[var(--color-fg)] " +
-          "hover:bg-[var(--color-glass)] hover:border-[var(--color-glass-border)]",
+          "hover:bg-[var(--color-surface-1)]",
+        ghost: "text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]",
       },
       size: {
-        sm: "h-8 px-3 text-xs",
-        md: "h-10 px-4",
+        /* Dense key — visual h-9, hit area expanded to 44px via ::after (§8). */
+        sm: "h-9 px-3 text-xs after:absolute after:inset-x-0 after:-inset-y-1 after:content-['']",
+        md: "h-11 px-4",
         lg: "h-12 px-6 text-base",
-        icon: "size-10",
+        icon: "size-11",
       },
     },
-    defaultVariants: { variant: "primary", size: "md" },
+    defaultVariants: { variant: "key", size: "md" },
   },
 );
 

@@ -62,9 +62,9 @@ export function FundamentalsPanel({
   notFound: boolean;
 }) {
   return (
-    <section className="glass space-y-4 rounded-2xl p-5 sm:p-6">
+    <section className="panel space-y-4 rounded-lg p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
-        <p className="flex items-center gap-2 font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-accent)]">
+        <p className="flex items-center gap-2 font-mono text-2xs font-medium uppercase tracking-[0.18em] text-[var(--color-fg-subtle)]">
           <Gauge className="size-3.5" aria-hidden="true" />
           Fundamentals
         </p>
@@ -97,7 +97,7 @@ export function FundamentalsPanel({
           <Link
             to="/"
             state={{ ticker }}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "mt-1")}
+            className={cn(buttonVariants({ variant: "rail", size: "sm" }), "mt-1")}
           >
             Analyze {ticker}
           </Link>

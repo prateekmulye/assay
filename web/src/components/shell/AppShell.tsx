@@ -1,25 +1,36 @@
 import { Suspense } from "react";
 import { Outlet } from "react-router";
 
-import { AuroraBackground } from "@/components/shell/AuroraBackground";
+import { useShellLive } from "@/components/shell/live";
 import { Footer } from "@/components/shell/Footer";
 import { PageTransition } from "@/components/shell/PageTransition";
 import { RouteFallback } from "@/components/shell/RouteFallback";
 import { TopNav } from "@/components/shell/TopNav";
 
 /**
- * AppShell — the persistent glass frame around every route. Layers, back to
- * front: aurora background → grain overlay (via `.grain` on the root) → glass
- * nav → transitioning page → footer. A skip link keeps keyboard users fast.
+ * AppShell — the bench (DESIGN.md §2.3). Atmosphere layers, back to front:
+ * base fill + static bench light (L1) → live emission field (L2, opacity
+ * driven by data-live) → content → machined grain (L4, via `.grain`). The
+ * `data-live` attribute is the single liveness switch: emission field and
+ * Wordmark cursor blink are pure CSS reactions to it.
  */
 export function AppShell() {
+  const live = useShellLive();
+
   return (
-    <div className="grain relative flex min-h-dvh flex-col">
-      <AuroraBackground />
+    <div
+      data-live={live ? "true" : "false"}
+      className="grain relative flex min-h-dvh flex-col"
+    >
+      {/* Atmosphere L0–L2: two fixed radial fields, both token-defined in CSS. */}
+      <div aria-hidden="true" className="fixed inset-0 -z-10">
+        <div className="bench-light" />
+        <div className="emission-field" />
+      </div>
 
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-[var(--color-accent)] focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-[var(--color-accent-fg)]"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[var(--z-toast)] focus:rounded-md focus:bg-[var(--color-beam)] focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-[var(--color-key-fg)]"
       >
         Skip to content
       </a>
@@ -31,7 +42,7 @@ export function AppShell() {
       <div
         id="main"
         tabIndex={-1}
-        className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 outline-none sm:py-10"
+        className="mx-auto w-full max-w-7xl flex-1 px-6 py-8 outline-none sm:py-10"
       >
         <PageTransition>
           <Suspense fallback={<RouteFallback />}>

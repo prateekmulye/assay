@@ -60,7 +60,7 @@ export function KindChip({ kind }: { kind: "news" | "run" }) {
   const cfg =
     kind === "news"
       ? { Icon: Newspaper, label: "news", tint: "var(--color-fg-muted)" }
-      : { Icon: FileText, label: "run", tint: "var(--color-accent)" };
+      : { Icon: FileText, label: "run", tint: "var(--color-fg-muted)" };
   return (
     <span
       className="inline-flex items-center gap-1 rounded-full border border-[var(--color-line)] px-2 py-0.5 font-mono text-2xs lowercase tracking-wide"
