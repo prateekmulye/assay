@@ -31,7 +31,7 @@ function Meter({
   width?: string;
 }) {
   return (
-    <div className="flex min-w-0 items-baseline gap-2 px-3 first:pl-0 sm:px-4">
+    <div className="flex min-w-0 items-baseline gap-2 sm:px-4 sm:first:pl-0">
       <span className="kicker whitespace-nowrap !tracking-[0.14em]">{label}</span>
       <span
         className={cn(
@@ -111,7 +111,10 @@ export function CostTicker({
           boxShadow: active ? "0 0 6px 0 var(--color-beam-dim)" : "none",
         }}
       />
-      <div className="flex divide-x divide-[var(--color-line)]">
+      {/* <sm: the four meters wrap into a 2×2 grid (the strip otherwise clips
+          mid-glyph at 390px with no scroll affordance — NODES vanished). From
+          sm up it is the §8.12 single tape with hairline verticals. */}
+      <div className="grid min-w-0 flex-1 grid-cols-2 gap-x-4 gap-y-1 sm:flex sm:flex-initial sm:grid-cols-none sm:gap-0 sm:divide-x sm:divide-[var(--color-line)]">
         <Meter
           key={`tok-${flashKey}`}
           label="tokens"

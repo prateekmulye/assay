@@ -12,7 +12,7 @@ import { ArrowDownRight, ArrowUpRight, Scale } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-import { Tile, TokenStream } from "./panelKit";
+import { SkippedNote, Tile, TokenStream } from "./panelKit";
 import type { DebatePanel, NodeStatus } from "./pipeline";
 
 const BULL = "var(--color-bull)";
@@ -59,6 +59,8 @@ function ThesisColumn({
         <p className="font-mono text-xs text-[var(--color-fg-subtle)]">
           awaiting analysts…
         </p>
+      ) : status === "skipped" ? (
+        <SkippedNote />
       ) : text ? (
         <TokenStream text={text} />
       ) : (
@@ -107,6 +109,8 @@ function VerdictBridge({
         <p className="font-mono text-xs text-[var(--color-fg-subtle)]">
           weighing the debate…
         </p>
+      ) : status === "skipped" ? (
+        <SkippedNote />
       ) : (
         <p className="font-mono text-xs text-[var(--color-fg-subtle)]">
           verdict pending

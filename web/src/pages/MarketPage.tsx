@@ -134,8 +134,10 @@ export function MarketPage() {
 
       {/* Mirror-binary lanes (§10-Market): coverage | research, 1fr 1fr. */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Lane 1 — Instruments */}
-        <section aria-labelledby="lane-instruments">
+        {/* Lane 1 — Instruments. min-w-0: the rows' nowrap truncate text sets a
+            ~400px min-content; without this the implicit grid track honors it
+            and the page overflows horizontally at 390px. */}
+        <section aria-labelledby="lane-instruments" className="min-w-0">
           <LaneHeader
             kicker="Instruments"
             count={instrumentsQuery.isSuccess ? instruments.length : undefined}
@@ -181,8 +183,8 @@ export function MarketPage() {
           )}
         </section>
 
-        {/* Lane 2 — Research memory */}
-        <section aria-labelledby="lane-research">
+        {/* Lane 2 — Research memory. min-w-0: same grid-blowout guard as lane 1. */}
+        <section aria-labelledby="lane-research" className="min-w-0">
           <LaneHeader
             kicker="Research memory"
             count={searchable && searchQuery.isSuccess ? hits.length : undefined}

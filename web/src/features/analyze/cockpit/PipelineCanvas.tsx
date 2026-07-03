@@ -360,6 +360,11 @@ export const PipelineCanvas = memo(function PipelineCanvas({
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}
+        // The board is aria-hidden decoration — nothing inside it may take
+        // keyboard focus (xyflow defaults edges/nodes to tabbable, which put
+        // "Edge from router to…" in the page tab order behind aria-hidden).
+        nodesFocusable={false}
+        edgesFocusable={false}
         panOnDrag={false}
         panOnScroll={false}
         zoomOnScroll={false}

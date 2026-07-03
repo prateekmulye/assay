@@ -83,6 +83,15 @@ baseline the [eval harness](#the-ablation-the-paper-omits) compares against.
   fundamentals, news) into Postgres 16 + pgvector during each run; a nightly in-process
   collector refreshes a 30-ticker watchlist across US, Indian, Japanese, Chinese,
   Hong Kong, and European exchanges.
+- **Budgeted X (Twitter) signal.** Optional social sentiment for the news analyst from
+  the pay-per-use X API, engineered to almost never pay: cache-first from the warehouse,
+  a hard monthly post budget consumed increment-first (default caps worst-case spend at
+  ~$8/month), stale-cache fallback, and full graceful degrade — a run never dies over
+  tweets. Off unless `X_BEARER_TOKEN` is set.
+- **"Machined Light" design system.** The SPA is a tungsten-lit graphite instrument
+  (`web/DESIGN.md`): chroma is rationed to market/state signals, glow means live
+  computation, and the unlit 12-die pipeline *is* the empty state. AAA contrast on data,
+  full reduced-motion variants, 44px targets throughout.
 - **Quick/deep model tiers.** Provider-agnostic `ChatOpenAI` pointed at Ollama Cloud's
   OpenAI-compatible `/v1` — `gpt-oss:20b` for routing, analysts, and reporting;
   `gpt-oss:120b` for debate, trading, risk, and judging. No OpenAI key, no GPU.
@@ -91,6 +100,8 @@ baseline the [eval harness](#the-ablation-the-paper-omits) compares against.
   embedding API key.
 
 ## Screenshots
+
+![The armed bench — the unlit 12-die pipeline is the empty state](docs/assets/analyze-armed.png)
 
 | Research library | Timeline replay |
 | --- | --- |
@@ -224,7 +235,7 @@ Everything under `/api`, liveness at the root:
 ```
 src/            the application — graph, agents, llm, tools, api, warehouse, collector, eval, memory, obs
 web/            React SPA (Vite + TS); design tokens in web/DESIGN.md
-tests/          offline unit + integration suites (540 tests; no network)
+tests/          offline unit + integration suites (555 tests; no network)
 migrations/     Alembic schema for the warehouse
 evals/          curated A/B ticker set; eval reports land here
 scripts/        dev utilities (demo seeder, smoke test)
@@ -235,7 +246,7 @@ docs/           deploy runbook, design history (docs/superpowers/), screenshots
 
 ## Testing
 
-815 tests: **540 backend** (pytest, fully offline — LLMs and tools mocked) + **275
+834 tests: **555 backend** (pytest, fully offline — LLMs and tools mocked) + **279
 frontend** (vitest). CI runs five parallel jobs: backend matrix (3.11/3.13), frontend
 gates, real-Postgres integration, security (gitleaks + pip-audit + npm audit), and a
 fake-LLM e2e smoke with a Trivy image scan.

@@ -26,7 +26,9 @@ old Pinecone/RAG prototype). Paste-ready; tweak freely.
 > framed honestly as a judge-preference proxy, not P&L. Around that core sits a
 > production app: a FastAPI backend streaming runs over SSE, a write-through Postgres +
 > pgvector warehouse with local BGE-small embeddings powering semantic search, a React
-> 19 glass-shell SPA with a live agent-graph cockpit and timeline replay, a
+> 19 SPA in the "Machined Light" design system (a tungsten-lit graphite instrument)
+> with a live agent-graph cockpit and timeline replay, an X (Twitter) social signal
+> hard-budgeted to ~$8/month, a
 > quota-guarded public demo with a deterministic fake-LLM mode, and a $0/month Docker
 > Compose deployment behind a Cloudflare Tunnel (zero open inbound ports) with a
 > five-job CI pipeline. Everything runs on open-weight models via Ollama Cloud — no
@@ -34,7 +36,7 @@ old Pinecone/RAG prototype). Paste-ready; tweak freely.
 
 ## Suggested metrics line
 
-> 12-node agent graph · 540 backend + 275 frontend tests · debate A/B eval harness ·
+> 12-node agent graph · 555 backend + 279 frontend tests · debate A/B eval harness ·
 > Postgres + pgvector warehouse · React 19 · 100% open-weight models
 
 ## Links

@@ -4,7 +4,7 @@
  * completion it flips to the structured summary + key points + confidence chip,
  * read from the node's `analyst_reports` delta.
  */
-import { ConfidenceChip, KeyPoints, Tile, TokenStream } from "./panelKit";
+import { ConfidenceChip, KeyPoints, SkippedNote, Tile, TokenStream } from "./panelKit";
 import type { AnalystPanel } from "./pipeline";
 
 const ACCENT = "var(--color-conservative)"; // analyst phase tint (§8.9): cool intake
@@ -33,6 +33,8 @@ function AnalystCard({ panel, title }: { panel: AnalystPanel; title: string }) {
         <p className="font-mono text-xs text-[var(--color-fg-subtle)]">
           awaiting router…
         </p>
+      ) : panel.status === "skipped" ? (
+        <SkippedNote />
       ) : panel.text ? (
         <TokenStream text={panel.text} />
       ) : (

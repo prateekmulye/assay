@@ -30,6 +30,21 @@ export function StatusDot({ status }: { status: NodeStatus }) {
 }
 
 /**
+ * SkippedNote — honest body copy for a `skipped` node (the verdict-cache hit,
+ * §8.9): the die reads CACHED, so the organ panel must agree. Without this
+ * branch, skipped panels fell through to in-flight verbs ("analyzing…") on a
+ * finished run — present-tense liveness on a node that never ran violates the
+ * One Rule's clause 2. Graphite, no chroma: a skip is an absence, not a state.
+ */
+export function SkippedNote() {
+  return (
+    <p className="font-mono text-xs text-[var(--color-fg-subtle)]">
+      skipped — served from cache
+    </p>
+  );
+}
+
+/**
  * Tile — the §8.10 panel: kicker-weight mono header row, top filament, dense
  * body. `filament="always"` = persona identity; `"earned"` = ignites on
  * completion.

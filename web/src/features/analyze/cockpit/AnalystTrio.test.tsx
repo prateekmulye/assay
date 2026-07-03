@@ -46,4 +46,18 @@ describe("AnalystTrio", () => {
     expect(screen.getByText(/no report — degraded/i)).toBeInTheDocument();
     expect(screen.queryByText(/analyzing/i)).not.toBeInTheDocument();
   });
+
+  it("says 'skipped — served from cache' on a verdict-cache hit (never in-flight verbs)", () => {
+    // The cache-hit path (§8.9): the run is done, these nodes never fired.
+    // The die reads CACHED; the panel body must agree — not "analyzing…".
+    render(
+      <AnalystTrio
+        news={panel("news_analyst", { status: "skipped" })}
+        fundamentals={panel("fundamentals_analyst", { status: "skipped" })}
+        technicals={panel("technicals_analyst", { status: "skipped" })}
+      />,
+    );
+    expect(screen.getAllByText(/skipped — served from cache/i)).toHaveLength(3);
+    expect(screen.queryByText(/analyzing/i)).not.toBeInTheDocument();
+  });
 });

@@ -11,7 +11,7 @@ import { Flame, Scale, ShieldHalf } from "lucide-react";
 import { SignalBadge } from "@/components/ui/signal-badge";
 import { cn } from "@/lib/utils";
 
-import { Tile, TokenStream } from "./panelKit";
+import { SkippedNote, Tile, TokenStream } from "./panelKit";
 import type { NodeStatus, RiskPanel, TradePanel } from "./pipeline";
 
 function StanceTile({
@@ -57,6 +57,8 @@ function StanceTile({
         <p className="font-mono text-xs text-[var(--color-fg-subtle)]">
           awaiting trade proposal…
         </p>
+      ) : status === "skipped" ? (
+        <SkippedNote />
       ) : text ? (
         <TokenStream text={text} />
       ) : (
@@ -98,6 +100,8 @@ function TradeCard({ trade }: { trade: TradePanel }) {
         <p className="font-mono text-xs text-[var(--color-fg-subtle)]">
           awaiting debate verdict…
         </p>
+      ) : trade.status === "skipped" ? (
+        <SkippedNote />
       ) : trade.text ? (
         <TokenStream text={trade.text} />
       ) : (
@@ -136,6 +140,8 @@ function ArbiterBridge({ status, text }: { status: NodeStatus; text: string }) {
         <p className="font-mono text-xs text-[var(--color-fg-subtle)]">
           reconciling the desks…
         </p>
+      ) : status === "skipped" ? (
+        <SkippedNote />
       ) : (
         <p className="font-mono text-xs text-[var(--color-fg-subtle)]">
           resolution pending
