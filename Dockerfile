@@ -6,7 +6,7 @@
 # TLS/edge is Cloudflare's (Tunnel) — no in-stack web server anymore.
 
 # ---- Stage 1: build the Vite SPA ------------------------------------------
-FROM node:22-slim AS web-builder
+FROM node:26-slim AS web-builder
 WORKDIR /web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
