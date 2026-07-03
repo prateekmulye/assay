@@ -130,3 +130,6 @@ runs/
 
 # Brainstorming companion sessions
 .superpowers/
+
+# Generated A/B eval reports (python -m src.eval.run) — outputs, not sources
+/evals/report-*

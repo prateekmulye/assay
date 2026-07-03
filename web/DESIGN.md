@@ -78,7 +78,7 @@ story — instruments don't have frosted parts.
 
 | Layer | What | Cost |
 | --- | --- | --- |
-| 0 | `--color-base` page fill | free |
+| 0 | `--color-bench` page fill | free |
 | 1 | **Bench light** — one fixed radial field: `background: radial-gradient(120% 90% at 50% -10%, oklch(96% 0.02 90 / 5%), transparent 55%)` on a fixed, pointer-events-none div. Static. This replaces `AuroraBackground` (delete the blobs). | one composited layer |
 | 2 | **Live emission field** — only when a run is live (`[data-live="true"]` on the shell): a second radial field behind the cockpit region, `radial-gradient(80% 60% at 50% 30%, oklch(97% 0.01 90 / 4%), transparent 60%)`, opacity animated 0→1 over 600ms on ignition (§6.3-1). | one composited layer, run-time only |
 | 3 | Content | — |
@@ -126,7 +126,7 @@ what separates this system from every blue-black dev tool. Do not drift it coole
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--color-base` | `oklch(11% 0.006 75)` | Page background (the bench) |
+| `--color-bench` | `oklch(11% 0.006 75)` | Page background (the bench) |
 | `--color-surface-1` | `oklch(14.5% 0.007 75)` | Resting panel |
 | `--color-surface-2` | `oklch(18% 0.008 75)` | Raised panel, hover rows, dies |
 | `--color-surface-3` | `oklch(22.5% 0.009 75)` | Overlay panes, tooltips, active rows |
@@ -419,7 +419,7 @@ announced via the existing aria-live patterns; icons are lucide only, 16px defau
 
 - **AppShell:** base fill + bench light (L1) + grain (L4); `data-live` attribute
   driven by the analysis stream phase (powers §2.3-L2 and the Wordmark cursor).
-- **TopNav — "the rail":** full-width, opaque `--color-base`, single bottom hairline
+- **TopNav — "the rail":** full-width, opaque `--color-bench`, single bottom hairline
   `--color-line`; h-14; NOT floating, NOT blurred, NOT pill-shaped. On scroll >0:
   fill shifts to `--color-surface-1` and the hairline to `--color-line-strong`
   (180ms). Left: Wordmark. Center-left: tabs. Right: LED cluster (HealthDot,
@@ -701,7 +701,7 @@ where only the evidence is colored.
   --text-6xl: 4.75rem;    --text-6xl--line-height: 4.75rem;
 
   /* graphite surfaces §3.1 */
-  --color-base: oklch(11% 0.006 75);
+  --color-bench: oklch(11% 0.006 75);
   --color-surface-1: oklch(14.5% 0.007 75);
   --color-surface-2: oklch(18% 0.008 75);
   --color-surface-3: oklch(22.5% 0.009 75);

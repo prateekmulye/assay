@@ -42,10 +42,7 @@ export function ExplorerSearch({
         className={cn(
           "h-14 w-full rounded-md pl-12 pr-12",
           "border bg-[var(--color-well)] shadow-[var(--shadow-well)]",
-          // NOTE: not `text-base` — the --color-base surface token makes
-          // Tailwind emit `text-base` as a COLOR utility (11% ink) that beats
-          // the font-size utility of the same name. Size set explicitly.
-          "font-mono text-[1rem]/[1.55rem] font-medium text-[var(--color-fg)] [caret-color:var(--color-beam)]",
+          "font-mono text-base font-medium text-[var(--color-fg)] [caret-color:var(--color-beam)]",
           "placeholder:font-normal placeholder:text-[var(--color-fg-subtle)]",
           "transition-[border-color,box-shadow] duration-[180ms] ease-[var(--ease-out)]",
           "focus:border-[var(--color-beam)] focus:shadow-[var(--shadow-glow-beam)] focus:outline-none",

@@ -114,9 +114,6 @@ function Row({ pair }: { pair: EvalPair }) {
         GRID_COLS,
       )}
     >
-      {/* Ticker. NB: no `text-base` here — the theme's `--color-base` shadows
-          Tailwind's text-base font-size utility into `color: base` (near-black);
-          the body default is already 16px. */}
       <span className="font-mono tracking-tight text-[var(--color-fg)] [font-weight:550]">
         {pair.ticker}
       </span>

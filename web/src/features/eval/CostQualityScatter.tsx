@@ -177,7 +177,7 @@ export function CostQualityScatter({ pairs }: { pairs: EvalPair[] }) {
                   <Cell
                     key={p.ticker}
                     fill={judgeColor(p.pair.judgePreferred)}
-                    stroke="var(--color-base)"
+                    stroke="var(--color-bench)"
                     strokeWidth={1.5}
                   />
                 ),

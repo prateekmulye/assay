@@ -47,7 +47,7 @@
   --text-6xl--line-height: 4.75rem;
 
   /* ---- Graphite surfaces (§3.1) — warm cast hue 75; do not drift cooler ---- */
-  --color-base: oklch(11% 0.006 75); /* the bench */
+  --color-bench: oklch(11% 0.006 75); /* the bench */
   --color-surface-1: oklch(14.5% 0.007 75); /* resting panel */
   --color-surface-2: oklch(18% 0.008 75); /* raised panel, hover rows, dies */
   --color-surface-3: oklch(22.5% 0.009 75); /* overlay panes, tooltips, active rows */
@@ -237,7 +237,7 @@
   body {
     margin: 0;
     min-height: 100dvh;
-    background-color: var(--color-base);
+    background-color: var(--color-bench);
     color: var(--color-fg);
     font-family: var(--font-sans);
     font-size: var(--text-base);
@@ -359,7 +359,7 @@
     position: fixed;
     inset: 0;
     pointer-events: none;
-    background-color: var(--color-base);
+    background-color: var(--color-bench);
     background-image: radial-gradient(
       120% 90% at 50% -10%,
       oklch(96% 0.02 90 / 5%),

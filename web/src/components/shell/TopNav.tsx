@@ -48,7 +48,7 @@ export function TopNav() {
         "sticky top-0 z-[var(--z-rail)] border-b transition-colors duration-[180ms] ease-[var(--ease-out)]",
         scrolled
           ? "border-[var(--color-line-strong)] bg-[var(--color-surface-1)]"
-          : "border-[var(--color-line)] bg-[var(--color-base)]",
+          : "border-[var(--color-line)] bg-[var(--color-bench)]",
       )}
     >
       <nav
