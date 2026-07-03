@@ -1,11 +1,11 @@
-# prateekmulye.dev — FinResearchAI project copy
+# prateekmulye.dev — Assay project copy
 
 Refreshed copy for the portfolio site. The live card is stale (it still describes the
 old Pinecone/RAG prototype). Paste-ready; tweak freely.
 
 ## Project card (2–3 sentences)
 
-> **FinResearchAI** — a multi-agent equity-research system you can watch think. A
+> **Assay** — a multi-agent equity-research system you can watch think. A
 > 12-node LangGraph pipeline streams parallel analysts, a bull/bear debate, and a risk
 > debate into a BUY/SELL/HOLD verdict over SSE, persists every run to a Postgres +
 > pgvector warehouse, and replays any of them on a timeline. It also ships the
@@ -14,7 +14,7 @@ old Pinecone/RAG prototype). Paste-ready; tweak freely.
 
 ## Case study paragraph
 
-> FinResearchAI started as a question about the *TradingAgents* paper (arXiv
+> Assay started as a question about the *TradingAgents* paper (arXiv
 > 2412.20138): the authors show a multi-agent debate pipeline beats baselines, but
 > never isolate what the debate itself buys. I built the system as a deliberate subset
 > of the paper — three parallel analysts, a bounded bull/bear exchange, a trader, and a
@@ -41,7 +41,7 @@ old Pinecone/RAG prototype). Paste-ready; tweak freely.
 
 ## Links
 
-- Repo: https://github.com/prateekmulye/FinResearchAI
-- Live demo: `finresearch.prateekmulye.dev` (once the free VM + tunnel are up — until
+- Repo: https://github.com/prateekmulye/assay
+- Live demo: `assay.prateekmulye.dev` (once the free VM + tunnel are up — until
   then point the card at the repo's README hero + screenshots)
 - Paper positioned against: https://arxiv.org/abs/2412.20138

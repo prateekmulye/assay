@@ -1,7 +1,7 @@
-# FinResearch — Design System v3: MACHINED LIGHT
+# Assay — Design System v3: MACHINED LIGHT
 
 > **Identity:** _Machined Light — a tungsten-lit graphite instrument._
-> **Thesis:** FinResearchAI is a precision instrument milled from graphite and lit by a
+> **Thesis:** Assay is a precision instrument milled from graphite and lit by a
 > single tungsten lamp. **Every trace of chroma is a market or state signal. Every glow
 > is live computation. Everything else speaks in luminance.**
 > **Dark-only. No light theme** (justification in §2.7).
@@ -428,7 +428,7 @@ announced via the existing aria-live patterns; icons are lucide only, 16px defau
   (100ms); active → `--color-fg` + the **filament**: a 2px beam underline sliding
   between tabs via the existing Motion `layoutId="nav-active-pill"` (rename to
   `nav-filament`), spring per §6.1 exception. The v2 pill fill is gone.
-- **Wordmark:** "FinResearch" Instrument Sans 600 tight + a trailing 2×14px block
+- **Wordmark:** "Assay" Instrument Sans 600 tight + a trailing 2×14px block
   cursor in `--color-beam` — solid at rest, **blinking (1.1s steps(2)) only while
   `data-live`** (brand ties to liveness; static under reduced motion).
 - **Footer:** top hairline; mono `--text-2xs` `--color-fg-subtle` colophon (version,
@@ -842,7 +842,7 @@ When pulling any 21st.dev component, wrap its source in this prompt for the
 implementing agent:
 
 > You are given a reference React component from 21st.dev. Integrate its
-> TECHNIQUE — not its skin — into FinResearchAI (`web/`, React 19 + Tailwind v4 +
+> TECHNIQUE — not its skin — into Assay (`web/`, React 19 + Tailwind v4 +
 > Motion v12). Re-tokenize completely to `web/DESIGN.md` v3 "Machined Light":
 > tokens §3 only (no raw colors), type §4 (Instrument Sans / JetBrains Mono), motion
 > §6 springs, One Rule §1 (chroma = state, glow = interaction, else graphite).

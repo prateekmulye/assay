@@ -18,7 +18,7 @@ def dist(tmp_path: Path) -> Path:
     d = tmp_path / "dist"
     (d / "assets").mkdir(parents=True)
     (d / "index.html").write_text(
-        '<!doctype html><title>FinResearch</title><div id="root"></div>',
+        '<!doctype html><title>Assay</title><div id="root"></div>',
         encoding="utf-8",
     )
     (d / "assets" / "app-abc123.js").write_text("console.log(1)", encoding="utf-8")

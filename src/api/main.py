@@ -1,4 +1,4 @@
-"""FastAPI app for FinResearchAI — API v2 (WP-5): everything under /api.
+"""FastAPI app for Assay — API v2 (WP-5): everything under /api.
 
 Endpoints:
   POST /api/analyze              -> EventSourceResponse streaming the graph run as SSE.
@@ -60,7 +60,7 @@ def create_app(
     # Lifespan (WP-3): watchlist seeding + the gated collector; degrades on any
     # failure so it can never affect startup — see src/api/lifespan.py.
     # version: simple literal, kept in sync with pyproject.toml [project].version.
-    app = FastAPI(title="FinResearchAI API", version="2.0.0", lifespan=lifespan)
+    app = FastAPI(title="Assay API", version="3.0.0", lifespan=lifespan)
 
     origins = allowed_origins or [
         o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",") if o.strip()

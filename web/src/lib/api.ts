@@ -1,5 +1,5 @@
 /**
- * Typed API client for the FinResearchAI FastAPI backend.
+ * Typed API client for the Assay FastAPI backend.
  *
  * DTOs mirror src/api/routes/dto.py and src/api/schemas.py EXACTLY. The SSE
  * stream is handled separately in hooks/useAnalysisStream.ts (it needs a

@@ -12,7 +12,7 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     # The token binds this connector to one tunnel + its DNS route
-    # (finresearch.prateekmulye.dev -> http://app:7860), all configured on the
+    # (assay.prateekmulye.dev -> http://app:7860), all configured on the
     # Cloudflare side. Empty/missing token -> cloudflared exits loudly.
     command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN:-}
     # Profile-gated so CI and tokenless local runs can boot app+db alone:

@@ -37,7 +37,7 @@ def demo_score(ticker: str) -> int:
 
 
 def news_url(ticker: str, i: int) -> str:
-    return f"https://demo.finresearch.ai/news/{ticker.lower()}/{i}"
+    return f"https://demo.assay.dev/news/{ticker.lower()}/{i}"
 
 
 _SECTORS = (

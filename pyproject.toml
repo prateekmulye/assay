@@ -1,7 +1,7 @@
 [project]
-name = "finresearchai"
+name = "assay"
 # Keep in sync with the FastAPI version literal in src/api/main.py.
-version = "2.0.0"
+version = "3.0.0"
 description = "Debate-driven multi-agent financial research system"
 readme = "README.md"
 license = "MIT"
@@ -52,11 +52,11 @@ dev = [
 ]
 # Aggregate group CI installs so lint/type-check/tests see every import path.
 all = [
-    "finresearchai[web]",
-    "finresearchai[data]",
-    "finresearchai[api]",
-    "finresearchai[db]",
-    "finresearchai[dev]",
+    "assay[web]",
+    "assay[data]",
+    "assay[api]",
+    "assay[db]",
+    "assay[dev]",
 ]
 
 [build-system]

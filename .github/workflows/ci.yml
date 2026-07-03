@@ -199,8 +199,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      # Deterministic image/container names (finresearch-app).
-      COMPOSE_PROJECT_NAME: finresearch
+      # Deterministic image/container names (assay-app).
+      COMPOSE_PROJECT_NAME: assay
       POSTGRES_PASSWORD: ci
       APP_FAKE_LLM: "1" # deterministic offline demo LLM — zero external calls
       # Dummy values: APP_FAKE_LLM short-circuits every LLM/tool call before
@@ -220,7 +220,7 @@ jobs:
       - name: Trivy scan (app runtime image — the only image the stack ships)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: finresearch-app:latest
+          image-ref: assay-app:latest
           severity: CRITICAL,HIGH
           exit-code: "1"
           ignore-unfixed: true
@@ -234,7 +234,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsS --retry 5 --retry-delay 2 --retry-connrefused http://localhost:7860/ | tee /tmp/index.html >/dev/null
-          grep -q "<title>FinResearch" /tmp/index.html
+          grep -q "<title>Assay" /tmp/index.html
           grep -q 'id="root"' /tmp/index.html
 
       - name: "Smoke: /healthz"

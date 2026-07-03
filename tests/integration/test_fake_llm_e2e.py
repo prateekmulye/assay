@@ -85,7 +85,7 @@ def test_fake_llm_full_run_persists_and_replays(
         assert fundamentals["payload"]
         news = client.get("/api/market/AAPL/news").json()
         assert len(news["items"]) == 5
-        assert all(n["url"].startswith("https://demo.finresearch.ai/") for n in news["items"])
+        assert all(n["url"].startswith("https://demo.assay.dev/") for n in news["items"])
 
     # ---- raw warehouse row counts (post-shutdown, throwaway session) --------
     async def _counts(session):

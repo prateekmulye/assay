@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Wordmark (DESIGN.md §8.1): "FinResearch" set tight at 600, with a trailing
+ * Wordmark (DESIGN.md §8.1): "Assay" set tight at 600, with a trailing
  * 2×14px block cursor in the beam. The cursor is solid at rest and blinks
  * (1.1s, steps(2)) ONLY while the shell is data-live — the brand itself ties
  * to liveness. Both behaviors are pure CSS on `.wm-cursor`; reduced motion

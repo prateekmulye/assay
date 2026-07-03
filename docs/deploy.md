@@ -1,4 +1,4 @@
-# Deploying FinResearchAI — $0/month (Oracle Always-Free + Cloudflare Tunnel)
+# Deploying Assay — $0/month (Oracle Always-Free + Cloudflare Tunnel)
 
 The production stack is `docker-compose.prod.yml`, three services:
 
@@ -60,7 +60,7 @@ Your domain must already be on Cloudflare (nameservers pointed there).
    — don't run the install command itself; the compose stack runs the
    connector as a container.
 3. **Public Hostnames → Add**:
-   - Hostname: `finresearch.prateekmulye.dev`
+   - Hostname: `assay.prateekmulye.dev`
    - Service: **HTTP** → `app:7860`  ← the compose-network name of the app
      container; cloudflared resolves it because it runs on the same network.
 4. Saving the hostname auto-creates the DNS record for the subdomain — no
@@ -72,9 +72,9 @@ Your domain must already be on Cloudflare (nameservers pointed there).
 ## 4. Clone and configure
 
 ```bash
-sudo mkdir -p /opt/finresearchai && sudo chown $USER /opt/finresearchai
-git clone https://github.com/prateekmulye/FinResearchAI.git /opt/finresearchai
-cd /opt/finresearchai
+sudo mkdir -p /opt/assay && sudo chown $USER /opt/assay
+git clone https://github.com/prateekmulye/assay.git /opt/assay
+cd /opt/assay
 cp .env.example .env && chmod 600 .env
 ```
 
@@ -124,7 +124,7 @@ First-run checks:
 ```bash
 docker compose --profile tunnel -f docker-compose.prod.yml ps   # all Up, app (healthy)
 curl -fsS http://localhost:7860/healthz                          # {"status":"ok"} on-box
-curl -I https://finresearch.prateekmulye.dev/                    # 200 through the tunnel
+curl -I https://assay.prateekmulye.dev/                    # 200 through the tunnel
 docker compose -f docker-compose.prod.yml logs app | head -30
 #   -> "entrypoint: migrations up to date", watchlist seeded, collector started
 docker compose -f docker-compose.prod.yml logs cloudflared | head -20
@@ -139,7 +139,7 @@ Recommended one-time Cloudflare dashboard settings for the zone:
 ## 6. Updating
 
 ```bash
-cd /opt/finresearchai && git pull
+cd /opt/assay && git pull
 docker compose --profile tunnel -f docker-compose.prod.yml up -d --build
 ```
 
@@ -182,7 +182,7 @@ Secrets and variables → Actions* and set:
    Oracle's image), `VPS_SSH_KEY` (the private key whose public half is in
    the VM's `~/.ssh/authorized_keys`).
 
-The VM must have the repo cloned at `/opt/finresearchai` with `.env`
+The VM must have the repo cloned at `/opt/assay` with `.env`
 configured per §4. Once armed, each deploy:
 
 - pushes the app image to GHCR (`ghcr.io/prateekmulye/finresearchai-app`,

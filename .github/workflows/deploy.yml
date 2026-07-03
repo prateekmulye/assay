@@ -67,8 +67,8 @@ jobs:
           target: runtime
           push: true
           tags: |
-            ghcr.io/prateekmulye/finresearchai-app:latest
-            ghcr.io/prateekmulye/finresearchai-app:${{ github.event.workflow_run.head_sha || github.sha }}
+            ghcr.io/prateekmulye/assay-app:latest
+            ghcr.io/prateekmulye/assay-app:${{ github.event.workflow_run.head_sha || github.sha }}
           cache-from: type=gha,scope=app
           cache-to: type=gha,mode=max,scope=app
 
@@ -91,7 +91,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
-            cd /opt/finresearchai
+            cd /opt/assay
             # Deploy the exact commit CI validated — a commit landing between
             # CI start and this SSH must not ship under the previous green.
             git fetch origin main

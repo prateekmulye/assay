@@ -1,5 +1,5 @@
 # src/graph.py
-"""build_graph — owned by WP-D. Wires the full FinResearchAI pipeline with guarded
+"""build_graph — owned by WP-D. Wires the full Assay pipeline with guarded
 imports so each WP's real node auto-activates when its module lands on the branch,
 and falls back to an inline stub otherwise.
 

@@ -1,4 +1,4 @@
-"""Alembic async environment for the FinResearchAI warehouse.
+"""Alembic async environment for the Assay warehouse.
 
 URL resolution: the DATABASE_URL environment variable wins; the alembic.ini
 ``sqlalchemy.url`` value is the fallback. Target metadata is the warehouse ORM

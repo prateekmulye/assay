@@ -1,17 +1,17 @@
-# FinResearchAI
+# Assay
 
 **Multi-agent equity research you can watch think.** A 12-node LangGraph pipeline streams
 three parallel analysts, a bounded bull/bear debate, a trader, and a risk debate into a
 BUY / SELL / HOLD verdict — live over SSE, persisted to a Postgres warehouse, replayable
 forever, and measured by the debate-cost ablation its reference paper omits.
 
-[![CI](https://github.com/prateekmulye/FinResearchAI/actions/workflows/ci.yml/badge.svg)](https://github.com/prateekmulye/FinResearchAI/actions/workflows/ci.yml)
+[![CI](https://github.com/prateekmulye/assay/actions/workflows/ci.yml/badge.svg)](https://github.com/prateekmulye/assay/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.13-3776AB?logo=python&logoColor=white)](./pyproject.toml)
 [![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)](./web/package.json)
 [![Demo](https://img.shields.io/badge/demo-replay--first-6E56CF)](#quickstart)
 
-**Live demo:** coming soon at `finresearch.prateekmulye.dev` — until then, the
+**Live demo:** coming soon at `assay.prateekmulye.dev` — until then, the
 [zero-key demo](#a-zero-key-demo-no-api-keys) runs the full app on your machine in
 about two minutes.
 

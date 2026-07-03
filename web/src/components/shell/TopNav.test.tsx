@@ -31,7 +31,7 @@ describe("TopNav — shell smoke", () => {
 
   it("links the wordmark home", () => {
     renderWithProviders(<TopNav />);
-    expect(screen.getByRole("link", { name: /finresearch home/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /assay home/i })).toHaveAttribute(
       "href",
       "/",
     );

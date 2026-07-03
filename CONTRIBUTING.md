@@ -1,4 +1,4 @@
-# Contributing to FinResearchAI
+# Contributing to Assay
 
 Thanks for your interest! This project is a portfolio flagship, but issues and PRs are
 welcome.
@@ -6,7 +6,7 @@ welcome.
 ## Development setup
 
 ```bash
-git clone <repo-url> && cd FinResearchAI
+git clone <repo-url> && cd Assay
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[all]"            # all optional groups (web, data, api, db, dev)
 cp .env.example .env               # add your own OLLAMA_API_KEY / FIRECRAWL_API_KEY

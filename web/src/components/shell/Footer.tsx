@@ -18,7 +18,7 @@ export function Footer() {
         </p>
         <div className="flex items-center gap-4">
           <a
-            href="https://github.com/prateekmulye/FinResearchAI"
+            href="https://github.com/prateekmulye/assay"
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-2 rounded-md font-mono text-2xs font-medium text-[var(--color-fg-muted)] underline decoration-[var(--color-line-strong)] underline-offset-4 transition-colors hover:text-[var(--color-fg)] hover:decoration-[var(--color-beam)]"

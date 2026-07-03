@@ -1,4 +1,4 @@
-"""Request models and SSE envelope builders for the FinResearchAI API.
+"""Request models and SSE envelope builders for the Assay API.
 
 Envelope contract (single source of truth):
   Every SSE message is a dict {"event": <name>, "data": <json-string>}.

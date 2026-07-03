@@ -55,7 +55,7 @@ export function TopNav() {
         aria-label="Primary"
         className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-6"
       >
-        <NavLink to="/" className="rounded-md" aria-label="FinResearch home">
+        <NavLink to="/" className="rounded-md" aria-label="Assay home">
           <Wordmark />
         </NavLink>
 

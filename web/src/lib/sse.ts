@@ -1,5 +1,5 @@
 /**
- * Pure SSE frame parser for the FinResearchAI analysis stream.
+ * Pure SSE frame parser for the Assay analysis stream.
  *
  * The backend (POST /api/analyze) returns text/event-stream over a fetch body,
  * so we cannot use the native EventSource (GET-only). Frames are separated by a

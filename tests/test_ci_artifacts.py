@@ -140,8 +140,8 @@ class TestCiWorkflow:
         # The prod stack ships ONE built image (app runtime — cloudflared is a
         # pulled upstream image, Caddy is retired); it must pass the gate.
         text = _steps_text(jobs["e2e-smoke"])
-        assert "image-ref: finresearch-app:latest" in text
-        assert "finresearch-caddy" not in text, "the caddy image was retired"
+        assert "image-ref: assay-app:latest" in text
+        assert "assay-caddy" not in text, "the caddy image was retired"
 
     def test_no_real_api_key_secrets_ever_reach_ci(self, raw: str) -> None:
         # The only secret CI may touch is the ephemeral GITHUB_TOKEN.
@@ -181,9 +181,9 @@ class TestDeployWorkflow:
 
     def test_pushes_the_app_ghcr_target(self, wf: dict) -> None:
         text = _steps_text(wf["jobs"]["build-push"])
-        assert "ghcr.io/prateekmulye/finresearchai-app" in text
+        assert "ghcr.io/prateekmulye/assay-app" in text
         assert "target: runtime" in text
-        assert "finresearchai-caddy" not in text, "the caddy image was retired"
+        assert "assay-caddy" not in text, "the caddy image was retired"
         # packages:write is scoped to the build-push job only; the SSH job
         # keeps the workflow-default read-only token.
         assert wf["jobs"]["build-push"]["permissions"]["packages"] == "write"
