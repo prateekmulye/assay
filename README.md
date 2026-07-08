@@ -11,7 +11,7 @@ forever, and measured by the debate-cost ablation its reference paper omits.
 [![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)](./web/package.json)
 [![Demo](https://img.shields.io/badge/demo-replay--first-6E56CF)](#quickstart)
 
-**Live demo:** coming soon at `assay.prateekmulye.dev` — until then, the
+**Live demo:** [on Hugging Face Spaces](https://huggingface.co/spaces/prateekmulye/FinResearchAI) — or the
 [zero-key demo](#a-zero-key-demo-no-api-keys) runs the full app on your machine in
 about two minutes.
 
