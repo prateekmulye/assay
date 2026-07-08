@@ -26,13 +26,21 @@ def x_token(monkeypatch):
     settings_mod.get_settings.cache_clear()
 
 
+def _iso(ts: datetime) -> str:
+    return ts.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
 def _api_payload() -> dict:
+    # Timestamps are relative to now: the cache-freshness window
+    # (x_cache_ttl_hours, default 24h) is checked against the post ts, so a
+    # hardcoded date would silently expire and re-trigger the paid call.
+    now = datetime.now(UTC)
     return {
         "data": [
             {
                 "id": "111",
                 "text": "AAPL quietly shipping the best silicon roadmap in tech",
-                "created_at": "2026-07-03T08:00:00.000Z",
+                "created_at": _iso(now - timedelta(hours=2)),
                 "public_metrics": {
                     "like_count": 5,
                     "retweet_count": 1,
@@ -43,7 +51,7 @@ def _api_payload() -> dict:
             {
                 "id": "222",
                 "text": "$AAPL services margin is the story nobody prices in",
-                "created_at": "2026-07-03T09:00:00.000Z",
+                "created_at": _iso(now - timedelta(hours=1)),
                 "public_metrics": {
                     "like_count": 90,
                     "retweet_count": 30,
