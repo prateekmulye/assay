@@ -1,9 +1,14 @@
 # Assay
 
-**Multi-agent equity research you can watch think.** A 12-node LangGraph pipeline streams
-three parallel analysts, a bounded bull/bear debate, a trader, and a risk debate into a
-BUY / SELL / HOLD verdict — live over SSE, persisted to a Postgres warehouse, replayable
-forever, and measured by the debate-cost ablation its reference paper omits.
+An experimental application for inspecting multi-agent financial research.
+Python/LangGraph coordinates parallel analysts, research debate, risk review, and
+reporting. FastAPI streams progress to a React client; an optional PostgreSQL +
+pgvector warehouse supports saved runs, replay, and research search.
+
+Assay develops Prateek Mulye's contribution to the SuperDataScience CP044
+FinResearch AI community project. The engineering focus is orchestration,
+streaming, persistence, and evaluation. Generated BUY / SELL / HOLD labels are
+research outputs, not validated investment recommendations or evidence of returns.
 
 [![CI](https://github.com/prateekmulye/assay/actions/workflows/ci.yml/badge.svg)](https://github.com/prateekmulye/assay/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
@@ -11,18 +16,19 @@ forever, and measured by the debate-cost ablation its reference paper omits.
 [![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)](./web/package.json)
 [![Demo](https://img.shields.io/badge/demo-replay--first-6E56CF)](#quickstart)
 
-**Live demo:** [on Hugging Face Spaces](https://huggingface.co/spaces/prateekmulye/FinResearchAI) — or the
-[zero-key demo](#a-zero-key-demo-no-api-keys) runs the full app on your machine in
-about two minutes.
+[Hugging Face Space](https://huggingface.co/spaces/prateekmulye/FinResearchAI) ·
+[Local demo without API keys](#a-zero-key-demo-no-api-keys) ·
+[Portfolio](https://prateekmulye.dev/)
+
+The local demo uses a deterministic fake LLM and canned market data. Hosted
+availability and live-model quality are separate from source and offline-test coverage.
 
 ![Analyze cockpit — the 12-node pipeline resolving AAPL into a verdict](docs/assets/hero-cockpit.png)
 
-Type a ticker, watch the agent graph light up node by node as analysts report, the bull
-and bear argue, the trader sizes a position, and a conservative↔aggressive risk debate
-settles into a final decision with a 0–100 score and conviction — with per-node cost,
-latency, and token counts streamed the whole way. Every run is written through to a
-Postgres + pgvector warehouse, so the research library, timeline replays, market data,
-and semantic search keep working even when live-run quota is spent.
+Enter a ticker to follow analyst reports, opposing research theses, and risk review.
+The interface exposes node progress, generated decisions, and recorded usage metrics.
+When a warehouse is configured and persistence succeeds, saved runs remain available
+for inspection and replay without another model call.
 
 ## How it works
 
@@ -68,30 +74,23 @@ flowchart LR
 
 That is the debate-**on** topology (12 nodes). `build_graph("off")` swaps the three
 debate nodes for a single `research_synthesis` node (10 nodes) — the single-pass
-baseline the [eval harness](#the-ablation-the-paper-omits) compares against.
+baseline the [eval harness](#comparing-debate-and-single-pass-workflows) compares against.
 
-- **State-first LangGraph.** A typed `AgentState` (`src/state.py`) is the only channel
-  between nodes; concurrent writers (analyst reports, debate transcripts, metrics) merge
-  through explicit reducers, never last-write-wins.
-- **Structured outputs only.** Every node calls
-  `with_structured_output(Schema, method=STRUCT_METHOD)` against Pydantic models — no
-  JSON string-scraping anywhere in the pipeline.
-- **Degrade everywhere.** A node whose LLM or tool call fails returns a schema-shaped
-  fallback plus a zero-metrics trace line; one failure never aborts the graph or drops
-  observability.
-- **Write-through warehouse.** Analyst tools persist whatever they fetch (prices,
-  fundamentals, news) into Postgres 16 + pgvector during each run; a nightly in-process
-  collector refreshes a 30-ticker watchlist across US, Indian, Japanese, Chinese,
-  Hong Kong, and European exchanges.
-- **Budgeted X (Twitter) signal.** Optional social sentiment for the news analyst from
-  the pay-per-use X API, engineered to almost never pay: cache-first from the warehouse,
-  a hard monthly post budget consumed increment-first (default caps worst-case spend at
-  ~$8/month), stale-cache fallback, and full graceful degrade — a run never dies over
-  tweets. Off unless `X_BEARER_TOKEN` is set.
-- **"Machined Light" design system.** The SPA is a tungsten-lit graphite instrument
-  (`web/DESIGN.md`): chroma is rationed to market/state signals, glow means live
-  computation, and the unlit 12-die pipeline *is* the empty state. AAA contrast on data,
-  full reduced-motion variants, 44px targets throughout.
+- **Typed state.** `AgentState` (`src/state.py`) defines graph state, with explicit
+  reducers for analyst reports, debate transcripts, and accumulated metrics.
+- **Structured outputs.** Pydantic models define the expected shape of agent outputs.
+  Schema validation does not establish factual correctness.
+- **Failure paths.** Agent fallbacks and SSE error events expose failures. They do not
+  guarantee that every run completes or that every error can be recovered.
+- **Warehouse.** PostgreSQL stores market data, research runs, and recorded events.
+  pgvector supports semantic search; keyword search provides a fallback when
+  embeddings are unavailable.
+- **Optional social signal.** The news analyst can use X data when
+  `X_BEARER_TOKEN` is configured. Review provider billing and the application budget
+  configuration before enabling it.
+- **Research interface.** The React client includes graph progress, a research library,
+  replay controls, and evaluation views. Design decisions are recorded in
+  [web/DESIGN.md](web/DESIGN.md).
 - **Quick/deep model tiers.** Provider-agnostic `ChatOpenAI` pointed at Ollama Cloud's
   OpenAI-compatible `/v1` — `gpt-oss:20b` for routing, analysts, and reporting;
   `gpt-oss:120b` for debate, trading, risk, and judging. No OpenAI key, no GPU.
@@ -105,51 +104,52 @@ baseline the [eval harness](#the-ablation-the-paper-omits) compares against.
 
 | Research library | Timeline replay |
 | --- | --- |
-| ![Research library — every run, replayable](docs/assets/library.png) | ![Replay theater — transport bar scrubbing a recorded run](docs/assets/replay.png) |
+| ![Research library — saved runs](docs/assets/library.png) | ![Replay theater — transport bar scrubbing a recorded run](docs/assets/replay.png) |
 
 | Market dossier | Eval dashboard |
 | --- | --- |
 | ![Market dossier — candlesticks, fundamentals, news](docs/assets/market.png) | ![Eval dashboard — does the debate earn its cost?](docs/assets/eval.png) |
 
-## The ablation the paper omits
+## Comparing debate and single-pass workflows
 
-The design adopts a deliberate subset of *TradingAgents*
-([arXiv 2412.20138](https://arxiv.org/abs/2412.20138)): bull/bear debate, quick/deep
-model routing, structured state-passing, and an actionable signal. The paper, however,
-never isolates what the debate itself buys you. This repo does:
+The design draws on *TradingAgents*
+([arXiv 2412.20138](https://arxiv.org/abs/2412.20138)), including bull/bear debate,
+quick/deep model routing, and structured state-passing. The evaluation harness
+compares debate-on and debate-off workflows:
 
 ```bash
 python -m src.eval.run --tickers evals/tickers.json --label demo
 ```
 
-runs every ticker through both topologies — debate-on and debate-off — and reports
-action agreement, a blind judge's reasoning preference, score deltas, and the exact
-cost/latency/token price of the debate, persisted to the warehouse and visualized on the
+The command runs each ticker through both topologies — debate-on and debate-off — and reports
+action agreement, a blind judge's reasoning preference, score deltas, and estimated
+cost, summed node latency, and token usage, persisted to the warehouse and visualized on the
 Eval page.
 
-**Honest framing:** the quality signal is a *judge-preference proxy*, not realized P&L.
-The harness runs no backtest and reports no returns; the judge sees the two verdicts in a
-fixed A/B position, so a small positional bias is possible. That disclaimer is embedded
-in every report it writes (`PROXY_DISCLAIMER` in `src/eval/report.py`) — I'd rather ship
-a number I can explain than a backtest I can't defend.
+**Interpretation limits:** judge preference is a proxy, not realized P&L. The
+harness runs no backtest and establishes no returns. The judge receives verdicts
+in a fixed A/B order; failed pairs are excluded; summed node latency is not
+end-to-end elapsed time. These limits prevent a blanket claim that debate improves
+quality or earns its cost. See [harness.py](src/eval/harness.py) and
+[judge.py](src/eval/judge.py).
 
 ## Features
 
 - **Live cockpit** — the agent graph lights node by node from the SSE stream; bull/bear
   theses stream side by side; the decision reveals with a conviction gauge and a live
   cost ticker.
-- **Run library + replay** — every run is persisted with its full event stream; any run
-  replays through a timeline scrubber with transport controls, exactly as it happened.
+- **Run library + replay** — successfully persisted event streams can be inspected
+  through a timeline scrubber with transport controls.
 - **Market explorer + semantic search** — global instrument search, candlestick /
   fundamentals / news dossiers, and pgvector semantic search over accumulated research.
 - **Eval dashboard** — the debate A/B results: judge preference, score deltas, and a
   cost-vs-quality scatter per ticker.
-- **Demo guard** — live runs are capped per IP and globally per day (Postgres-backed,
-  restart-proof); the library, replays, and market data stay free; an `X-Admin-Token`
-  header bypasses caps.
-- **Fake-LLM mode** — `APP_FAKE_LLM=1` boots the entire stack with a deterministic
-  offline LLM and canned market data: no keys, no network, no cost. It powers the e2e
-  suite and the zero-key demo below.
+- **Demo guard** — daily per-IP and global caps use warehouse counters when available.
+  Without the warehouse or during database failures, daily caps are bypassed; the
+  hourly burst limiter remains. Configured administrator credentials bypass both
+  protections. Saved library and replay access do not require a new LLM run.
+- **Fake-LLM mode** — `APP_FAKE_LLM=1` uses deterministic model outputs and canned
+  market data without live model calls. It powers the e2e suite and the local demo below.
 
 ## Quickstart
 
@@ -178,10 +178,10 @@ cd web && npm install && npm run dev
 cp .env.example .env          # add OLLAMA_API_KEY and FIRECRAWL_API_KEY
 pip install -e ".[all]"
 
+export DATABASE_URL=postgresql+asyncpg://finresearch:finresearch@localhost:5433/finresearch
 docker compose up -d db       # Postgres 16 + pgvector on localhost:5433
 alembic upgrade head          # create the warehouse schema
 
-export DATABASE_URL=postgresql+asyncpg://finresearch:finresearch@localhost:5433/finresearch
 uvicorn src.api.main:app --port 7860
 cd web && npm install && npm run dev
 ```
@@ -191,16 +191,16 @@ JSONL traces; you lose the library, market explorer, and search.
 
 ### c) Production
 
-Runs for **$0/month**: an Oracle Always-Free VM (or any always-on Linux box) with
-three containers — Cloudflare Tunnel (outbound-only, zero open inbound ports) →
-FastAPI (serves the API + built SPA) → Postgres. Cloudflare terminates TLS at
-its edge; there is no in-stack web server and no certificate to manage.
+The deployment configuration uses three containers: Cloudflare Tunnel →
+FastAPI (API and built SPA) → PostgreSQL. The application port is bound to
+loopback and the database has no published host port. Hosting, model, and data
+costs depend on your provider plans and usage; a zero-cost deployment is not guaranteed.
 
 ```bash
 docker compose --profile tunnel -f docker-compose.prod.yml up -d --build
 ```
 
-Full runbook — free VM, tunnel setup, secrets, first-run checks, updates, backups,
+Full runbook — VM, tunnel setup, secrets, first-run checks, updates, backups,
 and the gated GitHub Actions deploy pipeline — in [`docs/deploy.md`](./docs/deploy.md).
 
 ## API
@@ -235,7 +235,7 @@ Everything under `/api`, liveness at the root:
 ```
 src/            the application — graph, agents, llm, tools, api, warehouse, collector, eval, memory, obs
 web/            React SPA (Vite + TS); design tokens in web/DESIGN.md
-tests/          offline unit + integration suites (555 tests; no network)
+tests/          unit + integration suites
 migrations/     Alembic schema for the warehouse
 evals/          curated A/B ticker set; eval reports land here
 scripts/        dev utilities (demo seeder, smoke test)
@@ -246,10 +246,10 @@ docs/           deploy runbook, design history (docs/superpowers/), screenshots
 
 ## Testing
 
-834 tests: **555 backend** (pytest, fully offline — LLMs and tools mocked) + **279
-frontend** (vitest). CI runs five parallel jobs: backend matrix (3.11/3.13), frontend
-gates, real-Postgres integration, security (gitleaks + pip-audit + npm audit), and a
-fake-LLM e2e smoke with a Trivy image scan.
+Backend tests use pytest; frontend tests use Vitest. Offline tests use mocked
+models and tools. Separate live-model and PostgreSQL integration checks require
+the corresponding services. Consult the current CI run for results; test counts
+and source inspection do not establish deployed reliability or model quality.
 
 ```bash
 python -m pytest -q                 # backend, offline
